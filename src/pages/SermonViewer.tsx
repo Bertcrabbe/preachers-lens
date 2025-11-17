@@ -236,6 +236,18 @@ const SermonViewer = () => {
     return pauseCount;
   };
 
+  const countSlowSpeechParagraphs = (threshold: number = 0.75): number => {
+    if (sentences.length === 0) return 0;
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const averageRate = getAverageSpeechRate();
+    
+    return paragraphs.filter(p => {
+      const rate = calculateSpeechRate(p);
+      return rate < averageRate * threshold;
+    }).length;
+  };
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -1033,7 +1045,7 @@ const SermonViewer = () => {
         {/* Sermon Dashboard */}
         <Card className="mb-6 p-6">
           <h2 className="text-xl font-semibold mb-4">Sermon Analytics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="p-4 bg-primary/5">
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-primary">
@@ -1063,6 +1075,17 @@ const SermonViewer = () => {
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Verbal Pauses Detected
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-blue-500/5">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl font-bold text-blue-600">
+                  {countSlowSpeechParagraphs(0.75)}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Slow Speech Sections (0.75x)
                 </div>
               </div>
             </Card>
