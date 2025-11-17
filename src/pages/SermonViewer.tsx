@@ -110,7 +110,7 @@ const SermonViewer = () => {
   const [showVolumeChanges, setShowVolumeChanges] = useState(false);
   const [fastSpeechThreshold, setFastSpeechThreshold] = useState(1.2);
   const [slowSpeechThreshold, setSlowSpeechThreshold] = useState(0.75);
-  const [volumeChangeThreshold, setVolumeChangeThreshold] = useState(1.5);
+  const [volumeChangeThreshold, setVolumeChangeThreshold] = useState(1.0);
   const [waveformData, setWaveformData] = useState<number[]>([]);
 
   useEffect(() => {
@@ -204,8 +204,13 @@ const SermonViewer = () => {
     const paragraphAmplitudes = waveformData.slice(startIdx, endIdx);
     const avgAmplitude = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
     
+    // Threshold is on a scale from -2 to +2
+    // Convert to multiplier: threshold of 1.0 means 2x louder or 0.5x quieter
+    const upperBound = overallAverage * (1 + threshold);
+    const lowerBound = overallAverage / (1 + threshold);
+    
     // Check if volume is significantly higher or lower than average
-    return avgAmplitude > (overallAverage * threshold) || avgAmplitude < (overallAverage / threshold);
+    return avgAmplitude > upperBound || avgAmplitude < lowerBound;
   };
 
   const calculateSpeechRate = (paragraph: Sentence[]): number => {
@@ -1323,19 +1328,19 @@ const SermonViewer = () => {
                   {countVolumeChangeParagraphs(volumeChangeThreshold)}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Noticeable Volume Shifts ({volumeChangeThreshold.toFixed(1)}x)
+                  Noticeable Volume Shifts
                 </div>
               </div>
               <div className="px-2" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                   <span>Threshold</span>
-                  <span>{volumeChangeThreshold.toFixed(1)}x</span>
+                  <span>{volumeChangeThreshold > 0 ? '+' : ''}{volumeChangeThreshold.toFixed(1)}</span>
                 </div>
                 <Slider
                   value={[volumeChangeThreshold]}
                   onValueChange={([value]) => setVolumeChangeThreshold(value)}
-                  min={1.2}
-                  max={3.0}
+                  min={-2}
+                  max={2}
                   step={0.1}
                   className="w-full"
                 />
