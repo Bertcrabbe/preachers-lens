@@ -71,6 +71,8 @@ serve(async (req) => {
         sentiment_analysis: false,
         auto_highlights: false,
         summarization: false,
+        punctuate: true,
+        format_text: true,
       }),
     });
 
@@ -101,43 +103,21 @@ serve(async (req) => {
       status = statusData.status;
 
       if (status === "completed") {
-        // Extract sentences from the transcript
-        const sentences = statusData.words || [];
-        const groupedSentences: Array<{
-          text: string;
-          start: number;
-          end: number;
-        }> = [];
-
-        let currentSentence = "";
-        let sentenceStart = 0;
-        let sentenceEnd = 0;
-
-        for (let i = 0; i < sentences.length; i++) {
-          const word = sentences[i];
-          if (i === 0) {
-            sentenceStart = word.start;
+        // Get sentences from the transcript
+        const sentencesResponse = await fetch(
+          `https://api.assemblyai.com/v2/transcript/${transcript.id}/sentences`,
+          {
+            headers: {
+              "Authorization": assemblyAIKey,
+            },
           }
+        );
 
-          currentSentence += word.text + " ";
-          sentenceEnd = word.end;
-
-          // Check if sentence ends
-          const endsWithPunctuation = /[.!?]$/.test(word.text);
-          const isLastWord = i === sentences.length - 1;
-
-          if (endsWithPunctuation || isLastWord) {
-            groupedSentences.push({
-              text: currentSentence.trim(),
-              start: sentenceStart,
-              end: sentenceEnd,
-            });
-            currentSentence = "";
-          }
-        }
+        const sentencesData = await sentencesResponse.json();
+        const sentences = sentencesData.sentences || [];
 
         // Store sentences in database
-        const sentenceRecords = groupedSentences.map((sentence, index) => ({
+        const sentenceRecords = sentences.map((sentence: any, index: number) => ({
           sermon_id: sermonId,
           start_time_ms: sentence.start,
           end_time_ms: sentence.end,
@@ -157,7 +137,7 @@ serve(async (req) => {
           .eq("id", sermonId);
 
         return new Response(
-          JSON.stringify({ success: true, sentenceCount: groupedSentences.length }),
+          JSON.stringify({ success: true, sentenceCount: sentences.length }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else if (status === "error") {
