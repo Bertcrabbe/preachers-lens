@@ -192,8 +192,8 @@ const SermonViewer = () => {
     return avgAmplitude < (overallAverage * 0.5);
   };
 
-  const hasSignificantVolumeChange = (paragraph: Sentence[], threshold: number): boolean => {
-    if (!sermon?.duration_seconds || waveformData.length === 0) return false;
+  const hasSignificantVolumeChange = (paragraph: Sentence[], threshold: number): 'increase' | 'decrease' | null => {
+    if (!sermon?.duration_seconds || waveformData.length === 0) return null;
     
     const firstSentence = paragraph[0];
     const lastSentence = paragraph[paragraph.length - 1];
@@ -218,7 +218,9 @@ const SermonViewer = () => {
     const lowerBound = overallAverage / (1 + threshold);
     
     // Check if volume is significantly higher or lower than average
-    return avgAmplitude > upperBound || avgAmplitude < lowerBound;
+    if (avgAmplitude > upperBound) return 'increase';
+    if (avgAmplitude < lowerBound) return 'decrease';
+    return null;
   };
 
   const calculateSpeechRate = (paragraph: Sentence[]): number => {
@@ -545,12 +547,20 @@ const SermonViewer = () => {
     });
   };
 
-  const countVolumeChangeParagraphs = (threshold: number = 1.5): number => {
-    if (sentences.length === 0) return 0;
+  const countVolumeChangeParagraphs = (threshold: number = 1.5): { increases: number; decreases: number } => {
+    if (sentences.length === 0) return { increases: 0, decreases: 0 };
     
     const paragraphs = groupIntoParagraphs(sentences);
+    let increases = 0;
+    let decreases = 0;
     
-    return paragraphs.filter(p => hasSignificantVolumeChange(p, threshold)).length;
+    paragraphs.forEach(p => {
+      const changeType = hasSignificantVolumeChange(p, threshold);
+      if (changeType === 'increase') increases++;
+      if (changeType === 'decrease') decreases++;
+    });
+    
+    return { increases, decreases };
   };
 
   const getVolumeChangeParagraphs = (threshold: number = 1.5) => {
@@ -558,7 +568,7 @@ const SermonViewer = () => {
     
     const paragraphs = groupIntoParagraphs(sentences);
     
-    return paragraphs.filter(p => hasSignificantVolumeChange(p, threshold));
+    return paragraphs.filter(p => hasSignificantVolumeChange(p, threshold) !== null);
   };
 
   const checkAuth = async () => {
@@ -1665,11 +1675,23 @@ const SermonViewer = () => {
                 />
               </div>
               <div className="flex flex-col items-center text-center mb-3">
-                <div className="text-3xl font-bold text-emerald-600">
-                  {countVolumeChangeParagraphs(volumeChangeThreshold)}
+                <div className="flex items-center gap-4 justify-center">
+                  <div className="flex flex-col items-center">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {countVolumeChangeParagraphs(volumeChangeThreshold).increases}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Increases</div>
+                  </div>
+                  <div className="text-2xl text-muted-foreground">|</div>
+                  <div className="flex flex-col items-center">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {countVolumeChangeParagraphs(volumeChangeThreshold).decreases}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Decreases</div>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  Noticeable Volume Shifts
+                <div className="text-sm text-muted-foreground mt-2">
+                  Volume Shifts
                 </div>
               </div>
               <div className="px-2" onClick={(e) => e.stopPropagation()}>
