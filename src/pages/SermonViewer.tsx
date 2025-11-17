@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -16,6 +17,7 @@ import {
   AlignLeft,
   MessageSquare,
   X,
+  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -48,12 +50,21 @@ interface Sentence {
   order_index: number;
 }
 
+interface Rule {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+}
+
 interface Comment {
   id: string;
   start_time_ms: number;
   end_time_ms: number;
   comment_text: string;
   created_at: string;
+  rule_id?: string | null;
+  evaluation_rules?: Rule;
 }
 
 const SermonViewer = () => {
@@ -73,6 +84,10 @@ const SermonViewer = () => {
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [selectedTimeRange, setSelectedTimeRange] = useState<{ start: number; end: number } | null>(null);
   const [newComment, setNewComment] = useState("");
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [evaluationDialogOpen, setEvaluationDialogOpen] = useState(false);
+  const [selectedRuleIds, setSelectedRuleIds] = useState<string[]>([]);
+  const [evaluating, setEvaluating] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -80,6 +95,7 @@ const SermonViewer = () => {
       fetchSermon();
       fetchSentences();
       fetchComments();
+      fetchRules();
     }
   }, [id]);
 
@@ -138,9 +154,17 @@ const SermonViewer = () => {
     try {
       const { data, error } = await supabase
         .from("sermon_comments")
-        .select("*")
+        .select(`
+          *,
+          evaluation_rules (
+            id,
+            name,
+            description,
+            color
+          )
+        `)
         .eq("sermon_id", id)
-        .order("created_at");
+        .order("start_time_ms");
 
       if (error) throw error;
       setComments(data || []);
@@ -149,156 +173,140 @@ const SermonViewer = () => {
     }
   };
 
-  const togglePlayPause = () => {
-    if (!audioRef.current) return;
-    if (playing) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setPlaying(!playing);
-  };
-
-  const seekToTime = (ms: number) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = ms / 1000;
-    if (!playing) {
-      audioRef.current.play();
-      setPlaying(true);
-    }
-  };
-
-  const formatTimestamp = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
-        .toString()
-        .padStart(2, "0")}`;
-    }
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
-
-  const handleExport = async (format: string) => {
-    if (!sermon) return;
-    
-    setExporting(true);
+  const fetchRules = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("export-sermon", {
-        body: { sermonId: sermon.id, format },
+      const { data, error } = await supabase
+        .from("evaluation_rules")
+        .select("id, name, description, color")
+        .order("name");
+
+      if (error) throw error;
+      setRules(data || []);
+    } catch (error: any) {
+      console.error("Failed to load rules:", error);
+    }
+  };
+
+  const handleEvaluate = async () => {
+    if (selectedRuleIds.length === 0) {
+      toast({
+        title: "No rules selected",
+        description: "Please select at least one rule",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEvaluating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("evaluate-sermon", {
+        body: {
+          sermonId: id,
+          ruleIds: selectedRuleIds,
+        },
       });
 
       if (error) throw error;
 
-      // Create download link
-      const blob = new Blob([data], { type: "application/octet-stream" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${sermon.title || "sermon"}.${format}`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-
       toast({
-        title: "Export successful",
-        description: `Transcript exported as ${format.toUpperCase()}`,
+        title: "Evaluation complete",
+        description: `Created ${data.commentsCreated} new comments`,
       });
+
+      setEvaluationDialogOpen(false);
+      setSelectedRuleIds([]);
+      fetchComments();
     } catch (error: any) {
       toast({
-        title: "Export failed",
+        title: "Evaluation failed",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setExporting(false);
+      setEvaluating(false);
     }
   };
 
-  const isCurrentSentence = (sentence: Sentence) => {
-    const currentMs = currentTime * 1000;
-    return currentMs >= sentence.start_time_ms && currentMs <= sentence.end_time_ms;
-  };
-
-  const groupIntoParagraphs = () => {
-    const paragraphs: Array<{
-      sentences: Sentence[];
-      startTime: number;
-      endTime: number;
-      text: string;
-    }> = [];
-    
-    let currentParagraph: Sentence[] = [];
-    const sentencesPerParagraph = 5; // Group every 5 sentences
-    
-    sentences.forEach((sentence, index) => {
-      currentParagraph.push(sentence);
-      
-      if (currentParagraph.length === sentencesPerParagraph || index === sentences.length - 1) {
-        paragraphs.push({
-          sentences: [...currentParagraph],
-          startTime: currentParagraph[0].start_time_ms,
-          endTime: currentParagraph[currentParagraph.length - 1].end_time_ms,
-          text: currentParagraph.map(s => s.sentence_text).join(" "),
-        });
-        currentParagraph = [];
-      }
-    });
-    
+  const groupIntoParagraphs = (sentences: Sentence[]) => {
+    const paragraphs = [];
+    for (let i = 0; i < sentences.length; i += 5) {
+      paragraphs.push(sentences.slice(i, i + 5));
+    }
     return paragraphs;
   };
 
-  const isCurrentParagraph = (paragraph: { startTime: number; endTime: number }) => {
-    const currentMs = currentTime * 1000;
-    return currentMs >= paragraph.startTime && currentMs <= paragraph.endTime;
+  const isCurrentSentence = (sentence: Sentence) => {
+    return currentTime >= sentence.start_time_ms && currentTime < sentence.end_time_ms;
   };
 
-  const openCommentDialog = (startTime: number, endTime: number) => {
-    setSelectedTimeRange({ start: startTime, end: endTime });
-    setNewComment("");
+  const isCurrentParagraph = (paragraph: Sentence[]) => {
+    const firstSentence = paragraph[0];
+    const lastSentence = paragraph[paragraph.length - 1];
+    return currentTime >= firstSentence.start_time_ms && currentTime < lastSentence.end_time_ms;
+  };
+
+  const seekTo = (timeMs: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = timeMs / 1000;
+      setCurrentTime(timeMs);
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (playing) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setPlaying(!playing);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime * 1000);
+    }
+  };
+
+  const openCommentDialog = (start: number, end: number) => {
+    setSelectedTimeRange({ start, end });
     setCommentDialogOpen(true);
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !selectedTimeRange || !id) return;
+    if (!newComment.trim() || !selectedTimeRange) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("sermon_comments").insert({
-        sermon_id: id,
-        user_id: user.id,
-        start_time_ms: selectedTimeRange.start,
-        end_time_ms: selectedTimeRange.end,
-        comment_text: newComment.trim(),
-      });
+      const { error } = await supabase
+        .from("sermon_comments")
+        .insert([{
+          sermon_id: id,
+          user_id: user.id,
+          start_time_ms: selectedTimeRange.start,
+          end_time_ms: selectedTimeRange.end,
+          comment_text: newComment,
+        }]);
 
       if (error) throw error;
 
-      toast({
-        title: "Comment added",
-        description: "Your comment has been saved",
-      });
-
+      toast({ title: "Comment added successfully" });
       setCommentDialogOpen(false);
       setNewComment("");
       fetchComments();
     } catch (error: any) {
       toast({
-        title: "Failed to add comment",
+        title: "Error adding comment",
         description: error.message,
         variant: "destructive",
       });
     }
-  };
-
-  const getCommentsForRange = (startTime: number, endTime: number) => {
-    return comments.filter(
-      (c) => c.start_time_ms === startTime && c.end_time_ms === endTime
-    );
   };
 
   const handleDeleteComment = async (commentId: string) => {
@@ -310,25 +318,56 @@ const SermonViewer = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Comment deleted",
-        description: "Your comment has been removed",
-      });
-
+      toast({ title: "Comment deleted" });
       fetchComments();
     } catch (error: any) {
       toast({
-        title: "Failed to delete comment",
+        title: "Error deleting comment",
         description: error.message,
         variant: "destructive",
       });
     }
   };
 
+  const getCommentsForRange = (start: number, end: number) => {
+    return comments.filter(
+      (c) => c.start_time_ms === start && c.end_time_ms === end
+    );
+  };
+
+  const handleExport = async (format: string) => {
+    setExporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("export-sermon", {
+        body: { sermonId: id, format },
+      });
+
+      if (error) throw error;
+
+      const blob = new Blob([data.content], { type: data.mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Export successful" });
+    } catch (error: any) {
+      toast({
+        title: "Export failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -336,266 +375,323 @@ const SermonViewer = () => {
   if (!sermon) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Card className="p-6 text-center">
-          <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-xl font-semibold mb-2">Sermon not found</h2>
-          <Button onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </Card>
+        <p>Sermon not found</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+      <div className="container py-8">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">{sermon.title || "Untitled Sermon"}</h1>
+              <Badge variant="outline" className="mt-2">
+                {sermon.transcription_status}
+              </Badge>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setEvaluationDialogOpen(true)}
+              disabled={rules.length === 0}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Evaluate
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setViewMode(viewMode === "sentence" ? "paragraph" : "sentence")}
+            >
+              {viewMode === "sentence" ? <AlignLeft className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
+              {viewMode === "sentence" ? "Paragraph View" : "Sentence View"}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={exporting || sentences.length === 0}>
+                <Button variant="outline" disabled={exporting}>
                   {exporting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Exporting...
-                    </>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Export
-                    </>
+                    <Download className="mr-2 h-4 w-4" />
                   )}
+                  Export
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => handleExport("txt")}>
-                  Plain Text (.txt)
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export as TXT
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport("md")}>
-                  Markdown (.md)
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export as Markdown
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport("pdf")}>
-                  PDF Document (.pdf)
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export as PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport("docx")}>
-                  Word Document (.docx)
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export as DOCX
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{sermon.title || "Untitled Sermon"}</h1>
-          <Badge>{sermon.transcription_status}</Badge>
-        </div>
-
-        {audioUrl && (
-          <Card className="p-6 mb-8">
-            <div className="flex items-center gap-4">
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 w-12 rounded-full"
-                onClick={togglePlayPause}
-              >
-                {playing ? (
-                  <Pause className="h-5 w-5" />
-                ) : (
-                  <Play className="h-5 w-5 ml-0.5" />
-                )}
-              </Button>
-              <div className="flex-1">
-                <audio
-                  ref={audioRef}
-                  src={audioUrl}
-                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                  onEnded={() => setPlaying(false)}
-                  className="w-full"
-                  controls
+        <Card className="mb-6 p-6">
+          <div className="flex items-center gap-4">
+            <Button size="icon" onClick={togglePlayPause}>
+              {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </Button>
+            <div className="flex-1">
+              <audio
+                ref={audioRef}
+                src={audioUrl}
+                onTimeUpdate={handleTimeUpdate}
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+              />
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width: sermon.duration_seconds
+                      ? `${(currentTime / (sermon.duration_seconds * 1000)) * 100}%`
+                      : "0%",
+                  }}
                 />
               </div>
             </div>
-          </Card>
-        )}
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Transcript</h2>
-            <div className="flex gap-2">
-              <Button
-                variant={viewMode === "sentence" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("sentence")}
-              >
-                <List className="h-4 w-4 mr-2" />
-                Sentences
-              </Button>
-              <Button
-                variant={viewMode === "paragraph" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("paragraph")}
-              >
-                <AlignLeft className="h-4 w-4 mr-2" />
-                Paragraphs
-              </Button>
-            </div>
           </div>
-          {sentences.length === 0 ? (
-            <Card className="p-8 text-center text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p>Transcription in progress...</p>
-            </Card>
-          ) : viewMode === "sentence" ? (
-            <div className="space-y-1">
-              {sentences.map((sentence) => {
-                const sentenceComments = getCommentsForRange(sentence.start_time_ms, sentence.end_time_ms);
-                return (
-                  <div key={sentence.id}>
-                    <div
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        isCurrentSentence(sentence)
-                          ? "bg-primary/10 border-l-4 border-primary"
-                          : "hover:bg-muted"
-                      }`}
-                      onClick={() => seekToTime(sentence.start_time_ms)}
-                    >
-                      <div className="flex gap-3">
-                        <span className="text-sm font-mono text-muted-foreground min-w-[60px]">
-                          {formatTimestamp(sentence.start_time_ms)}
-                        </span>
-                        <p className="flex-1">{sentence.sentence_text}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openCommentDialog(sentence.start_time_ms, sentence.end_time_ms);
-                          }}
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          {sentenceComments.length > 0 && (
-                            <span className="ml-1 text-xs">{sentenceComments.length}</span>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    {sentenceComments.length > 0 && (
-                      <div className="ml-20 mt-1 space-y-1">
-                        {sentenceComments.map((comment) => (
-                          <div key={comment.id} className="bg-muted/50 p-2 rounded text-sm flex justify-between items-start">
-                            <p className="flex-1">{comment.comment_text}</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleDeleteComment(comment.id)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {groupIntoParagraphs().map((paragraph, index) => {
-                const paragraphComments = getCommentsForRange(paragraph.startTime, paragraph.endTime);
-                return (
-                  <div key={index}>
-                    <div
-                      className={`p-4 rounded-lg cursor-pointer transition-colors ${
-                        isCurrentParagraph(paragraph)
-                          ? "bg-primary/10 border-l-4 border-primary"
-                          : "hover:bg-muted"
-                      }`}
-                      onClick={() => seekToTime(paragraph.startTime)}
-                    >
-                      <div className="flex gap-3">
-                        <span className="text-sm font-mono text-muted-foreground min-w-[60px]">
-                          {formatTimestamp(paragraph.startTime)}
-                        </span>
-                        <p className="flex-1 leading-relaxed">{paragraph.text}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openCommentDialog(paragraph.startTime, paragraph.endTime);
-                          }}
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          {paragraphComments.length > 0 && (
-                            <span className="ml-1 text-xs">{paragraphComments.length}</span>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    {paragraphComments.length > 0 && (
-                      <div className="ml-20 mt-2 space-y-2">
-                        {paragraphComments.map((comment) => (
-                          <div key={comment.id} className="bg-muted/50 p-3 rounded text-sm flex justify-between items-start">
-                            <p className="flex-1">{comment.comment_text}</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleDeleteComment(comment.id)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        </Card>
 
-        <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Comment</DialogTitle>
-              <DialogDescription>
-                Add a note or comment for this section
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Textarea
-                placeholder="Enter your comment..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                rows={4}
-              />
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setCommentDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddComment} disabled={!newComment.trim()}>
-                  Add Comment
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </main>
+        <Card className="p-6">
+          <div className="space-y-4">
+            {viewMode === "sentence" ? (
+              sentences.map((sentence) => (
+                <div
+                  key={sentence.id}
+                  className={`p-3 rounded-lg transition-colors cursor-pointer ${
+                    isCurrentSentence(sentence)
+                      ? "bg-primary/10 border border-primary"
+                      : "hover:bg-muted"
+                  }`}
+                  onClick={() => seekTo(sentence.start_time_ms)}
+                >
+                  <div className="flex items-start gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {Math.floor(sentence.start_time_ms / 1000 / 60)}:
+                      {String(Math.floor((sentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
+                    </Badge>
+                    <p className="flex-1">{sentence.sentence_text}</p>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCommentDialog(sentence.start_time_ms, sentence.end_time_ms);
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {getCommentsForRange(sentence.start_time_ms, sentence.end_time_ms).map((comment) => (
+                    <div
+                      key={comment.id}
+                      className="mt-2 p-2 rounded"
+                      style={{
+                        backgroundColor: comment.evaluation_rules?.color
+                          ? `${comment.evaluation_rules.color}20`
+                          : "hsl(var(--muted))",
+                        borderLeft: comment.evaluation_rules?.color
+                          ? `3px solid ${comment.evaluation_rules.color}`
+                          : "3px solid hsl(var(--border))",
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          {comment.evaluation_rules && (
+                            <Badge
+                              variant="outline"
+                              className="mb-1"
+                              style={{ borderColor: comment.evaluation_rules.color }}
+                            >
+                              {comment.evaluation_rules.name}
+                            </Badge>
+                          )}
+                          <p className="text-sm">{comment.comment_text}</p>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteComment(comment.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))
+            ) : (
+              groupIntoParagraphs(sentences).map((paragraph, idx) => {
+                const firstSentence = paragraph[0];
+                const lastSentence = paragraph[paragraph.length - 1];
+                return (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-lg transition-colors cursor-pointer ${
+                      isCurrentParagraph(paragraph)
+                        ? "bg-primary/10 border border-primary"
+                        : "hover:bg-muted"
+                    }`}
+                    onClick={() => seekTo(firstSentence.start_time_ms)}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {Math.floor(firstSentence.start_time_ms / 1000 / 60)}:
+                        {String(Math.floor((firstSentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
+                      </Badge>
+                      <p className="flex-1">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openCommentDialog(firstSentence.start_time_ms, lastSentence.end_time_ms);
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="mt-2 p-2 rounded"
+                        style={{
+                          backgroundColor: comment.evaluation_rules?.color
+                            ? `${comment.evaluation_rules.color}20`
+                            : "hsl(var(--muted))",
+                          borderLeft: comment.evaluation_rules?.color
+                            ? `3px solid ${comment.evaluation_rules.color}`
+                            : "3px solid hsl(var(--border))",
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            {comment.evaluation_rules && (
+                              <Badge
+                                variant="outline"
+                                className="mb-1"
+                                style={{ borderColor: comment.evaluation_rules.color }}
+                              >
+                                {comment.evaluation_rules.name}
+                              </Badge>
+                            )}
+                            <p className="text-sm">{comment.comment_text}</p>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDeleteComment(comment.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Comment</DialogTitle>
+            <DialogDescription>
+              Add a comment for this section of the sermon
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Type your comment here..."
+            className="min-h-[100px]"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCommentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddComment}>Add Comment</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={evaluationDialogOpen} onOpenChange={setEvaluationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Evaluate Sermon</DialogTitle>
+            <DialogDescription>
+              Select evaluation rules to apply to this sermon
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {rules.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No evaluation rules found. Create rules first.
+              </p>
+            ) : (
+              rules.map((rule) => (
+                <div key={rule.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={rule.id}
+                    checked={selectedRuleIds.includes(rule.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedRuleIds([...selectedRuleIds, rule.id]);
+                      } else {
+                        setSelectedRuleIds(selectedRuleIds.filter((id) => id !== rule.id));
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor={rule.id}
+                    className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: rule.color }}
+                      />
+                      {rule.name}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{rule.description}</p>
+                  </label>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEvaluationDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEvaluate} disabled={evaluating || selectedRuleIds.length === 0}>
+              {evaluating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Start Evaluation
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
