@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -106,6 +107,8 @@ const SermonViewer = () => {
   const [showFastSpeech, setShowFastSpeech] = useState(true);
   const [showVerbalPauses, setShowVerbalPauses] = useState(false);
   const [showSlowSpeech, setShowSlowSpeech] = useState(false);
+  const [fastSpeechThreshold, setFastSpeechThreshold] = useState(1.2);
+  const [slowSpeechThreshold, setSlowSpeechThreshold] = useState(0.75);
   const [waveformData, setWaveformData] = useState<number[]>([]);
 
   useEffect(() => {
@@ -198,14 +201,13 @@ const SermonViewer = () => {
     return rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
   };
 
-  const hasFastSpeechRate = (paragraph: Sentence[]): boolean => {
+  const hasFastSpeechRate = (paragraph: Sentence[], threshold: number = 1.5): boolean => {
     if (sentences.length === 0) return false;
     
     const paragraphRate = calculateSpeechRate(paragraph);
     const averageRate = getAverageSpeechRate();
     
-    // Consider it fast if it's 1.5x faster than average
-    return paragraphRate > averageRate * 1.5;
+    return paragraphRate > averageRate * threshold;
   };
 
   const countFastSpeechParagraphs = (threshold: number = 1.2): number => {
@@ -943,7 +945,7 @@ const SermonViewer = () => {
                     // Get fast speech paragraphs
                     const paragraphs = groupIntoParagraphs(sentences);
                     const fastSpeechRanges = paragraphs
-                      .filter(p => hasFastSpeechRate(p))
+                      .filter(p => hasFastSpeechRate(p, fastSpeechThreshold))
                       .map(p => ({
                         start: p[0].start_time_ms,
                         end: p[p.length - 1].end_time_ms
@@ -1039,7 +1041,7 @@ const SermonViewer = () => {
                         })}
                         
                         {/* Slow speech overlays */}
-                        {showSlowSpeech && getSlowSpeechParagraphs(0.75).map((paragraph, idx) => {
+                        {showSlowSpeech && getSlowSpeechParagraphs(slowSpeechThreshold).map((paragraph, idx) => {
                           const start = paragraph[0].start_time_ms;
                           const end = paragraph[paragraph.length - 1].end_time_ms;
                           const left = (start / totalDuration) * 100;
@@ -1135,23 +1137,35 @@ const SermonViewer = () => {
               onClick={() => setShowFastSpeech(!showFastSpeech)}
             >
               <div className="flex items-start justify-between mb-2">
-                <input
-                  type="checkbox"
+                <h3 className="text-sm font-medium text-fuchsia-700">Fast Speech</h3>
+                <Checkbox
                   checked={showFastSpeech}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setShowFastSpeech(e.target.checked);
-                  }}
+                  onCheckedChange={(checked) => setShowFastSpeech(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
                   className="mt-1"
                 />
               </div>
-              <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-fuchsia-600">
-                  {countFastSpeechParagraphs(1.2)}
+                  {countFastSpeechParagraphs(fastSpeechThreshold)}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Fast Speech Sections (1.2x+)
+                  Fast Speech Sections ({fastSpeechThreshold.toFixed(2)}x+)
                 </div>
+              </div>
+              <div className="px-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>Threshold</span>
+                  <span>{fastSpeechThreshold.toFixed(2)}x</span>
+                </div>
+                <Slider
+                  value={[fastSpeechThreshold]}
+                  onValueChange={([value]) => setFastSpeechThreshold(value)}
+                  min={1.0}
+                  max={2.0}
+                  step={0.05}
+                  className="w-full"
+                />
               </div>
             </Card>
 
@@ -1185,23 +1199,35 @@ const SermonViewer = () => {
               onClick={() => setShowSlowSpeech(!showSlowSpeech)}
             >
               <div className="flex items-start justify-between mb-2">
-                <input
-                  type="checkbox"
+                <h3 className="text-sm font-medium text-blue-700">Slow Speech</h3>
+                <Checkbox
                   checked={showSlowSpeech}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setShowSlowSpeech(e.target.checked);
-                  }}
+                  onCheckedChange={(checked) => setShowSlowSpeech(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
                   className="mt-1"
                 />
               </div>
-              <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-blue-600">
-                  {countSlowSpeechParagraphs(0.75)}
+                  {countSlowSpeechParagraphs(slowSpeechThreshold)}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Slow Speech Sections (0.75x)
+                  Slow Speech Sections ({slowSpeechThreshold.toFixed(2)}x)
                 </div>
+              </div>
+              <div className="px-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>Threshold</span>
+                  <span>{slowSpeechThreshold.toFixed(2)}x</span>
+                </div>
+                <Slider
+                  value={[slowSpeechThreshold]}
+                  onValueChange={([value]) => setSlowSpeechThreshold(value)}
+                  min={0.5}
+                  max={1.0}
+                  step={0.05}
+                  className="w-full"
+                />
               </div>
             </Card>
           </div>
