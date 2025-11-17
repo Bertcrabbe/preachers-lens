@@ -348,10 +348,16 @@ const SermonViewer = () => {
     
     setPreviewingParagraph(paragraphIndex);
     
+    // Pause any current playback
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setPlaying(false);
+    }
+
     // Get comments for this paragraph
     const paragraphComments = comments.filter(
       c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.end_time_ms <= lastSentence.end_time_ms
-    );
+    ).sort((a, b) => a.start_time_ms - b.start_time_ms);
 
     if (paragraphComments.length === 0) {
       // No audio comments, just play the sermon section
@@ -373,72 +379,76 @@ const SermonViewer = () => {
     }
 
     try {
-      // Create audio context for scheduling
-      const audioContext = new AudioContext();
-      const sermonResponse = await fetch(audioUrl);
-      const sermonArrayBuffer = await sermonResponse.arrayBuffer();
-      const sermonBuffer = await audioContext.decodeAudioData(sermonArrayBuffer);
-
-      // Fetch comment audio
-      const commentAudios: { buffer: AudioBuffer; timestamp: number }[] = [];
-      for (const comment of paragraphComments) {
-        const { data: urlData } = await supabase.storage
-          .from("sermon-comments-audio")
-          .createSignedUrl(comment.audio_url!, 3600);
-        
-        if (urlData?.signedUrl) {
-          const response = await fetch(urlData.signedUrl);
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = await audioContext.decodeAudioData(arrayBuffer);
-          commentAudios.push({ buffer, timestamp: comment.start_time_ms / 1000 });
-        }
-      }
-
-      // Calculate segments
       const paragraphStart = firstSentence.start_time_ms / 1000;
       const paragraphEnd = lastSentence.end_time_ms / 1000;
       
+      // Function to play a segment of the sermon
+      const playSermonSegment = (startTime: number, endTime: number): Promise<void> => {
+        return new Promise((resolve) => {
+          if (!audioRef.current) {
+            resolve();
+            return;
+          }
+
+          audioRef.current.currentTime = startTime;
+          audioRef.current.play();
+          setPlaying(true);
+
+          const checkEnd = setInterval(() => {
+            if (!audioRef.current || audioRef.current.currentTime >= endTime) {
+              audioRef.current?.pause();
+              setPlaying(false);
+              clearInterval(checkEnd);
+              resolve();
+            }
+          }, 50);
+        });
+      };
+
+      // Function to play a comment audio
+      const playCommentAudio = async (audioUrl: string): Promise<void> => {
+        return new Promise(async (resolve) => {
+          const { data: urlData } = await supabase.storage
+            .from("sermon-comments-audio")
+            .createSignedUrl(audioUrl, 3600);
+          
+          if (!urlData?.signedUrl) {
+            resolve();
+            return;
+          }
+
+          const audio = new Audio(urlData.signedUrl);
+          audio.onended = () => resolve();
+          audio.onerror = () => resolve();
+          await audio.play();
+        });
+      };
+
+      // Play segments sequentially
       let currentTime = paragraphStart;
-      let scheduledTime = 0;
 
-      // Sort comments by timestamp
-      commentAudios.sort((a, b) => a.timestamp - b.timestamp);
-
-      // Schedule audio playback
-      for (const comment of commentAudios) {
-        // Play sermon segment before comment
-        if (comment.timestamp > currentTime) {
-          const source = audioContext.createBufferSource();
-          source.buffer = sermonBuffer;
-          source.connect(audioContext.destination);
-          const duration = comment.timestamp - currentTime;
-          source.start(scheduledTime, currentTime, duration);
-          scheduledTime += duration;
-          currentTime = comment.timestamp;
+      for (const comment of paragraphComments) {
+        const commentStart = comment.start_time_ms / 1000;
+        
+        // Play sermon segment before this comment
+        if (commentStart > currentTime) {
+          await playSermonSegment(currentTime, commentStart);
+          await new Promise(resolve => setTimeout(resolve, 100)); // Small gap
         }
 
-        // Play comment
-        const commentSource = audioContext.createBufferSource();
-        commentSource.buffer = comment.buffer;
-        commentSource.connect(audioContext.destination);
-        commentSource.start(scheduledTime);
-        scheduledTime += comment.buffer.duration;
+        // Play the comment
+        await playCommentAudio(comment.audio_url!);
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small gap
+
+        currentTime = commentStart;
       }
 
-      // Play remaining sermon segment
+      // Play remaining sermon segment after last comment
       if (currentTime < paragraphEnd) {
-        const source = audioContext.createBufferSource();
-        source.buffer = sermonBuffer;
-        source.connect(audioContext.destination);
-        const duration = paragraphEnd - currentTime;
-        source.start(scheduledTime, currentTime, duration);
+        await playSermonSegment(currentTime, paragraphEnd);
       }
 
-      // Reset preview state when done
-      setTimeout(() => {
-        setPreviewingParagraph(null);
-        audioContext.close();
-      }, scheduledTime * 1000 + 1000);
+      setPreviewingParagraph(null);
 
     } catch (error: any) {
       console.error("Preview error:", error);
