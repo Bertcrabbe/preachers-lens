@@ -137,7 +137,7 @@ const SermonViewer = () => {
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
       const rawData = audioBuffer.getChannelData(0);
-      const samples = 200; // Number of bars in waveform
+      const samples = 500; // Number of bars in waveform - increased for more detail
       const blockSize = Math.floor(rawData.length / samples);
       const filteredData = [];
       
@@ -966,13 +966,14 @@ const SermonViewer = () => {
                 >
                   {/* Waveform visualization */}
                   {waveformData.length > 0 && (
-                    <div className="absolute inset-0 flex items-center justify-around px-0.5">
+                    <div className="absolute inset-0 flex items-center justify-around">
                       {waveformData.map((amplitude, idx) => (
                         <div
                           key={idx}
-                          className="w-1 bg-foreground/40 rounded-full"
+                          className="bg-foreground/30 rounded-full"
                           style={{
-                            height: `${Math.max(amplitude * 100, 8)}%`,
+                            width: '2px',
+                            height: `${Math.max(amplitude * 100, 4)}%`,
                           }}
                         />
                       ))}
@@ -1028,25 +1029,19 @@ const SermonViewer = () => {
                     
                     return (
                       <>
-                        {segments.map((segment, idx) => {
+                        {/* Only show commentary insertions, not sermon segments */}
+                        {segments.filter(s => s.type === 'comment').map((segment, idx) => {
                           const left = (segment.start / totalDuration) * 100;
-                          const width = segment.type === 'comment' 
-                            ? 0.5 // Fixed narrow width for comment markers
-                            : ((segment.end - segment.start) / totalDuration) * 100;
                           
                           return (
                             <div
                               key={idx}
-                              className={`absolute h-full transition-opacity ${
-                                segment.type === 'sermon' 
-                                  ? 'bg-green-500/60' 
-                                  : 'bg-red-500 border-l-2 border-r-2 border-red-700'
-                              }`}
+                              className="absolute h-full bg-red-500 border-l-2 border-r-2 border-red-700"
                               style={{
                                 left: `${left}%`,
-                                width: segment.type === 'comment' ? '2px' : `${width}%`,
+                                width: '2px',
                               }}
-                              title={segment.type === 'comment' ? `Commentary at ${Math.floor(segment.start / 1000 / 60)}:${String(Math.floor((segment.start / 1000) % 60)).padStart(2, "0")}` : undefined}
+                              title={`Commentary at ${Math.floor(segment.start / 1000 / 60)}:${String(Math.floor((segment.start / 1000) % 60)).padStart(2, "0")}`}
                             />
                           );
                         })}
@@ -1161,10 +1156,6 @@ const SermonViewer = () => {
 
             {/* Legend */}
             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-2 bg-green-500/60 rounded" />
-                <span>Sermon Audio</span>
-              </div>
               <div className="flex items-center gap-2">
                 <div className="w-0.5 h-4 bg-red-500" />
                 <span>Commentary Insertion</span>
