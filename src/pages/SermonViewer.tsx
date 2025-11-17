@@ -547,20 +547,50 @@ const SermonViewer = () => {
     });
   };
 
-  const countVolumeChangeParagraphs = (threshold: number = 1.5): { increases: number; decreases: number } => {
-    if (sentences.length === 0) return { increases: 0, decreases: 0 };
+  const countVolumeChangeParagraphs = (): { [key: number]: number } => {
+    if (sentences.length === 0 || !sermon?.duration_seconds || waveformData.length === 0) {
+      return { '-2': 0, '-1': 0, '0': 0, '1': 0, '2': 0 };
+    }
     
     const paragraphs = groupIntoParagraphs(sentences);
-    let increases = 0;
-    let decreases = 0;
+    const thresholds = [-2, -1, 0, 1, 2];
+    const counts: { [key: number]: number } = { '-2': 0, '-1': 0, '0': 0, '1': 0, '2': 0 };
     
-    paragraphs.forEach(p => {
-      const changeType = hasSignificantVolumeChange(p, threshold);
-      if (changeType === 'increase') increases++;
-      if (changeType === 'decrease') decreases++;
+    // Calculate overall average amplitude
+    const overallAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
+    
+    paragraphs.forEach(paragraph => {
+      const firstSentence = paragraph[0];
+      const lastSentence = paragraph[paragraph.length - 1];
+      if (!firstSentence || !lastSentence) return;
+      
+      const startIndex = Math.floor((firstSentence.start_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+      const endIndex = Math.ceil((lastSentence.end_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+      
+      if (startIndex >= waveformData.length || endIndex > waveformData.length) return;
+      
+      const paragraphData = waveformData.slice(startIndex, endIndex);
+      if (paragraphData.length === 0) return;
+      
+      const avgAmplitude = paragraphData.reduce((sum, val) => sum + val, 0) / paragraphData.length;
+      
+      // Check each threshold level
+      for (const threshold of thresholds) {
+        const multiplier = 1 + Math.abs(threshold);
+        const upperBound = overallAverage * multiplier;
+        const lowerBound = overallAverage / multiplier;
+        
+        if (threshold >= 0 && avgAmplitude > upperBound) {
+          counts[threshold]++;
+          break; // Count only the highest matching threshold
+        } else if (threshold < 0 && avgAmplitude < lowerBound) {
+          counts[threshold]++;
+          break; // Count only the lowest matching threshold
+        }
+      }
     });
     
-    return { increases, decreases };
+    return counts;
   };
 
   const getVolumeChangeParagraphs = (threshold: number = 1.5) => {
@@ -1675,23 +1705,20 @@ const SermonViewer = () => {
                 />
               </div>
               <div className="flex flex-col items-center text-center mb-3">
-                <div className="flex items-center gap-4 justify-center">
-                  <div className="flex flex-col items-center">
-                    <div className="text-2xl font-bold text-emerald-600">
-                      {countVolumeChangeParagraphs(volumeChangeThreshold).increases}
+                <div className="grid grid-cols-5 gap-2 w-full px-2">
+                  {[-2, -1, 0, 1, 2].map(level => (
+                    <div key={level} className="flex flex-col items-center">
+                      <div className="text-lg font-bold text-emerald-600">
+                        {countVolumeChangeParagraphs()[level]}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {level > 0 ? `+${level}` : level}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">Increases</div>
-                  </div>
-                  <div className="text-2xl text-muted-foreground">|</div>
-                  <div className="flex flex-col items-center">
-                    <div className="text-2xl font-bold text-emerald-600">
-                      {countVolumeChangeParagraphs(volumeChangeThreshold).decreases}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Decreases</div>
-                  </div>
+                  ))}
                 </div>
                 <div className="text-sm text-muted-foreground mt-2">
-                  Volume Shifts
+                  Volume Shifts by Level
                 </div>
               </div>
               <div className="px-2" onClick={(e) => e.stopPropagation()}>
