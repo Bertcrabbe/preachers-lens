@@ -103,6 +103,7 @@ const SermonViewer = () => {
   const previewAudioRef = useRef<HTMLAudioElement>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewingParagraph, setPreviewingParagraph] = useState<number | null>(null);
+  const [waveformData, setWaveformData] = useState<number[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -113,6 +114,43 @@ const SermonViewer = () => {
       fetchRules();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (audioUrl) {
+      generateWaveform(audioUrl);
+    }
+  }, [audioUrl]);
+
+  const generateWaveform = async (url: string) => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      const rawData = audioBuffer.getChannelData(0);
+      const samples = 200; // Number of bars in waveform
+      const blockSize = Math.floor(rawData.length / samples);
+      const filteredData = [];
+      
+      for (let i = 0; i < samples; i++) {
+        let blockStart = blockSize * i;
+        let sum = 0;
+        for (let j = 0; j < blockSize; j++) {
+          sum += Math.abs(rawData[blockStart + j]);
+        }
+        filteredData.push(sum / blockSize);
+      }
+      
+      // Normalize the data
+      const max = Math.max(...filteredData);
+      const normalizedData = filteredData.map(n => n / max);
+      
+      setWaveformData(normalizedData);
+    } catch (error) {
+      console.error("Error generating waveform:", error);
+    }
+  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -746,6 +784,21 @@ const SermonViewer = () => {
                     seekTo(newTime);
                   }}
                 >
+                  {/* Waveform visualization */}
+                  {waveformData.length > 0 && (
+                    <div className="absolute inset-0 flex items-center justify-around px-0.5">
+                      {waveformData.map((amplitude, idx) => (
+                        <div
+                          key={idx}
+                          className="w-0.5 bg-muted-foreground/30 rounded-full"
+                          style={{
+                            height: `${Math.max(amplitude * 100, 4)}%`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
                   {/* Sermon segments (green) and comment segments (red) */}
                   {sermon.duration_seconds && (() => {
                     const totalDuration = sermon.duration_seconds * 1000;
