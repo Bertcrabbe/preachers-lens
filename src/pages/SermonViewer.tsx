@@ -103,6 +103,9 @@ const SermonViewer = () => {
   const previewAudioRef = useRef<HTMLAudioElement>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewingParagraph, setPreviewingParagraph] = useState<number | null>(null);
+  const [showFastSpeech, setShowFastSpeech] = useState(true);
+  const [showVerbalPauses, setShowVerbalPauses] = useState(false);
+  const [showSlowSpeech, setShowSlowSpeech] = useState(false);
   const [waveformData, setWaveformData] = useState<number[]>([]);
 
   useEffect(() => {
@@ -246,6 +249,38 @@ const SermonViewer = () => {
       const rate = calculateSpeechRate(p);
       return rate < averageRate * threshold;
     }).length;
+  };
+
+  const getVerbalPauseTimestamps = (): { start: number; end: number }[] => {
+    const pauses: { start: number; end: number }[] = [];
+    
+    for (let i = 1; i < sentences.length; i++) {
+      const prevSentence = sentences[i - 1];
+      const currentSentence = sentences[i];
+      
+      const gap = (currentSentence.start_time_ms - prevSentence.end_time_ms) / 1000;
+      
+      if (gap > 1) {
+        pauses.push({
+          start: prevSentence.end_time_ms,
+          end: currentSentence.start_time_ms
+        });
+      }
+    }
+    
+    return pauses;
+  };
+
+  const getSlowSpeechParagraphs = (threshold: number = 0.75) => {
+    if (sentences.length === 0) return [];
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const averageRate = getAverageSpeechRate();
+    
+    return paragraphs.filter(p => {
+      const rate = calculateSpeechRate(p);
+      return rate < averageRate * threshold;
+    });
   };
 
   const checkAuth = async () => {
@@ -968,7 +1003,7 @@ const SermonViewer = () => {
                         })}
                         
                         {/* Fast speech overlays */}
-                        {fastSpeechRanges.map((range, idx) => {
+                        {showFastSpeech && fastSpeechRanges.map((range, idx) => {
                           const left = (range.start / totalDuration) * 100;
                           const width = ((range.end - range.start) / totalDuration) * 100;
                           
@@ -981,6 +1016,44 @@ const SermonViewer = () => {
                                 width: `${width}%`,
                               }}
                               title={`Fast speech at ${Math.floor(range.start / 1000 / 60)}:${String(Math.floor((range.start / 1000) % 60)).padStart(2, "0")}`}
+                            />
+                          );
+                        })}
+                        
+                        {/* Verbal pause overlays */}
+                        {showVerbalPauses && getVerbalPauseTimestamps().map((pause, idx) => {
+                          const left = (pause.start / totalDuration) * 100;
+                          const width = ((pause.end - pause.start) / totalDuration) * 100;
+                          
+                          return (
+                            <div
+                              key={`pause-${idx}`}
+                              className="absolute h-full bg-orange-500/50 border-t-2 border-b-2 border-orange-600"
+                              style={{
+                                left: `${left}%`,
+                                width: `${width}%`,
+                              }}
+                              title={`Verbal pause at ${Math.floor(pause.start / 1000 / 60)}:${String(Math.floor((pause.start / 1000) % 60)).padStart(2, "0")}`}
+                            />
+                          );
+                        })}
+                        
+                        {/* Slow speech overlays */}
+                        {showSlowSpeech && getSlowSpeechParagraphs(0.75).map((paragraph, idx) => {
+                          const start = paragraph[0].start_time_ms;
+                          const end = paragraph[paragraph.length - 1].end_time_ms;
+                          const left = (start / totalDuration) * 100;
+                          const width = ((end - start) / totalDuration) * 100;
+                          
+                          return (
+                            <div
+                              key={`slow-${idx}`}
+                              className="absolute h-full bg-blue-500/50 border-t-2 border-b-2 border-blue-600"
+                              style={{
+                                left: `${left}%`,
+                                width: `${width}%`,
+                              }}
+                              title={`Slow speech at ${Math.floor(start / 1000 / 60)}:${String(Math.floor((start / 1000) % 60)).padStart(2, "0")}`}
                             />
                           );
                         })}
@@ -1057,7 +1130,21 @@ const SermonViewer = () => {
               </div>
             </Card>
 
-            <Card className="p-4 bg-fuchsia-500/5">
+            <Card 
+              className="p-4 bg-fuchsia-500/5 cursor-pointer hover:bg-fuchsia-500/10 transition-colors"
+              onClick={() => setShowFastSpeech(!showFastSpeech)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <input
+                  type="checkbox"
+                  checked={showFastSpeech}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setShowFastSpeech(e.target.checked);
+                  }}
+                  className="mt-1"
+                />
+              </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-fuchsia-600">
                   {countFastSpeechParagraphs(1.2)}
@@ -1068,7 +1155,21 @@ const SermonViewer = () => {
               </div>
             </Card>
 
-            <Card className="p-4 bg-orange-500/5">
+            <Card 
+              className="p-4 bg-orange-500/5 cursor-pointer hover:bg-orange-500/10 transition-colors"
+              onClick={() => setShowVerbalPauses(!showVerbalPauses)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <input
+                  type="checkbox"
+                  checked={showVerbalPauses}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setShowVerbalPauses(e.target.checked);
+                  }}
+                  className="mt-1"
+                />
+              </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-orange-600">
                   {countVerbalPauses()}
@@ -1079,7 +1180,21 @@ const SermonViewer = () => {
               </div>
             </Card>
 
-            <Card className="p-4 bg-blue-500/5">
+            <Card 
+              className="p-4 bg-blue-500/5 cursor-pointer hover:bg-blue-500/10 transition-colors"
+              onClick={() => setShowSlowSpeech(!showSlowSpeech)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <input
+                  type="checkbox"
+                  checked={showSlowSpeech}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setShowSlowSpeech(e.target.checked);
+                  }}
+                  className="mt-1"
+                />
+              </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-blue-600">
                   {countSlowSpeechParagraphs(0.75)}
