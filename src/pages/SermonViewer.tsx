@@ -111,7 +111,9 @@ const SermonViewer = () => {
   const [showVerbalPauses, setShowVerbalPauses] = useState(false);
   const [showSlowSpeech, setShowSlowSpeech] = useState(false);
   const [showVolumeChanges, setShowVolumeChanges] = useState(false);
+  const [showInsiderLanguage, setShowInsiderLanguage] = useState(false);
   const [visibleFillerWords, setVisibleFillerWords] = useState<Set<string>>(new Set());
+  const [visibleInsiderTerms, setVisibleInsiderTerms] = useState<Set<string>>(new Set());
   const [fastSpeechThreshold, setFastSpeechThreshold] = useState(1.2);
   const [slowSpeechThreshold, setSlowSpeechThreshold] = useState(0.75);
   const [volumeChangeThreshold, setVolumeChangeThreshold] = useState(1.0);
@@ -370,6 +372,153 @@ const SermonViewer = () => {
       newSet.add(word);
     }
     setVisibleFillerWords(newSet);
+  };
+
+  const countInsiderLanguage = (): number => {
+    const insiderTerms = {
+      single: ['sanctification', 'justification', 'redemption', 'atonement', 'repentance', 
+               'trinity', 'gospel', 'salvation', 'saved', 'resurrection', 'discipleship',
+               'covenant', 'righteousness', 'idolatry', 'pharisee', 'sadducee', 'propitiation',
+               'disciple', 'apostle', 'shepherding', 'iniquity', 'transgression', 'missional',
+               'elders', 'deacons', 'liturgy', 'narthex', 'vestibule', 'sanctuary', 'anointed',
+               'revival', 'holiness', 'calvinist', 'arminian', 'eucharist', 'apologetics',
+               'legalism', 'benediction'],
+      phrases: ['quiet time', 'devotional time', 'prayer warrior', 'love offering', 'fellowship',
+                'covered by the blood', 'hedge of protection', 'being led', 'i feel led',
+                'doing life together', 'on fire for god', 'being called', 'baby christian',
+                'mature christian', 'servant leadership', 'missional living', 'the church',
+                'accountability partner', 'small group', 'community group', 'life group',
+                'spiritual disciplines', 'worship time', 'church home', 'church family',
+                'church plant', 'doing ministry', 'sin nature', 'spiritual gifts',
+                'spiritual warfare', 'holy spirit', 'the spirit', 'born again', 'new birth',
+                'altar call', "the lord's supper", 'passing the plate', 'worship leader',
+                'sermon series', 'asking jesus into your heart', 'personal relationship with jesus',
+                'lost people', 'the lost', 'reaching the unreached', 'the great commission',
+                'spiritual attack', 'prayer covering', 'kingdom work', 'called to ministry',
+                'faith step', 'prosperity gospel', 'fruit of the spirit', 'armor of god',
+                'kingdom of heaven', 'kingdom of god', 'lamb of god', 'ministry team',
+                'global partners', 'pastoral care', 'shepherding team', 'church polity',
+                'praise and worship', 'praise & worship', 'worship experience', 'spirit moving',
+                'worship night', 'vacation bible school', 'vbs', 'testimony', 'purity culture',
+                'accountability group', 'contemporary christian music', 'ccm']
+    };
+    
+    let termCount = 0;
+    
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      
+      // Check phrases first
+      insiderTerms.phrases.forEach(term => {
+        const regex = new RegExp(`\\b${term.replace(/\s+/g, '\\s+').replace(/'/g, "\\'")}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          termCount += matches.length;
+        }
+      });
+      
+      // Then check single words
+      insiderTerms.single.forEach(term => {
+        const regex = new RegExp(`\\b${term}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          termCount += matches.length;
+        }
+      });
+    });
+    
+    return termCount;
+  };
+
+  const getTopInsiderTerms = (): { word: string; count: number; color: string }[] => {
+    const insiderTerms = {
+      single: ['sanctification', 'justification', 'redemption', 'atonement', 'repentance', 
+               'trinity', 'gospel', 'salvation', 'saved', 'resurrection', 'discipleship',
+               'covenant', 'righteousness', 'idolatry', 'pharisee', 'sadducee', 'propitiation',
+               'disciple', 'apostle', 'shepherding', 'iniquity', 'transgression', 'missional',
+               'elders', 'deacons', 'liturgy', 'narthex', 'vestibule', 'sanctuary', 'anointed',
+               'revival', 'holiness', 'calvinist', 'arminian', 'eucharist', 'apologetics',
+               'legalism', 'benediction'],
+      phrases: ['quiet time', 'devotional time', 'prayer warrior', 'love offering', 'fellowship',
+                'covered by the blood', 'hedge of protection', 'being led', 'i feel led',
+                'doing life together', 'on fire for god', 'being called', 'baby christian',
+                'mature christian', 'servant leadership', 'missional living', 'the church',
+                'accountability partner', 'small group', 'community group', 'life group',
+                'spiritual disciplines', 'worship time', 'church home', 'church family',
+                'church plant', 'doing ministry', 'sin nature', 'spiritual gifts',
+                'spiritual warfare', 'holy spirit', 'the spirit', 'born again', 'new birth',
+                'altar call', "the lord's supper", 'passing the plate', 'worship leader',
+                'sermon series', 'asking jesus into your heart', 'personal relationship with jesus',
+                'lost people', 'the lost', 'reaching the unreached', 'the great commission',
+                'spiritual attack', 'prayer covering', 'kingdom work', 'called to ministry',
+                'faith step', 'prosperity gospel', 'fruit of the spirit', 'armor of god',
+                'kingdom of heaven', 'kingdom of god', 'lamb of god', 'ministry team',
+                'global partners', 'pastoral care', 'shepherding team', 'church polity',
+                'praise and worship', 'praise & worship', 'worship experience', 'spirit moving',
+                'worship night', 'vacation bible school', 'vbs', 'testimony', 'purity culture',
+                'accountability group', 'contemporary christian music', 'ccm']
+    };
+    
+    const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd']; // purple variations
+    const termCounts: { [key: string]: number } = {};
+    
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      
+      // Check phrases first
+      insiderTerms.phrases.forEach(term => {
+        const regex = new RegExp(`\\b${term.replace(/\s+/g, '\\s+').replace(/'/g, "\\'")}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          termCounts[term] = (termCounts[term] || 0) + matches.length;
+        }
+      });
+      
+      // Then check single words
+      insiderTerms.single.forEach(term => {
+        const regex = new RegExp(`\\b${term}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          termCounts[term] = (termCounts[term] || 0) + matches.length;
+        }
+      });
+    });
+    
+    return Object.entries(termCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map((entry, idx) => ({
+        word: entry[0],
+        count: entry[1],
+        color: colors[idx]
+      }));
+  };
+
+  const getInsiderTermTimestamps = (term: string): { start: number; end: number }[] => {
+    const timestamps: { start: number; end: number }[] = [];
+    
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      const regex = new RegExp(`\\b${term.replace(/\s+/g, '\\s+').replace(/'/g, "\\'")}\\b`, 'gi');
+      if (regex.test(text)) {
+        timestamps.push({
+          start: sentence.start_time_ms,
+          end: sentence.end_time_ms
+        });
+      }
+    });
+    
+    return timestamps;
+  };
+
+  const toggleInsiderTerm = (term: string) => {
+    const newSet = new Set(visibleInsiderTerms);
+    if (newSet.has(term)) {
+      newSet.delete(term);
+    } else {
+      newSet.add(term);
+    }
+    setVisibleInsiderTerms(newSet);
   };
 
   const countSlowSpeechParagraphs = (threshold: number = 0.75): number => {
@@ -1265,6 +1414,30 @@ const SermonViewer = () => {
                             />
                           );
                         })}
+                        
+                        {/* Insider language overlays */}
+                        {getTopInsiderTerms().map((term) => {
+                          if (!visibleInsiderTerms.has(term.word)) return null;
+                          
+                          return getInsiderTermTimestamps(term.word).map((timestamp, idx) => {
+                            const left = (timestamp.start / totalDuration) * 100;
+                            const width = ((timestamp.end - timestamp.start) / totalDuration) * 100;
+                            
+                            return (
+                              <div
+                                key={`insider-${term.word}-${idx}`}
+                                className="absolute h-full border-t-2 border-b-2"
+                                style={{
+                                  left: `${left}%`,
+                                  width: `${width}%`,
+                                  backgroundColor: `${term.color}50`,
+                                  borderColor: term.color,
+                                }}
+                                title={`"${term.word}" at ${Math.floor(timestamp.start / 1000 / 60)}:${String(Math.floor((timestamp.start / 1000) % 60)).padStart(2, "0")}`}
+                              />
+                            );
+                          });
+                        })}
                       </>
                     );
                   })()}
@@ -1328,6 +1501,18 @@ const SermonViewer = () => {
                 <div className="w-4 h-2 bg-emerald-500/50 border-t border-b border-emerald-600 rounded" />
                 <span>Volume Changes</span>
               </div>
+              {getTopInsiderTerms().map((term) => (
+                <div key={term.word} className="flex items-center gap-2">
+                  <div 
+                    className="w-4 h-2 border-t border-b rounded" 
+                    style={{
+                      backgroundColor: `${term.color}50`,
+                      borderColor: term.color
+                    }}
+                  />
+                  <span className="capitalize">{term.word}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -1342,7 +1527,7 @@ const SermonViewer = () => {
         {/* Sermon Dashboard */}
         <Card className="mb-6 p-6">
           <h2 className="text-xl font-semibold mb-4">Sermon Analytics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="p-4 bg-primary/5">
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-primary">
@@ -1500,6 +1685,44 @@ const SermonViewer = () => {
                   step={0.1}
                   className="w-full"
                 />
+              </div>
+            </Card>
+
+            <Card 
+              className="p-4 bg-purple-500/5"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-sm font-medium text-purple-700">Insider Language</h3>
+              </div>
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="text-3xl font-bold text-purple-600">
+                  {countInsiderLanguage()}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Churchy Terms Used
+                </div>
+              </div>
+              <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                <div className="text-xs text-muted-foreground mb-2">
+                  <p className="font-medium">Top 3 Church Terms:</p>
+                  <p className="mt-1 text-xs opacity-80">May be unclear to unchurched guests</p>
+                </div>
+                {getTopInsiderTerms().map((term) => (
+                  <div key={term.word} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={visibleInsiderTerms.has(term.word)}
+                        onCheckedChange={() => toggleInsiderTerm(term.word)}
+                      />
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: term.color }}
+                      />
+                      <span className="text-sm capitalize">{term.word}</span>
+                    </div>
+                    <span className="text-sm font-medium">{term.count}</span>
+                  </div>
+                ))}
               </div>
             </Card>
           </div>
