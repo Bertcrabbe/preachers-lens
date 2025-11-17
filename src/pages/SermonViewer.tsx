@@ -452,18 +452,26 @@ const SermonViewer = () => {
 
       for (const comment of paragraphComments) {
         const commentStart = comment.start_time_ms / 1000;
+        const commentEnd = comment.end_time_ms / 1000;
         
         // Play sermon segment before this comment
         if (commentStart > currentTime) {
           await playSermonSegment(currentTime, commentStart);
-          await new Promise(resolve => setTimeout(resolve, 200)); // Gap before commentary
+          await new Promise(resolve => setTimeout(resolve, 300)); // Gap before commentary
         }
 
-        // Play the comment (sermon is already paused)
-        await playCommentAudio(comment.audio_url!);
-        await new Promise(resolve => setTimeout(resolve, 200)); // Gap after commentary
+        // Ensure sermon is fully stopped before playing comment
+        if (audioRef.current) {
+          audioRef.current.pause();
+          setPlaying(false);
+        }
 
-        currentTime = comment.end_time_ms / 1000;
+        // Play the comment audio
+        await playCommentAudio(comment.audio_url!);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Gap after commentary
+
+        // Resume from where the comment ends
+        currentTime = commentEnd;
       }
 
       // Play remaining sermon segment after last comment
