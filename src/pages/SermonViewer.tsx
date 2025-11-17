@@ -29,6 +29,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { combineAudioFiles } from "@/utils/audioCombiner";
+import { Progress } from "@/components/ui/progress";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +68,7 @@ interface Comment {
   comment_text: string;
   created_at: string;
   rule_id?: string | null;
+  audio_url?: string | null;
   evaluation_rules?: Rule;
 }
 
@@ -93,6 +96,8 @@ const SermonViewer = () => {
   const [commentType, setCommentType] = useState<"text" | "audio">("text");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [combiningAudio, setCombiningAudio] = useState(false);
+  const [combineProgress, setCombineProgress] = useState(0);
+  const [combineStatus, setCombineStatus] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -330,27 +335,64 @@ const SermonViewer = () => {
   };
 
   const handleCombineAudio = async () => {
-    setCombiningAudio(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("combine-audio", {
-        body: { sermonId: id },
-      });
-
-      if (error) throw error;
-
+    if (!sermon || !audioUrl) {
       toast({
-        title: "Audio export created",
-        description: "Your combined audio MP3 is ready to download",
+        title: "Error",
+        description: "Sermon audio not loaded",
+        variant: "destructive",
       });
+      return;
+    }
+
+    setCombiningAudio(true);
+    setCombineProgress(0);
+    setCombineStatus("Starting...");
+
+    try {
+      // Get authenticated URLs for audio comments
+      const audioComments: { url: string; timestamp: number }[] = [];
+      
+      for (const comment of comments.filter(c => c.audio_url)) {
+        const { data: urlData } = await supabase.storage
+          .from("sermon-comments-audio")
+          .createSignedUrl(comment.audio_url!, 3600);
+        
+        if (urlData?.signedUrl) {
+          audioComments.push({
+            url: urlData.signedUrl,
+            timestamp: comment.start_time_ms
+          });
+        }
+      }
+
+      if (audioComments.length === 0) {
+        throw new Error("No audio comments found");
+      }
+
+      // Combine audio on client side
+      const combinedBlob = await combineAudioFiles(
+        audioUrl,
+        audioComments,
+        (progress, status) => {
+          setCombineProgress(progress);
+          setCombineStatus(status);
+        }
+      );
 
       // Download the combined audio
-      if (data.audioUrl) {
-        const link = document.createElement("a");
-        link.href = data.audioUrl;
-        link.download = data.fileName || "combined_sermon.mp3";
-        link.click();
-      }
+      const url = URL.createObjectURL(combinedBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${sermon.title || 'sermon'}_combined.wav`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Combined audio downloaded successfully",
+      });
     } catch (error: any) {
+      console.error("Combine audio error:", error);
       toast({
         title: "Export failed",
         description: error.message,
@@ -358,6 +400,8 @@ const SermonViewer = () => {
       });
     } finally {
       setCombiningAudio(false);
+      setCombineProgress(0);
+      setCombineStatus("");
     }
   };
 
@@ -451,7 +495,7 @@ const SermonViewer = () => {
             <Button
               variant="outline"
               onClick={handleCombineAudio}
-              disabled={combiningAudio}
+              disabled={combiningAudio || comments.filter(c => c.audio_url).length === 0}
             >
               {combiningAudio ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -533,6 +577,13 @@ const SermonViewer = () => {
               </div>
             </div>
           </div>
+
+          {combiningAudio && (
+            <div className="mt-4 space-y-2">
+              <Progress value={combineProgress} />
+              <p className="text-sm text-muted-foreground text-center">{combineStatus}</p>
+            </div>
+          )}
         </Card>
 
         <Card className="p-6">
