@@ -176,6 +176,35 @@ const SermonViewer = () => {
     return avgAmplitude < (overallAverage * 0.5);
   };
 
+  const calculateSpeechRate = (paragraph: Sentence[]): number => {
+    const firstSentence = paragraph[0];
+    const lastSentence = paragraph[paragraph.length - 1];
+    const durationSeconds = (lastSentence.end_time_ms - firstSentence.start_time_ms) / 1000;
+    const text = paragraph.map(s => s.sentence_text).join(" ");
+    const wordCount = text.split(/\s+/).length;
+    
+    // Words per minute
+    return (wordCount / durationSeconds) * 60;
+  };
+
+  const getAverageSpeechRate = (): number => {
+    if (sentences.length === 0) return 0;
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const rates = paragraphs.map(p => calculateSpeechRate(p));
+    return rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
+  };
+
+  const hasFastSpeechRate = (paragraph: Sentence[]): boolean => {
+    if (sentences.length === 0) return false;
+    
+    const paragraphRate = calculateSpeechRate(paragraph);
+    const averageRate = getAverageSpeechRate();
+    
+    // Consider it fast if it's more than 20% faster than average
+    return paragraphRate > averageRate * 1.2;
+  };
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -830,8 +859,17 @@ const SermonViewer = () => {
                       .filter(c => c.audio_url)
                       .sort((a, b) => a.start_time_ms - b.start_time_ms);
                     
-                    const segments: Array<{ start: number; end: number; type: 'sermon' | 'comment'; comment?: Comment }> = [];
+                    const segments: Array<{ start: number; end: number; type: 'sermon' | 'comment' | 'fast-speech'; comment?: Comment }> = [];
                     let currentPos = 0;
+                    
+                    // Get fast speech paragraphs
+                    const paragraphs = groupIntoParagraphs(sentences);
+                    const fastSpeechRanges = paragraphs
+                      .filter(p => hasFastSpeechRate(p))
+                      .map(p => ({
+                        start: p[0].start_time_ms,
+                        end: p[p.length - 1].end_time_ms
+                      }));
                     
                     sortedComments.forEach(comment => {
                       // Add sermon segment before comment
@@ -861,28 +899,50 @@ const SermonViewer = () => {
                       });
                     }
                     
-                    return segments.map((segment, idx) => {
-                      const left = (segment.start / totalDuration) * 100;
-                      const width = segment.type === 'comment' 
-                        ? 0.5 // Fixed narrow width for comment markers
-                        : ((segment.end - segment.start) / totalDuration) * 100;
-                      
-                      return (
-                        <div
-                          key={idx}
-                          className={`absolute h-full transition-opacity ${
-                            segment.type === 'sermon' 
-                              ? 'bg-green-500/60' 
-                              : 'bg-red-500 border-l-2 border-r-2 border-red-700'
-                          }`}
-                          style={{
-                            left: `${left}%`,
-                            width: segment.type === 'comment' ? '2px' : `${width}%`,
-                          }}
-                          title={segment.type === 'comment' ? `Commentary at ${Math.floor(segment.start / 1000 / 60)}:${String(Math.floor((segment.start / 1000) % 60)).padStart(2, "0")}` : undefined}
-                        />
-                      );
-                    });
+                    return (
+                      <>
+                        {segments.map((segment, idx) => {
+                          const left = (segment.start / totalDuration) * 100;
+                          const width = segment.type === 'comment' 
+                            ? 0.5 // Fixed narrow width for comment markers
+                            : ((segment.end - segment.start) / totalDuration) * 100;
+                          
+                          return (
+                            <div
+                              key={idx}
+                              className={`absolute h-full transition-opacity ${
+                                segment.type === 'sermon' 
+                                  ? 'bg-green-500/60' 
+                                  : 'bg-red-500 border-l-2 border-r-2 border-red-700'
+                              }`}
+                              style={{
+                                left: `${left}%`,
+                                width: segment.type === 'comment' ? '2px' : `${width}%`,
+                              }}
+                              title={segment.type === 'comment' ? `Commentary at ${Math.floor(segment.start / 1000 / 60)}:${String(Math.floor((segment.start / 1000) % 60)).padStart(2, "0")}` : undefined}
+                            />
+                          );
+                        })}
+                        
+                        {/* Fast speech overlays */}
+                        {fastSpeechRanges.map((range, idx) => {
+                          const left = (range.start / totalDuration) * 100;
+                          const width = ((range.end - range.start) / totalDuration) * 100;
+                          
+                          return (
+                            <div
+                              key={`fast-${idx}`}
+                              className="absolute h-full bg-fuchsia-500/50 border-t-2 border-b-2 border-fuchsia-600"
+                              style={{
+                                left: `${left}%`,
+                                width: `${width}%`,
+                              }}
+                              title={`Fast speech at ${Math.floor(range.start / 1000 / 60)}:${String(Math.floor((range.start / 1000) % 60)).padStart(2, "0")}`}
+                            />
+                          );
+                        })}
+                      </>
+                    );
                   })()}
                   
                   {/* Playhead */}
@@ -923,6 +983,10 @@ const SermonViewer = () => {
               <div className="flex items-center gap-2">
                 <div className="w-0.5 h-4 bg-red-500" />
                 <span>Commentary Insertion</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 bg-fuchsia-500/50 border-t border-b border-fuchsia-600 rounded" />
+                <span>Fast Speech</span>
               </div>
             </div>
           </div>
@@ -1011,6 +1075,7 @@ const SermonViewer = () => {
                   c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.end_time_ms <= lastSentence.end_time_ms
                 );
                 const hasPeak = paragraphHasPeak(paragraph);
+                const isFastSpeech = hasFastSpeechRate(paragraph);
                 return (
                   <div
                     key={idx}
@@ -1019,6 +1084,8 @@ const SermonViewer = () => {
                         ? "bg-primary/10 border border-primary"
                         : previewingParagraph === idx
                         ? "bg-accent/20 border border-accent"
+                        : isFastSpeech
+                        ? "bg-fuchsia-500/20 border-2 border-fuchsia-500 hover:bg-fuchsia-500/30"
                         : hasPeak
                         ? "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30"
                         : "hover:bg-muted"
@@ -1031,7 +1098,12 @@ const SermonViewer = () => {
                         Has Commentary
                       </Badge>
                     )}
-                    {hasPeak && !hasAudioComment && (
+                    {isFastSpeech && !hasAudioComment && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-fuchsia-500/20 border-fuchsia-500">
+                        ⚡ Fast Speech
+                      </Badge>
+                    )}
+                    {hasPeak && !hasAudioComment && !isFastSpeech && (
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-orange-500/20 border-orange-500">
                         🔉 Low Volume
                       </Badge>
