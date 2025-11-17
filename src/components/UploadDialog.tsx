@@ -77,7 +77,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
         .from("sermons")
         .getPublicUrl(fileName);
 
-      const { error: dbError } = await supabase
+      const { data: sermon, error: dbError } = await supabase
         .from("sermons")
         .insert({
           user_id: user.id,
@@ -85,9 +85,22 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
           file_url: fileName,
           file_type: "audio",
           transcription_status: "pending",
-        });
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
+
+      // Trigger transcription via edge function
+      if (sermon) {
+        const { error: transcribeError } = await supabase.functions.invoke('transcribe-sermon', {
+          body: { sermonId: sermon.id }
+        });
+
+        if (transcribeError) {
+          console.error('Transcription trigger failed:', transcribeError);
+        }
+      }
 
       toast({
         title: "Upload successful",
