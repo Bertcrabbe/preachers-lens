@@ -390,23 +390,41 @@ const SermonViewer = () => {
             return;
           }
 
+          // Ensure sermon audio is ready
+          audioRef.current.pause();
           audioRef.current.currentTime = startTime;
-          audioRef.current.play();
+          
+          const playPromise = audioRef.current.play();
           setPlaying(true);
 
           const checkEnd = setInterval(() => {
             if (!audioRef.current || audioRef.current.currentTime >= endTime) {
-              audioRef.current?.pause();
+              if (audioRef.current) {
+                audioRef.current.pause();
+              }
               setPlaying(false);
               clearInterval(checkEnd);
               resolve();
             }
           }, 50);
+          
+          // Handle play promise rejection
+          playPromise?.catch(() => {
+            clearInterval(checkEnd);
+            setPlaying(false);
+            resolve();
+          });
         });
       };
 
       // Function to play a comment audio
       const playCommentAudio = async (audioUrl: string): Promise<void> => {
+        // Ensure sermon is fully stopped
+        if (audioRef.current) {
+          audioRef.current.pause();
+          setPlaying(false);
+        }
+        
         return new Promise(async (resolve) => {
           const { data: urlData } = await supabase.storage
             .from("sermon-comments-audio")
@@ -420,7 +438,12 @@ const SermonViewer = () => {
           const audio = new Audio(urlData.signedUrl);
           audio.onended = () => resolve();
           audio.onerror = () => resolve();
-          await audio.play();
+          
+          try {
+            await audio.play();
+          } catch (error) {
+            resolve();
+          }
         });
       };
 
@@ -433,14 +456,14 @@ const SermonViewer = () => {
         // Play sermon segment before this comment
         if (commentStart > currentTime) {
           await playSermonSegment(currentTime, commentStart);
-          await new Promise(resolve => setTimeout(resolve, 100)); // Small gap
+          await new Promise(resolve => setTimeout(resolve, 200)); // Gap before commentary
         }
 
-        // Play the comment
+        // Play the comment (sermon is already paused)
         await playCommentAudio(comment.audio_url!);
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small gap
+        await new Promise(resolve => setTimeout(resolve, 200)); // Gap after commentary
 
-        currentTime = commentStart;
+        currentTime = comment.end_time_ms / 1000;
       }
 
       // Play remaining sermon segment after last comment
