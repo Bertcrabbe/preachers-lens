@@ -14,12 +14,46 @@ export type Database = {
   }
   public: {
     Tables: {
+      evaluation_rules: {
+        Row: {
+          color: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          prompt: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          prompt: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          prompt?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sermon_comments: {
         Row: {
           comment_text: string
           created_at: string
           end_time_ms: number
           id: string
+          rule_id: string | null
           sermon_id: string
           start_time_ms: number
           updated_at: string
@@ -30,6 +64,7 @@ export type Database = {
           created_at?: string
           end_time_ms: number
           id?: string
+          rule_id?: string | null
           sermon_id: string
           start_time_ms: number
           updated_at?: string
@@ -40,12 +75,20 @@ export type Database = {
           created_at?: string
           end_time_ms?: number
           id?: string
+          rule_id?: string | null
           sermon_id?: string
           start_time_ms?: number
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sermon_comments_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_rules"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sermon_comments_sermon_id_fkey"
             columns: ["sermon_id"]

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.export-sermon]
 verify_jwt = true
+
+[functions.evaluate-sermon]
+verify_jwt = true

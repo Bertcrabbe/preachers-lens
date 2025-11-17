@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Upload, LogOut, FileText, Clock, Loader2 } from "lucide-react";
+import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks } from "lucide-react";
 import { UploadDialog } from "@/components/UploadDialog";
 
 interface Sermon {
@@ -118,10 +118,16 @@ const Dashboard = () => {
             <h2 className="text-2xl font-bold">My Sermons</h2>
             <p className="text-muted-foreground">Upload and review sermon transcriptions</p>
           </div>
-          <Button onClick={() => setUploadOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Sermon
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/rules")} variant="outline">
+              <ListChecks className="mr-2 h-4 w-4" />
+              Evaluation Rules
+            </Button>
+            <Button onClick={() => setUploadOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Sermon
+            </Button>
+          </div>
         </div>
 
         {loading ? (
