@@ -49,6 +49,7 @@ export type Database = {
       }
       sermon_comments: {
         Row: {
+          audio_url: string | null
           comment_text: string
           created_at: string
           end_time_ms: number
@@ -60,6 +61,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_url?: string | null
           comment_text: string
           created_at?: string
           end_time_ms: number
@@ -71,6 +73,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_url?: string | null
           comment_text?: string
           created_at?: string
           end_time_ms?: number
