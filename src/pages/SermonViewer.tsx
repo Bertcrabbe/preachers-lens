@@ -201,8 +201,8 @@ const SermonViewer = () => {
     const paragraphRate = calculateSpeechRate(paragraph);
     const averageRate = getAverageSpeechRate();
     
-    // Consider it fast if it's more than 20% faster than average
-    return paragraphRate > averageRate * 1.2;
+    // Consider it fast if it's 1.5x faster than average
+    return paragraphRate > averageRate * 1.5;
   };
 
   const checkAuth = async () => {
