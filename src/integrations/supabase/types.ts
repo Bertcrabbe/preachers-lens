@@ -14,7 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      sermon_sentences: {
+        Row: {
+          created_at: string
+          end_time_ms: number
+          id: string
+          order_index: number
+          sentence_text: string
+          sermon_id: string
+          start_time_ms: number
+        }
+        Insert: {
+          created_at?: string
+          end_time_ms: number
+          id?: string
+          order_index: number
+          sentence_text: string
+          sermon_id: string
+          start_time_ms: number
+        }
+        Update: {
+          created_at?: string
+          end_time_ms?: number
+          id?: string
+          order_index?: number
+          sentence_text?: string
+          sermon_id?: string
+          start_time_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sermon_sentences_sermon_id_fkey"
+            columns: ["sermon_id"]
+            isOneToOne: false
+            referencedRelation: "sermons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sermons: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          error_message: string | null
+          file_type: string
+          file_url: string
+          id: string
+          title: string | null
+          transcription_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          file_type?: string
+          file_url: string
+          id?: string
+          title?: string | null
+          transcription_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          title?: string | null
+          transcription_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
