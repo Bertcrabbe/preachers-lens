@@ -720,27 +720,122 @@ const SermonViewer = () => {
         )}
 
         <Card className="mb-6 p-6">
-          <div className="flex items-center gap-4">
-            <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null}>
-              {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-            </Button>
-            <div className="flex-1">
-              <audio
-                ref={audioRef}
-                src={audioUrl}
-                onTimeUpdate={handleTimeUpdate}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-              />
-              <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{
-                    width: sermon.duration_seconds
-                      ? `${(currentTime / (sermon.duration_seconds * 1000)) * 100}%`
-                      : "0%",
-                  }}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null}>
+                {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </Button>
+              <div className="flex-1 space-y-2">
+                <audio
+                  ref={audioRef}
+                  src={audioUrl}
+                  onTimeUpdate={handleTimeUpdate}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
                 />
+                
+                {/* Timeline with sermon and comment segments */}
+                <div className="relative h-12 bg-secondary/30 rounded-lg overflow-hidden border border-border">
+                  {/* Sermon segments (green) and comment segments (red) */}
+                  {sermon.duration_seconds && (() => {
+                    const totalDuration = sermon.duration_seconds * 1000;
+                    const sortedComments = [...comments]
+                      .filter(c => c.audio_url)
+                      .sort((a, b) => a.start_time_ms - b.start_time_ms);
+                    
+                    const segments: Array<{ start: number; end: number; type: 'sermon' | 'comment'; comment?: Comment }> = [];
+                    let currentPos = 0;
+                    
+                    sortedComments.forEach(comment => {
+                      // Add sermon segment before comment
+                      if (comment.start_time_ms > currentPos) {
+                        segments.push({
+                          start: currentPos,
+                          end: comment.start_time_ms,
+                          type: 'sermon'
+                        });
+                      }
+                      // Add comment segment
+                      segments.push({
+                        start: comment.start_time_ms,
+                        end: comment.start_time_ms, // Comments are insertions, not replacements
+                        type: 'comment',
+                        comment
+                      });
+                      currentPos = comment.start_time_ms;
+                    });
+                    
+                    // Add final sermon segment
+                    if (currentPos < totalDuration) {
+                      segments.push({
+                        start: currentPos,
+                        end: totalDuration,
+                        type: 'sermon'
+                      });
+                    }
+                    
+                    return segments.map((segment, idx) => {
+                      const left = (segment.start / totalDuration) * 100;
+                      const width = segment.type === 'comment' 
+                        ? 0.5 // Fixed narrow width for comment markers
+                        : ((segment.end - segment.start) / totalDuration) * 100;
+                      
+                      return (
+                        <div
+                          key={idx}
+                          className={`absolute h-full transition-opacity ${
+                            segment.type === 'sermon' 
+                              ? 'bg-green-500/60' 
+                              : 'bg-red-500 border-l-2 border-r-2 border-red-700'
+                          }`}
+                          style={{
+                            left: `${left}%`,
+                            width: segment.type === 'comment' ? '2px' : `${width}%`,
+                          }}
+                          title={segment.type === 'comment' ? `Commentary at ${Math.floor(segment.start / 1000 / 60)}:${String(Math.floor((segment.start / 1000) % 60)).padStart(2, "0")}` : undefined}
+                        />
+                      );
+                    });
+                  })()}
+                  
+                  {/* Playhead */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-primary z-10"
+                    style={{
+                      left: sermon.duration_seconds
+                        ? `${(currentTime / (sermon.duration_seconds * 1000)) * 100}%`
+                        : "0%",
+                    }}
+                  >
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full" />
+                  </div>
+                </div>
+
+                {/* Time display */}
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    {Math.floor(currentTime / 1000 / 60)}:
+                    {String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")}
+                  </span>
+                  <span>
+                    {sermon.duration_seconds 
+                      ? `${Math.floor(sermon.duration_seconds / 60)}:${String(Math.floor(sermon.duration_seconds % 60)).padStart(2, "0")}`
+                      : "0:00"
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 bg-green-500/60 rounded" />
+                <span>Sermon Audio</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-0.5 h-4 bg-red-500" />
+                <span>Commentary Insertion</span>
               </div>
             </div>
           </div>
