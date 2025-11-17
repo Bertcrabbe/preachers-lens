@@ -27,6 +27,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { AudioRecorder } from "@/components/AudioRecorder";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,6 +90,9 @@ const SermonViewer = () => {
   const [evaluationDialogOpen, setEvaluationDialogOpen] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState<string[]>([]);
   const [evaluating, setEvaluating] = useState(false);
+  const [commentType, setCommentType] = useState<"text" | "audio">("text");
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [combiningAudio, setCombiningAudio] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -278,11 +283,24 @@ const SermonViewer = () => {
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !selectedTimeRange) return;
+    if ((!newComment.trim() && !audioBlob) || !selectedTimeRange) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      let audioUrl = null;
+
+      // Upload audio if present
+      if (audioBlob) {
+        const audioPath = `${user.id}/${crypto.randomUUID()}.webm`;
+        const { error: uploadError } = await supabase.storage
+          .from("sermon-comments-audio")
+          .upload(audioPath, audioBlob);
+
+        if (uploadError) throw uploadError;
+        audioUrl = audioPath;
+      }
 
       const { error } = await supabase
         .from("sermon_comments")
@@ -291,7 +309,8 @@ const SermonViewer = () => {
           user_id: user.id,
           start_time_ms: selectedTimeRange.start,
           end_time_ms: selectedTimeRange.end,
-          comment_text: newComment,
+          comment_text: newComment || "Audio comment",
+          audio_url: audioUrl,
         }]);
 
       if (error) throw error;
@@ -299,6 +318,7 @@ const SermonViewer = () => {
       toast({ title: "Comment added successfully" });
       setCommentDialogOpen(false);
       setNewComment("");
+      setAudioBlob(null);
       fetchComments();
     } catch (error: any) {
       toast({
@@ -306,6 +326,35 @@ const SermonViewer = () => {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCombineAudio = async () => {
+    setCombiningAudio(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("combine-audio", {
+        body: { sermonId: id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Audio export created",
+        description: "Your combined audio has been generated",
+      });
+
+      // Open the manifest URL
+      if (data.manifestUrl) {
+        window.open(data.manifestUrl, "_blank");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Export failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setCombiningAudio(false);
     }
   };
 
@@ -396,6 +445,18 @@ const SermonViewer = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCombineAudio}
+              disabled={combiningAudio}
+            >
+              {combiningAudio ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Combine Audio
+            </Button>
             <Button
               variant="outline"
               onClick={() => setEvaluationDialogOpen(true)}
@@ -619,20 +680,44 @@ const SermonViewer = () => {
           <DialogHeader>
             <DialogTitle>Add Comment</DialogTitle>
             <DialogDescription>
-              Add a comment for this section of the sermon
+              Add a text or audio comment for this section
             </DialogDescription>
           </DialogHeader>
-          <Textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Type your comment here..."
-            className="min-h-[100px]"
-          />
+          
+          <Tabs value={commentType} onValueChange={(v) => setCommentType(v as "text" | "audio")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="text">Text</TabsTrigger>
+              <TabsTrigger value="audio">Audio</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="text" className="space-y-4">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Type your comment here..."
+                className="min-h-[100px]"
+              />
+            </TabsContent>
+            
+            <TabsContent value="audio" className="space-y-4">
+              <AudioRecorder
+                onRecordingComplete={(blob) => setAudioBlob(blob)}
+                onClear={() => setAudioBlob(null)}
+              />
+            </TabsContent>
+          </Tabs>
+
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setCommentDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setCommentDialogOpen(false);
+              setNewComment("");
+              setAudioBlob(null);
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleAddComment}>Add Comment</Button>
+            <Button onClick={handleAddComment} disabled={!newComment.trim() && !audioBlob}>
+              Add Comment
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
