@@ -447,14 +447,13 @@ const SermonViewer = () => {
         });
       };
 
-      // Play segments sequentially
+      // Play segments sequentially - inserting comments, not replacing sermon sections
       let currentTime = paragraphStart;
 
       for (const comment of paragraphComments) {
         const commentStart = comment.start_time_ms / 1000;
-        const commentEnd = comment.end_time_ms / 1000;
         
-        // Play sermon segment before this comment
+        // Play sermon segment up to this comment
         if (commentStart > currentTime) {
           await playSermonSegment(currentTime, commentStart);
           await new Promise(resolve => setTimeout(resolve, 300)); // Gap before commentary
@@ -466,12 +465,13 @@ const SermonViewer = () => {
           setPlaying(false);
         }
 
-        // Play the comment audio
+        // Play the comment audio (inserted at this point)
         await playCommentAudio(comment.audio_url!);
         await new Promise(resolve => setTimeout(resolve, 300)); // Gap after commentary
 
-        // Resume from where the comment ends
-        currentTime = commentEnd;
+        // Resume sermon from where we paused (not skipping ahead)
+        // This way the comment is "inserted" rather than replacing the sermon audio
+        currentTime = commentStart;
       }
 
       // Play remaining sermon segment after last comment
