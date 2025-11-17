@@ -735,7 +735,17 @@ const SermonViewer = () => {
                 />
                 
                 {/* Timeline with sermon and comment segments */}
-                <div className="relative h-12 bg-secondary/30 rounded-lg overflow-hidden border border-border">
+                <div 
+                  className="relative h-12 bg-secondary/30 rounded-lg overflow-hidden border border-border cursor-pointer"
+                  onClick={(e) => {
+                    if (!sermon.duration_seconds) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = clickX / rect.width;
+                    const newTime = percentage * sermon.duration_seconds * 1000;
+                    seekTo(newTime);
+                  }}
+                >
                   {/* Sermon segments (green) and comment segments (red) */}
                   {sermon.duration_seconds && (() => {
                     const totalDuration = sermon.duration_seconds * 1000;
