@@ -340,12 +340,15 @@ const SermonViewer = () => {
 
       toast({
         title: "Audio export created",
-        description: "Your combined audio has been generated",
+        description: "Your combined audio MP3 is ready to download",
       });
 
-      // Open the manifest URL
-      if (data.manifestUrl) {
-        window.open(data.manifestUrl, "_blank");
+      // Download the combined audio
+      if (data.audioUrl) {
+        const link = document.createElement("a");
+        link.href = data.audioUrl;
+        link.download = data.fileName || "combined_sermon.mp3";
+        link.click();
       }
     } catch (error: any) {
       toast({
