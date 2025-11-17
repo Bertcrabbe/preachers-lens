@@ -28,60 +28,96 @@ export async function combineAudioFiles(
       onProgress?.(30 + (30 / commentAudios.length) * (i + 1), `Processing commentary ${i + 1}/${commentAudios.length}...`);
     }
     
-    onProgress?.(60, "Combining audio tracks...");
+    // Sort comments by timestamp
+    commentBuffers.sort((a, b) => a.timestamp - b.timestamp);
     
-    // Calculate total duration (sermon duration + all comment durations)
-    const totalDuration = sermonBuffer.duration + 
-      commentBuffers.reduce((sum, c) => sum + c.buffer.duration, 0);
+    onProgress?.(60, "Building audio segments...");
+    
+    // Calculate segments: sermon parts and commentary insertions
+    const segments: { type: 'sermon' | 'comment'; start: number; end: number; commentIndex?: number }[] = [];
+    let currentTime = 0;
+    
+    for (let i = 0; i < commentBuffers.length; i++) {
+      const comment = commentBuffers[i];
+      
+      // Add sermon segment before this comment
+      if (comment.timestamp > currentTime) {
+        segments.push({
+          type: 'sermon',
+          start: currentTime,
+          end: comment.timestamp
+        });
+      }
+      
+      // Add comment segment
+      segments.push({
+        type: 'comment',
+        start: comment.timestamp,
+        end: comment.timestamp + comment.buffer.duration,
+        commentIndex: i
+      });
+      
+      currentTime = comment.timestamp;
+    }
+    
+    // Add final sermon segment after last comment
+    if (currentTime < sermonBuffer.duration) {
+      segments.push({
+        type: 'sermon',
+        start: currentTime,
+        end: sermonBuffer.duration
+      });
+    }
+    
+    // Calculate total duration
+    const totalDuration = segments.reduce((sum, seg) => {
+      if (seg.type === 'sermon') {
+        return sum + (seg.end - seg.start);
+      } else {
+        return sum + commentBuffers[seg.commentIndex!].buffer.duration;
+      }
+    }, 0);
+    
+    onProgress?.(70, "Creating combined audio...");
     
     // Create offline context for rendering
     const offlineContext = new OfflineAudioContext(
       2, // stereo
-      Math.ceil(totalDuration * 44100), // sample rate * duration
+      Math.ceil(totalDuration * 44100),
       44100
     );
     
-    // Create and connect sermon source
-    const sermonSource = offlineContext.createBufferSource();
-    sermonSource.buffer = sermonBuffer;
+    let outputTime = 0;
     
-    // Apply gain to sermon to make room for commentary
-    const sermonGain = offlineContext.createGain();
-    sermonGain.gain.value = 0.7; // Reduce sermon volume slightly when commentary plays
-    sermonSource.connect(sermonGain);
-    sermonGain.connect(offlineContext.destination);
-    sermonSource.start(0);
-    
-    onProgress?.(70, "Inserting commentary...");
-    
-    // Create and schedule comment sources
-    for (const comment of commentBuffers) {
-      const commentSource = offlineContext.createBufferSource();
-      commentSource.buffer = comment.buffer;
-      
-      const commentGain = offlineContext.createGain();
-      commentGain.gain.value = 1.0; // Full volume for commentary
-      commentSource.connect(commentGain);
-      commentGain.connect(offlineContext.destination);
-      
-      // Start comment at its timestamp
-      commentSource.start(comment.timestamp);
-      
-      // Duck sermon audio during commentary
-      sermonGain.gain.setValueAtTime(0.7, comment.timestamp);
-      sermonGain.gain.linearRampToValueAtTime(0.3, comment.timestamp + 0.1);
-      sermonGain.gain.setValueAtTime(0.3, comment.timestamp + comment.buffer.duration);
-      sermonGain.gain.linearRampToValueAtTime(0.7, comment.timestamp + comment.buffer.duration + 0.5);
+    // Process each segment
+    for (const segment of segments) {
+      if (segment.type === 'sermon') {
+        // Copy sermon segment
+        const duration = segment.end - segment.start;
+        const source = offlineContext.createBufferSource();
+        source.buffer = sermonBuffer;
+        source.connect(offlineContext.destination);
+        source.start(outputTime, segment.start, duration);
+        outputTime += duration;
+      } else {
+        // Insert comment
+        const comment = commentBuffers[segment.commentIndex!];
+        const source = offlineContext.createBufferSource();
+        source.buffer = comment.buffer;
+        source.connect(offlineContext.destination);
+        source.start(outputTime);
+        outputTime += comment.buffer.duration;
+      }
     }
     
-    onProgress?.(80, "Rendering combined audio...");
+    onProgress?.(85, "Rendering combined audio...");
     
     // Render the combined audio
     const renderedBuffer = await offlineContext.startRendering();
     
-    onProgress?.(90, "Encoding to MP3...");
+    onProgress?.(95, "Encoding to WAV...");
     
-    // Convert to WAV format (we'll use WAV instead of MP3 for browser compatibility)
+    // Convert to WAV format
     const wavBlob = audioBufferToWav(renderedBuffer);
     
     onProgress?.(100, "Complete!");
