@@ -177,8 +177,8 @@ const SermonViewer = () => {
     const endTime = lastSentence.end_time_ms;
     const totalDuration = sermon.duration_seconds * 1000;
     
-    // Calculate overall average amplitude of the entire audio
-    const overallAverage = waveformData.reduce((sum, amp) => sum + amp, 0) / waveformData.length;
+    // Calculate baseline average volume for entire sermon
+    const baselineAverage = waveformData.reduce((sum, amp) => sum + amp, 0) / waveformData.length;
     
     // Map paragraph time range to waveform indices
     const startIdx = Math.floor((startTime / totalDuration) * waveformData.length);
@@ -186,10 +186,10 @@ const SermonViewer = () => {
     
     // Calculate average amplitude for this paragraph
     const paragraphAmplitudes = waveformData.slice(startIdx, endIdx);
-    const avgAmplitude = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
+    const paragraphAverage = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
     
-    // Consider it quiet if average amplitude is less than half the overall average
-    return avgAmplitude < (overallAverage * 0.5);
+    // Peak (quiet section) is less than 67% of baseline volume
+    return paragraphAverage < (baselineAverage * 0.67);
   };
 
   const hasSignificantVolumeChange = (paragraph: Sentence[], threshold: number): 'increase' | 'decrease' | null => {
@@ -201,8 +201,8 @@ const SermonViewer = () => {
     const endTime = lastSentence.end_time_ms;
     const totalDuration = sermon.duration_seconds * 1000;
     
-    // Calculate overall average amplitude of the entire audio
-    const overallAverage = waveformData.reduce((sum, amp) => sum + amp, 0) / waveformData.length;
+    // Calculate baseline average volume for entire sermon
+    const baselineAverage = waveformData.reduce((sum, amp) => sum + amp, 0) / waveformData.length;
     
     // Map paragraph time range to waveform indices
     const startIdx = Math.floor((startTime / totalDuration) * waveformData.length);
@@ -210,16 +210,16 @@ const SermonViewer = () => {
     
     // Calculate average amplitude for this paragraph
     const paragraphAmplitudes = waveformData.slice(startIdx, endIdx);
-    const avgAmplitude = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
+    const paragraphAverage = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
     
-    // Threshold is on a scale from -2 to +2
-    // Convert to multiplier: threshold of 1.0 means 2x louder or 0.5x quieter
-    const upperBound = overallAverage * (1 + threshold);
-    const lowerBound = overallAverage / (1 + threshold);
+    // Calculate ratio relative to baseline
+    const volumeRatio = paragraphAverage / baselineAverage;
     
-    // Check if volume is significantly higher or lower than average
-    if (avgAmplitude > upperBound) return 'increase';
-    if (avgAmplitude < lowerBound) return 'decrease';
+    // Threshold determines sensitivity (e.g., 1.5x baseline)
+    const sensitivityMultiplier = 1 + (threshold * 0.3); // Scale threshold to reasonable multiplier
+    
+    if (volumeRatio > sensitivityMultiplier) return 'increase';
+    if (volumeRatio < (1 / sensitivityMultiplier)) return 'decrease';
     return null;
   };
 
@@ -553,11 +553,10 @@ const SermonViewer = () => {
     }
     
     const paragraphs = groupIntoParagraphs(sentences);
-    const thresholds = [-2, -1, 0, 1, 2];
     const counts: { [key: number]: number } = { '-2': 0, '-1': 0, '0': 0, '1': 0, '2': 0 };
     
-    // Calculate overall average amplitude
-    const overallAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
+    // Calculate baseline average volume for entire sermon
+    const baselineAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
     
     paragraphs.forEach(paragraph => {
       const firstSentence = paragraph[0];
@@ -572,21 +571,27 @@ const SermonViewer = () => {
       const paragraphData = waveformData.slice(startIndex, endIndex);
       if (paragraphData.length === 0) return;
       
-      const avgAmplitude = paragraphData.reduce((sum, val) => sum + val, 0) / paragraphData.length;
+      const paragraphAverage = paragraphData.reduce((sum, val) => sum + val, 0) / paragraphData.length;
       
-      // Check each threshold level
-      for (const threshold of thresholds) {
-        const multiplier = 1 + Math.abs(threshold);
-        const upperBound = overallAverage * multiplier;
-        const lowerBound = overallAverage / multiplier;
-        
-        if (threshold >= 0 && avgAmplitude > upperBound) {
-          counts[threshold]++;
-          break; // Count only the highest matching threshold
-        } else if (threshold < 0 && avgAmplitude < lowerBound) {
-          counts[threshold]++;
-          break; // Count only the lowest matching threshold
-        }
+      // Calculate the ratio of paragraph volume to baseline volume
+      const volumeRatio = paragraphAverage / baselineAverage;
+      
+      // Categorize based on how much louder/quieter relative to baseline
+      // +2: 2x or more louder
+      // +1: 1.5x to 2x louder  
+      // 0: 0.67x to 1.5x (baseline range)
+      // -1: 0.5x to 0.67x quieter
+      // -2: 0.5x or less quieter
+      if (volumeRatio >= 2.0) {
+        counts[2]++;
+      } else if (volumeRatio >= 1.5) {
+        counts[1]++;
+      } else if (volumeRatio <= 0.5) {
+        counts[-2]++;
+      } else if (volumeRatio <= 0.67) {
+        counts[-1]++;
+      } else {
+        counts[0]++;
       }
     });
     
