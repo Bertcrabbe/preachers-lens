@@ -98,6 +98,10 @@ const SermonViewer = () => {
   const [combiningAudio, setCombiningAudio] = useState(false);
   const [combineProgress, setCombineProgress] = useState(0);
   const [combineStatus, setCombineStatus] = useState("");
+  const [previewMode, setPreviewMode] = useState(false);
+  const [previewAudioUrl, setPreviewAudioUrl] = useState<string>("");
+  const previewAudioRef = useRef<HTMLAudioElement>(null);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -334,7 +338,7 @@ const SermonViewer = () => {
     }
   };
 
-  const handleCombineAudio = async () => {
+  const handlePreviewAudio = async () => {
     if (!sermon || !audioUrl) {
       toast({
         title: "Error",
@@ -346,7 +350,7 @@ const SermonViewer = () => {
 
     setCombiningAudio(true);
     setCombineProgress(0);
-    setCombineStatus("Starting...");
+    setCombineStatus("Starting preview...");
 
     try {
       // Get authenticated URLs for audio comments
@@ -379,22 +383,23 @@ const SermonViewer = () => {
         }
       );
 
-      // Download the combined audio
+      // Create URL for preview
+      if (previewAudioUrl) {
+        URL.revokeObjectURL(previewAudioUrl);
+      }
+      
       const url = URL.createObjectURL(combinedBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${sermon.title || 'sermon'}_combined.wav`;
-      link.click();
-      URL.revokeObjectURL(url);
+      setPreviewAudioUrl(url);
+      setPreviewMode(true);
 
       toast({
-        title: "Success",
-        description: "Combined audio downloaded successfully",
+        title: "Preview ready",
+        description: "You can now preview the combined audio",
       });
     } catch (error: any) {
-      console.error("Combine audio error:", error);
+      console.error("Preview audio error:", error);
       toast({
-        title: "Export failed",
+        title: "Preview failed",
         description: error.message,
         variant: "destructive",
       });
@@ -403,6 +408,40 @@ const SermonViewer = () => {
       setCombineProgress(0);
       setCombineStatus("");
     }
+  };
+
+  const handleExportAudio = () => {
+    if (!previewAudioUrl) return;
+
+    const link = document.createElement("a");
+    link.href = previewAudioUrl;
+    link.download = `${sermon?.title || 'sermon'}_combined.wav`;
+    link.click();
+
+    toast({
+      title: "Success",
+      description: "Combined audio downloaded successfully",
+    });
+  };
+
+  const togglePreviewPlayPause = () => {
+    if (previewAudioRef.current) {
+      if (previewPlaying) {
+        previewAudioRef.current.pause();
+      } else {
+        previewAudioRef.current.play();
+      }
+      setPreviewPlaying(!previewPlaying);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewAudioUrl) {
+      URL.revokeObjectURL(previewAudioUrl);
+    }
+    setPreviewAudioUrl("");
+    setPreviewMode(false);
+    setPreviewPlaying(false);
   };
 
   const handleDeleteComment = async (commentId: string) => {
@@ -492,18 +531,37 @@ const SermonViewer = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleCombineAudio}
-              disabled={combiningAudio || comments.filter(c => c.audio_url).length === 0}
-            >
-              {combiningAudio ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              Combine Audio
-            </Button>
+            {!previewMode ? (
+              <Button
+                variant="outline"
+                onClick={handlePreviewAudio}
+                disabled={combiningAudio || comments.filter(c => c.audio_url).length === 0}
+              >
+                {combiningAudio ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                Preview Combined Audio
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleExportAudio}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Audio
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={closePreview}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Close Preview
+                </Button>
+              </>
+            )}
             <Button
               variant="outline"
               onClick={() => setEvaluationDialogOpen(true)}
@@ -552,9 +610,36 @@ const SermonViewer = () => {
           </div>
         </div>
 
+        {previewMode && previewAudioUrl && (
+          <Card className="mb-6 p-6 border-primary">
+            <div className="mb-2">
+              <Badge variant="outline" className="mb-2">Preview Mode</Badge>
+              <p className="text-sm text-muted-foreground">
+                Listening to combined audio with inserted commentary
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button size="icon" onClick={togglePreviewPlayPause}>
+                {previewPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </Button>
+              <div className="flex-1">
+                <audio
+                  ref={previewAudioRef}
+                  src={previewAudioUrl}
+                  onPlay={() => setPreviewPlaying(true)}
+                  onPause={() => setPreviewPlaying(false)}
+                />
+                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-full bg-primary transition-all" style={{ width: "0%" }} />
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <Card className="mb-6 p-6">
           <div className="flex items-center gap-4">
-            <Button size="icon" onClick={togglePlayPause}>
+            <Button size="icon" onClick={togglePlayPause} disabled={previewMode}>
               {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </Button>
             <div className="flex-1">
