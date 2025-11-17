@@ -260,12 +260,33 @@ const SermonViewer = () => {
   };
 
   const countVerbalPauses = (): number => {
-    const fillerWords = ['um', 'uh', 'er', 'ah', 'like', 'you know', 'so', 'well'];
+    const fillerWords = {
+      single: ['uh', 'um', 'like', 'so', 'well', 'okay', 'right', 'actually', 'basically', 
+               'literally', 'honestly', 'seriously', 'anyway', 'just', 'really', 'maybe', 
+               'perhaps', 'possibly', 'hmm', 'er', 'ah', 'oh'],
+      phrases: ['you know', 'i mean', 'sort of', 'kind of', 'you know what i mean', 
+                'the thing is', 'at the end of the day', 'in a sense', 'to be honest', 
+                'if you will', 'so yeah', 'well you see', 'i guess', 'i suppose', 
+                'its like', 'i was gonna say', 'i think', 'i feel like', 'im not sure but',
+                'uh-huh', 'mm-hmm']
+    };
+    
     let pauseCount = 0;
     
     sentences.forEach(sentence => {
       const text = sentence.sentence_text.toLowerCase();
-      fillerWords.forEach(filler => {
+      
+      // Check phrases first (they contain multiple words)
+      fillerWords.phrases.forEach(filler => {
+        const regex = new RegExp(`\\b${filler.replace(/\s+/g, '\\s+')}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          pauseCount += matches.length;
+        }
+      });
+      
+      // Then check single words
+      fillerWords.single.forEach(filler => {
         const regex = new RegExp(`\\b${filler}\\b`, 'gi');
         const matches = text.match(regex);
         if (matches) {
@@ -278,13 +299,34 @@ const SermonViewer = () => {
   };
 
   const getTopFillerWords = (): { word: string; count: number; color: string }[] => {
-    const fillerWords = ['um', 'uh', 'er', 'ah', 'like', 'you know', 'so', 'well', 'basically', 'actually', 'literally'];
+    const fillerWords = {
+      single: ['uh', 'um', 'like', 'so', 'well', 'okay', 'right', 'actually', 'basically', 
+               'literally', 'honestly', 'seriously', 'anyway', 'just', 'really', 'maybe', 
+               'perhaps', 'possibly', 'hmm', 'er', 'ah', 'oh'],
+      phrases: ['you know', 'i mean', 'sort of', 'kind of', 'you know what i mean', 
+                'the thing is', 'at the end of the day', 'in a sense', 'to be honest', 
+                'if you will', 'so yeah', 'well you see', 'i guess', 'i suppose', 
+                'its like', 'i was gonna say', 'i think', 'i feel like', 'im not sure but',
+                'uh-huh', 'mm-hmm']
+    };
+    
     const colors = ['#f97316', '#fb923c', '#fdba74']; // orange variations
     const wordCounts: { [key: string]: number } = {};
     
     sentences.forEach(sentence => {
       const text = sentence.sentence_text.toLowerCase();
-      fillerWords.forEach(filler => {
+      
+      // Check phrases first
+      fillerWords.phrases.forEach(filler => {
+        const regex = new RegExp(`\\b${filler.replace(/\s+/g, '\\s+')}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          wordCounts[filler] = (wordCounts[filler] || 0) + matches.length;
+        }
+      });
+      
+      // Then check single words
+      fillerWords.single.forEach(filler => {
         const regex = new RegExp(`\\b${filler}\\b`, 'gi');
         const matches = text.match(regex);
         if (matches) {
@@ -1353,18 +1395,21 @@ const SermonViewer = () => {
               className="p-4 bg-orange-500/5"
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-medium text-orange-700">Verbal Pauses</h3>
+                <h3 className="text-sm font-medium text-orange-700">Communication Opportunity</h3>
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-orange-600">
                   {countVerbalPauses()}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Total Filler Words
+                  Filler Words Used
                 </div>
               </div>
               <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                <div className="text-xs font-medium text-muted-foreground mb-2">Top 3 Filler Words:</div>
+                <div className="text-xs text-muted-foreground mb-2">
+                  <p className="font-medium">Top 3 Overused Words/Phrases:</p>
+                  <p className="mt-1 text-xs opacity-80">Consider replacing with intentional pauses</p>
+                </div>
                 {getTopFillerWords().map((filler) => (
                   <div key={filler.word} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
