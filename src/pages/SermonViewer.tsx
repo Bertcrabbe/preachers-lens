@@ -152,6 +152,27 @@ const SermonViewer = () => {
     }
   };
 
+  const paragraphHasPeak = (paragraph: Sentence[]): boolean => {
+    if (!sermon?.duration_seconds || waveformData.length === 0) return false;
+    
+    const firstSentence = paragraph[0];
+    const lastSentence = paragraph[paragraph.length - 1];
+    const startTime = firstSentence.start_time_ms;
+    const endTime = lastSentence.end_time_ms;
+    const totalDuration = sermon.duration_seconds * 1000;
+    
+    // Map paragraph time range to waveform indices
+    const startIdx = Math.floor((startTime / totalDuration) * waveformData.length);
+    const endIdx = Math.ceil((endTime / totalDuration) * waveformData.length);
+    
+    // Calculate average amplitude for this paragraph
+    const paragraphAmplitudes = waveformData.slice(startIdx, endIdx);
+    const avgAmplitude = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
+    
+    // Consider it a peak if average amplitude is above 60% of max
+    return avgAmplitude > 0.6;
+  };
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -790,9 +811,9 @@ const SermonViewer = () => {
                       {waveformData.map((amplitude, idx) => (
                         <div
                           key={idx}
-                          className="w-0.5 bg-muted-foreground/30 rounded-full"
+                          className="w-1 bg-foreground/40 rounded-full"
                           style={{
-                            height: `${Math.max(amplitude * 100, 4)}%`,
+                            height: `${Math.max(amplitude * 100, 8)}%`,
                           }}
                         />
                       ))}
@@ -986,6 +1007,7 @@ const SermonViewer = () => {
                 const hasAudioComment = comments.some(
                   c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.end_time_ms <= lastSentence.end_time_ms
                 );
+                const hasPeak = paragraphHasPeak(paragraph);
                 return (
                   <div
                     key={idx}
@@ -994,6 +1016,8 @@ const SermonViewer = () => {
                         ? "bg-primary/10 border border-primary"
                         : previewingParagraph === idx
                         ? "bg-accent/20 border border-accent"
+                        : hasPeak
+                        ? "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30"
                         : "hover:bg-muted"
                     }`}
                     onClick={() => handlePreviewParagraph(idx)}
@@ -1002,6 +1026,11 @@ const SermonViewer = () => {
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs">
                         <Play className="h-3 w-3 mr-1" />
                         Has Commentary
+                      </Badge>
+                    )}
+                    {hasPeak && !hasAudioComment && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-orange-500/20 border-orange-500">
+                        🔊 High Volume
                       </Badge>
                     )}
                     <div className="flex items-start gap-2">
