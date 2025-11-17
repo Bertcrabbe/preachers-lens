@@ -161,6 +161,9 @@ const SermonViewer = () => {
     const endTime = lastSentence.end_time_ms;
     const totalDuration = sermon.duration_seconds * 1000;
     
+    // Calculate overall average amplitude of the entire audio
+    const overallAverage = waveformData.reduce((sum, amp) => sum + amp, 0) / waveformData.length;
+    
     // Map paragraph time range to waveform indices
     const startIdx = Math.floor((startTime / totalDuration) * waveformData.length);
     const endIdx = Math.ceil((endTime / totalDuration) * waveformData.length);
@@ -169,8 +172,8 @@ const SermonViewer = () => {
     const paragraphAmplitudes = waveformData.slice(startIdx, endIdx);
     const avgAmplitude = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
     
-    // Consider it a valley if average amplitude is below 40% of max
-    return avgAmplitude < 0.4;
+    // Consider it quiet if average amplitude is less than half the overall average
+    return avgAmplitude < (overallAverage * 0.5);
   };
 
   const checkAuth = async () => {
