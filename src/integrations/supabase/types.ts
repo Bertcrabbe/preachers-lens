@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      sermon_comments: {
+        Row: {
+          comment_text: string
+          created_at: string
+          end_time_ms: number
+          id: string
+          sermon_id: string
+          start_time_ms: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string
+          end_time_ms: number
+          id?: string
+          sermon_id: string
+          start_time_ms: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string
+          end_time_ms?: number
+          id?: string
+          sermon_id?: string
+          start_time_ms?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sermon_comments_sermon_id_fkey"
+            columns: ["sermon_id"]
+            isOneToOne: false
+            referencedRelation: "sermons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sermon_sentences: {
         Row: {
           created_at: string
