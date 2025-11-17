@@ -14,7 +14,17 @@ import {
   FileText,
   List,
   AlignLeft,
+  MessageSquare,
+  X,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +48,14 @@ interface Sentence {
   order_index: number;
 }
 
+interface Comment {
+  id: string;
+  start_time_ms: number;
+  end_time_ms: number;
+  comment_text: string;
+  created_at: string;
+}
+
 const SermonViewer = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -51,12 +69,17 @@ const SermonViewer = () => {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [viewMode, setViewMode] = useState<"sentence" | "paragraph">("sentence");
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [selectedTimeRange, setSelectedTimeRange] = useState<{ start: number; end: number } | null>(null);
+  const [newComment, setNewComment] = useState("");
 
   useEffect(() => {
     checkAuth();
     if (id) {
       fetchSermon();
       fetchSentences();
+      fetchComments();
     }
   }, [id]);
 
@@ -108,6 +131,21 @@ const SermonViewer = () => {
       setSentences(data || []);
     } catch (error: any) {
       console.error("Failed to load sentences:", error);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("sermon_comments")
+        .select("*")
+        .eq("sermon_id", id)
+        .order("created_at");
+
+      if (error) throw error;
+      setComments(data || []);
+    } catch (error: any) {
+      console.error("Failed to load comments:", error);
     }
   };
 
@@ -215,6 +253,76 @@ const SermonViewer = () => {
   const isCurrentParagraph = (paragraph: { startTime: number; endTime: number }) => {
     const currentMs = currentTime * 1000;
     return currentMs >= paragraph.startTime && currentMs <= paragraph.endTime;
+  };
+
+  const openCommentDialog = (startTime: number, endTime: number) => {
+    setSelectedTimeRange({ start: startTime, end: endTime });
+    setNewComment("");
+    setCommentDialogOpen(true);
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !selectedTimeRange || !id) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase.from("sermon_comments").insert({
+        sermon_id: id,
+        user_id: user.id,
+        start_time_ms: selectedTimeRange.start,
+        end_time_ms: selectedTimeRange.end,
+        comment_text: newComment.trim(),
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Comment added",
+        description: "Your comment has been saved",
+      });
+
+      setCommentDialogOpen(false);
+      setNewComment("");
+      fetchComments();
+    } catch (error: any) {
+      toast({
+        title: "Failed to add comment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getCommentsForRange = (startTime: number, endTime: number) => {
+    return comments.filter(
+      (c) => c.start_time_ms === startTime && c.end_time_ms === endTime
+    );
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("sermon_comments")
+        .delete()
+        .eq("id", commentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Comment deleted",
+        description: "Your comment has been removed",
+      });
+
+      fetchComments();
+    } catch (error: any) {
+      toast({
+        title: "Failed to delete comment",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -348,48 +456,145 @@ const SermonViewer = () => {
             </Card>
           ) : viewMode === "sentence" ? (
             <div className="space-y-1">
-              {sentences.map((sentence) => (
-                <div
-                  key={sentence.id}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    isCurrentSentence(sentence)
-                      ? "bg-primary/10 border-l-4 border-primary"
-                      : "hover:bg-muted"
-                  }`}
-                  onClick={() => seekToTime(sentence.start_time_ms)}
-                >
-                  <div className="flex gap-3">
-                    <span className="text-sm font-mono text-muted-foreground min-w-[60px]">
-                      {formatTimestamp(sentence.start_time_ms)}
-                    </span>
-                    <p className="flex-1">{sentence.sentence_text}</p>
+              {sentences.map((sentence) => {
+                const sentenceComments = getCommentsForRange(sentence.start_time_ms, sentence.end_time_ms);
+                return (
+                  <div key={sentence.id}>
+                    <div
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        isCurrentSentence(sentence)
+                          ? "bg-primary/10 border-l-4 border-primary"
+                          : "hover:bg-muted"
+                      }`}
+                      onClick={() => seekToTime(sentence.start_time_ms)}
+                    >
+                      <div className="flex gap-3">
+                        <span className="text-sm font-mono text-muted-foreground min-w-[60px]">
+                          {formatTimestamp(sentence.start_time_ms)}
+                        </span>
+                        <p className="flex-1">{sentence.sentence_text}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCommentDialog(sentence.start_time_ms, sentence.end_time_ms);
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          {sentenceComments.length > 0 && (
+                            <span className="ml-1 text-xs">{sentenceComments.length}</span>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {sentenceComments.length > 0 && (
+                      <div className="ml-20 mt-1 space-y-1">
+                        {sentenceComments.map((comment) => (
+                          <div key={comment.id} className="bg-muted/50 p-2 rounded text-sm flex justify-between items-start">
+                            <p className="flex-1">{comment.comment_text}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleDeleteComment(comment.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="space-y-4">
-              {groupIntoParagraphs().map((paragraph, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg cursor-pointer transition-colors ${
-                    isCurrentParagraph(paragraph)
-                      ? "bg-primary/10 border-l-4 border-primary"
-                      : "hover:bg-muted"
-                  }`}
-                  onClick={() => seekToTime(paragraph.startTime)}
-                >
-                  <div className="flex gap-3">
-                    <span className="text-sm font-mono text-muted-foreground min-w-[60px]">
-                      {formatTimestamp(paragraph.startTime)}
-                    </span>
-                    <p className="flex-1 leading-relaxed">{paragraph.text}</p>
+              {groupIntoParagraphs().map((paragraph, index) => {
+                const paragraphComments = getCommentsForRange(paragraph.startTime, paragraph.endTime);
+                return (
+                  <div key={index}>
+                    <div
+                      className={`p-4 rounded-lg cursor-pointer transition-colors ${
+                        isCurrentParagraph(paragraph)
+                          ? "bg-primary/10 border-l-4 border-primary"
+                          : "hover:bg-muted"
+                      }`}
+                      onClick={() => seekToTime(paragraph.startTime)}
+                    >
+                      <div className="flex gap-3">
+                        <span className="text-sm font-mono text-muted-foreground min-w-[60px]">
+                          {formatTimestamp(paragraph.startTime)}
+                        </span>
+                        <p className="flex-1 leading-relaxed">{paragraph.text}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCommentDialog(paragraph.startTime, paragraph.endTime);
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          {paragraphComments.length > 0 && (
+                            <span className="ml-1 text-xs">{paragraphComments.length}</span>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {paragraphComments.length > 0 && (
+                      <div className="ml-20 mt-2 space-y-2">
+                        {paragraphComments.map((comment) => (
+                          <div key={comment.id} className="bg-muted/50 p-3 rounded text-sm flex justify-between items-start">
+                            <p className="flex-1">{comment.comment_text}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleDeleteComment(comment.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
+
+        <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Comment</DialogTitle>
+              <DialogDescription>
+                Add a note or comment for this section
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                placeholder="Enter your comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                rows={4}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setCommentDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddComment} disabled={!newComment.trim()}>
+                  Add Comment
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
