@@ -169,8 +169,8 @@ const SermonViewer = () => {
     const paragraphAmplitudes = waveformData.slice(startIdx, endIdx);
     const avgAmplitude = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
     
-    // Consider it a peak if average amplitude is above 60% of max
-    return avgAmplitude > 0.6;
+    // Consider it a valley if average amplitude is below 40% of max
+    return avgAmplitude < 0.4;
   };
 
   const checkAuth = async () => {
@@ -1030,7 +1030,7 @@ const SermonViewer = () => {
                     )}
                     {hasPeak && !hasAudioComment && (
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-orange-500/20 border-orange-500">
-                        🔊 High Volume
+                        🔉 Low Volume
                       </Badge>
                     )}
                     <div className="flex items-start gap-2">
