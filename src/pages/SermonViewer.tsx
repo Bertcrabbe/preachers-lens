@@ -205,6 +205,37 @@ const SermonViewer = () => {
     return paragraphRate > averageRate * 1.5;
   };
 
+  const countFastSpeechParagraphs = (threshold: number = 1.2): number => {
+    if (sentences.length === 0) return 0;
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const averageRate = getAverageSpeechRate();
+    
+    return paragraphs.filter(p => {
+      const rate = calculateSpeechRate(p);
+      return rate > averageRate * threshold;
+    }).length;
+  };
+
+  const countVerbalPauses = (): number => {
+    let pauseCount = 0;
+    
+    for (let i = 1; i < sentences.length; i++) {
+      const prevSentence = sentences[i - 1];
+      const currentSentence = sentences[i];
+      
+      // Gap between sentences in seconds
+      const gap = (currentSentence.start_time_ms - prevSentence.end_time_ms) / 1000;
+      
+      // Consider gaps longer than 1 second as verbal pauses
+      if (gap > 1) {
+        pauseCount++;
+      }
+    }
+    
+    return pauseCount;
+  };
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -997,6 +1028,45 @@ const SermonViewer = () => {
               <p className="text-sm text-muted-foreground text-center">{combineStatus}</p>
             </div>
           )}
+        </Card>
+
+        {/* Sermon Dashboard */}
+        <Card className="mb-6 p-6">
+          <h2 className="text-xl font-semibold mb-4">Sermon Analytics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4 bg-primary/5">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl font-bold text-primary">
+                  {Math.round(getAverageSpeechRate())}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Average Words Per Minute
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-fuchsia-500/5">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl font-bold text-fuchsia-600">
+                  {countFastSpeechParagraphs(1.2)}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Fast Speech Sections (1.2x+)
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-orange-500/5">
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl font-bold text-orange-600">
+                  {countVerbalPauses()}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Verbal Pauses Detected
+                </div>
+              </div>
+            </Card>
+          </div>
         </Card>
 
         <Card className="p-6">
