@@ -102,6 +102,7 @@ const SermonViewer = () => {
   const [previewAudioUrl, setPreviewAudioUrl] = useState<string>("");
   const previewAudioRef = useRef<HTMLAudioElement>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
+  const [previewingParagraph, setPreviewingParagraph] = useState<number | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -338,7 +339,119 @@ const SermonViewer = () => {
     }
   };
 
-  const handlePreviewAudio = async () => {
+  const handlePreviewParagraph = async (paragraphIndex: number) => {
+    const paragraph = groupIntoParagraphs(sentences)[paragraphIndex];
+    if (!paragraph || !audioRef.current) return;
+
+    const firstSentence = paragraph[0];
+    const lastSentence = paragraph[paragraph.length - 1];
+    
+    setPreviewingParagraph(paragraphIndex);
+    
+    // Get comments for this paragraph
+    const paragraphComments = comments.filter(
+      c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.end_time_ms <= lastSentence.end_time_ms
+    );
+
+    if (paragraphComments.length === 0) {
+      // No audio comments, just play the sermon section
+      audioRef.current.currentTime = firstSentence.start_time_ms / 1000;
+      audioRef.current.play();
+      setPlaying(true);
+      
+      // Stop at end of paragraph
+      const checkEnd = setInterval(() => {
+        if (audioRef.current && audioRef.current.currentTime * 1000 >= lastSentence.end_time_ms) {
+          audioRef.current.pause();
+          setPlaying(false);
+          setPreviewingParagraph(null);
+          clearInterval(checkEnd);
+        }
+      }, 100);
+      
+      return;
+    }
+
+    try {
+      // Create audio context for scheduling
+      const audioContext = new AudioContext();
+      const sermonResponse = await fetch(audioUrl);
+      const sermonArrayBuffer = await sermonResponse.arrayBuffer();
+      const sermonBuffer = await audioContext.decodeAudioData(sermonArrayBuffer);
+
+      // Fetch comment audio
+      const commentAudios: { buffer: AudioBuffer; timestamp: number }[] = [];
+      for (const comment of paragraphComments) {
+        const { data: urlData } = await supabase.storage
+          .from("sermon-comments-audio")
+          .createSignedUrl(comment.audio_url!, 3600);
+        
+        if (urlData?.signedUrl) {
+          const response = await fetch(urlData.signedUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = await audioContext.decodeAudioData(arrayBuffer);
+          commentAudios.push({ buffer, timestamp: comment.start_time_ms / 1000 });
+        }
+      }
+
+      // Calculate segments
+      const paragraphStart = firstSentence.start_time_ms / 1000;
+      const paragraphEnd = lastSentence.end_time_ms / 1000;
+      
+      let currentTime = paragraphStart;
+      let scheduledTime = 0;
+
+      // Sort comments by timestamp
+      commentAudios.sort((a, b) => a.timestamp - b.timestamp);
+
+      // Schedule audio playback
+      for (const comment of commentAudios) {
+        // Play sermon segment before comment
+        if (comment.timestamp > currentTime) {
+          const source = audioContext.createBufferSource();
+          source.buffer = sermonBuffer;
+          source.connect(audioContext.destination);
+          const duration = comment.timestamp - currentTime;
+          source.start(scheduledTime, currentTime, duration);
+          scheduledTime += duration;
+          currentTime = comment.timestamp;
+        }
+
+        // Play comment
+        const commentSource = audioContext.createBufferSource();
+        commentSource.buffer = comment.buffer;
+        commentSource.connect(audioContext.destination);
+        commentSource.start(scheduledTime);
+        scheduledTime += comment.buffer.duration;
+      }
+
+      // Play remaining sermon segment
+      if (currentTime < paragraphEnd) {
+        const source = audioContext.createBufferSource();
+        source.buffer = sermonBuffer;
+        source.connect(audioContext.destination);
+        const duration = paragraphEnd - currentTime;
+        source.start(scheduledTime, currentTime, duration);
+      }
+
+      // Reset preview state when done
+      setTimeout(() => {
+        setPreviewingParagraph(null);
+        audioContext.close();
+      }, scheduledTime * 1000 + 1000);
+
+    } catch (error: any) {
+      console.error("Preview error:", error);
+      toast({
+        title: "Preview failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setPreviewingParagraph(null);
+    }
+  };
+
+  const handleExportAudio = async () => {
     if (!sermon || !audioUrl) {
       toast({
         title: "Error",
@@ -350,7 +463,7 @@ const SermonViewer = () => {
 
     setCombiningAudio(true);
     setCombineProgress(0);
-    setCombineStatus("Starting preview...");
+    setCombineStatus("Starting...");
 
     try {
       // Get authenticated URLs for audio comments
@@ -383,23 +496,22 @@ const SermonViewer = () => {
         }
       );
 
-      // Create URL for preview
-      if (previewAudioUrl) {
-        URL.revokeObjectURL(previewAudioUrl);
-      }
-      
+      // Download the combined audio
       const url = URL.createObjectURL(combinedBlob);
-      setPreviewAudioUrl(url);
-      setPreviewMode(true);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${sermon.title || 'sermon'}_combined.wav`;
+      link.click();
+      URL.revokeObjectURL(url);
 
       toast({
-        title: "Preview ready",
-        description: "You can now preview the combined audio",
+        title: "Success",
+        description: "Combined audio downloaded successfully",
       });
     } catch (error: any) {
-      console.error("Preview audio error:", error);
+      console.error("Export error:", error);
       toast({
-        title: "Preview failed",
+        title: "Export failed",
         description: error.message,
         variant: "destructive",
       });
@@ -408,40 +520,6 @@ const SermonViewer = () => {
       setCombineProgress(0);
       setCombineStatus("");
     }
-  };
-
-  const handleExportAudio = () => {
-    if (!previewAudioUrl) return;
-
-    const link = document.createElement("a");
-    link.href = previewAudioUrl;
-    link.download = `${sermon?.title || 'sermon'}_combined.wav`;
-    link.click();
-
-    toast({
-      title: "Success",
-      description: "Combined audio downloaded successfully",
-    });
-  };
-
-  const togglePreviewPlayPause = () => {
-    if (previewAudioRef.current) {
-      if (previewPlaying) {
-        previewAudioRef.current.pause();
-      } else {
-        previewAudioRef.current.play();
-      }
-      setPreviewPlaying(!previewPlaying);
-    }
-  };
-
-  const closePreview = () => {
-    if (previewAudioUrl) {
-      URL.revokeObjectURL(previewAudioUrl);
-    }
-    setPreviewAudioUrl("");
-    setPreviewMode(false);
-    setPreviewPlaying(false);
   };
 
   const handleDeleteComment = async (commentId: string) => {
@@ -531,37 +609,18 @@ const SermonViewer = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            {!previewMode ? (
-              <Button
-                variant="outline"
-                onClick={handlePreviewAudio}
-                disabled={combiningAudio || comments.filter(c => c.audio_url).length === 0}
-              >
-                {combiningAudio ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="mr-2 h-4 w-4" />
-                )}
-                Preview Combined Audio
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleExportAudio}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Audio
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={closePreview}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Close Preview
-                </Button>
-              </>
-            )}
+            <Button
+              variant="outline"
+              onClick={handleExportAudio}
+              disabled={combiningAudio || comments.filter(c => c.audio_url).length === 0}
+            >
+              {combiningAudio ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Export Combined Audio
+            </Button>
             <Button
               variant="outline"
               onClick={() => setEvaluationDialogOpen(true)}
@@ -610,36 +669,18 @@ const SermonViewer = () => {
           </div>
         </div>
 
-        {previewMode && previewAudioUrl && (
-          <Card className="mb-6 p-6 border-primary">
-            <div className="mb-2">
-              <Badge variant="outline" className="mb-2">Preview Mode</Badge>
-              <p className="text-sm text-muted-foreground">
-                Listening to combined audio with inserted commentary
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button size="icon" onClick={togglePreviewPlayPause}>
-                {previewPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </Button>
-              <div className="flex-1">
-                <audio
-                  ref={previewAudioRef}
-                  src={previewAudioUrl}
-                  onPlay={() => setPreviewPlaying(true)}
-                  onPause={() => setPreviewPlaying(false)}
-                />
-                <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full bg-primary transition-all" style={{ width: "0%" }} />
-                </div>
-              </div>
+        {previewingParagraph !== null && (
+          <Card className="mb-6 p-4 border-primary bg-primary/5">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <p className="text-sm font-medium">Playing paragraph with commentary...</p>
             </div>
           </Card>
         )}
 
         <Card className="mb-6 p-6">
           <div className="flex items-center gap-4">
-            <Button size="icon" onClick={togglePlayPause} disabled={previewMode}>
+            <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null}>
               {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </Button>
             <div className="flex-1">
@@ -743,16 +784,27 @@ const SermonViewer = () => {
               groupIntoParagraphs(sentences).map((paragraph, idx) => {
                 const firstSentence = paragraph[0];
                 const lastSentence = paragraph[paragraph.length - 1];
+                const hasAudioComment = comments.some(
+                  c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.end_time_ms <= lastSentence.end_time_ms
+                );
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-lg transition-colors cursor-pointer ${
+                    className={`p-4 rounded-lg transition-colors cursor-pointer relative ${
                       isCurrentParagraph(paragraph)
                         ? "bg-primary/10 border border-primary"
+                        : previewingParagraph === idx
+                        ? "bg-accent/20 border border-accent"
                         : "hover:bg-muted"
                     }`}
-                    onClick={() => seekTo(firstSentence.start_time_ms)}
+                    onClick={() => handlePreviewParagraph(idx)}
                   >
+                    {hasAudioComment && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs">
+                        <Play className="h-3 w-3 mr-1" />
+                        Has Commentary
+                      </Badge>
+                    )}
                     <div className="flex items-start gap-2">
                       <Badge variant="outline" className="text-xs">
                         {Math.floor(firstSentence.start_time_ms / 1000 / 60)}:
