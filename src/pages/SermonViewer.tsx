@@ -1028,25 +1028,23 @@ const SermonViewer = () => {
                 {/* Timeline with sermon and comment segments */}
                 <div 
                   className="relative h-12 bg-secondary/30 rounded-lg overflow-x-auto border border-border cursor-pointer"
-                  onScroll={(e) => {
-                    if (zoomLevel > 1 && sermon.duration_seconds) {
-                      const scrollLeft = e.currentTarget.scrollLeft;
-                      const scrollWidth = e.currentTarget.scrollWidth - e.currentTarget.clientWidth;
-                      const scrollPercentage = scrollWidth > 0 ? (scrollLeft / scrollWidth) * 100 : 0;
-                      setViewStart(scrollPercentage * (zoomLevel - 1) / zoomLevel);
-                    }
-                  }}
                   onClick={(e) => {
                     if (!sermon.duration_seconds) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left + e.currentTarget.scrollLeft;
-                    const totalWidth = zoomLevel > 1 ? rect.width * zoomLevel : rect.width;
+                    const container = e.currentTarget;
+                    const rect = container.getBoundingClientRect();
+                    
+                    // Get click position including scroll offset
+                    const clickX = e.clientX - rect.left + container.scrollLeft;
+                    
+                    // Calculate total width of the zoomed timeline
+                    const totalWidth = rect.width * zoomLevel;
+                    
+                    // Calculate percentage of total duration
                     const percentage = clickX / totalWidth;
                     
-                    // Calculate the actual time based on zoom and view
-                    const viewWindowSize = 100 / zoomLevel; // percentage of total duration visible
-                    const actualPercentage = (viewStart / 100) + (percentage * viewWindowSize / 100);
-                    const newTime = actualPercentage * sermon.duration_seconds * 1000;
+                    // Convert to time in milliseconds
+                    const newTime = percentage * sermon.duration_seconds * 1000;
+                    
                     seekTo(newTime);
                   }}
                 >
