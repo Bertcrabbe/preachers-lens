@@ -1854,20 +1854,49 @@ const SermonViewer = () => {
                 );
                 const hasPeak = paragraphHasPeak(paragraph);
                 const isFastSpeech = hasFastSpeechRate(paragraph);
+                
+                // Determine active analytics highlights
+                const isSlowSpeech = showSlowSpeech && getSlowSpeechParagraphs(slowSpeechThreshold).some(
+                  p => p[0].start_time_ms === firstSentence.start_time_ms
+                );
+                const hasVerbalPause = showVerbalPauses && Array.from(visibleFillerWords).some(word =>
+                  paragraph.some(s => s.sentence_text.toLowerCase().includes(word.toLowerCase()))
+                );
+                const hasInsiderTerm = showInsiderLanguage && Array.from(visibleInsiderTerms).some(term => {
+                  const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+                  return paragraph.some(s => regex.test(s.sentence_text));
+                });
+                const hasVolumeChange = showVolumeChanges && hasSignificantVolumeChange(paragraph, volumeChangeThreshold);
+                const isActiveFastSpeech = showFastSpeech && isFastSpeech;
+                
+                // Determine highlight color and style based on active analytics
+                let highlightStyle = "hover:bg-muted";
+                let highlightClass = "";
+                
+                if (isCurrentParagraph(paragraph)) {
+                  highlightClass = "bg-primary/10 border border-primary";
+                } else if (previewingParagraph === idx) {
+                  highlightClass = "bg-accent/20 border border-accent";
+                } else if (isActiveFastSpeech) {
+                  highlightClass = "bg-fuchsia-500/20 border-2 border-fuchsia-500 hover:bg-fuchsia-500/30";
+                } else if (isSlowSpeech) {
+                  highlightClass = "bg-blue-500/20 border-2 border-blue-500 hover:bg-blue-500/30";
+                } else if (hasVolumeChange) {
+                  highlightClass = "bg-emerald-500/20 border-2 border-emerald-500 hover:bg-emerald-500/30";
+                } else if (hasVerbalPause) {
+                  highlightClass = "bg-orange-500/20 border-2 border-orange-500 hover:bg-orange-500/30";
+                } else if (hasInsiderTerm) {
+                  highlightClass = "bg-purple-500/20 border-2 border-purple-500 hover:bg-purple-500/30";
+                } else if (hasPeak) {
+                  highlightClass = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
+                } else {
+                  highlightClass = highlightStyle;
+                }
+                
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-lg transition-colors cursor-pointer relative ${
-                      isCurrentParagraph(paragraph)
-                        ? "bg-primary/10 border border-primary"
-                        : previewingParagraph === idx
-                        ? "bg-accent/20 border border-accent"
-                        : isFastSpeech
-                        ? "bg-fuchsia-500/20 border-2 border-fuchsia-500 hover:bg-fuchsia-500/30"
-                        : hasPeak
-                        ? "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30"
-                        : "hover:bg-muted"
-                    }`}
+                    className={`p-4 rounded-lg transition-colors cursor-pointer relative ${highlightClass}`}
                     onClick={() => handlePreviewParagraph(idx)}
                   >
                     {hasAudioComment && (
@@ -1876,12 +1905,32 @@ const SermonViewer = () => {
                         Has Commentary
                       </Badge>
                     )}
-                    {isFastSpeech && !hasAudioComment && (
+                    {!hasAudioComment && isActiveFastSpeech && (
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-fuchsia-500/20 border-fuchsia-500">
                         ⚡ Fast Speech
                       </Badge>
                     )}
-                    {hasPeak && !hasAudioComment && !isFastSpeech && (
+                    {!hasAudioComment && !isActiveFastSpeech && isSlowSpeech && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-blue-500/20 border-blue-500">
+                        🐌 Slow Speech
+                      </Badge>
+                    )}
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && hasVolumeChange && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-emerald-500/20 border-emerald-500">
+                        📊 Volume Change
+                      </Badge>
+                    )}
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && hasVerbalPause && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-orange-500/20 border-orange-500">
+                        🔁 Verbal Pause
+                      </Badge>
+                    )}
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && hasInsiderTerm && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-purple-500/20 border-purple-500">
+                        📖 Insider Language
+                      </Badge>
+                    )}
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && !hasInsiderTerm && hasPeak && (
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-orange-500/20 border-orange-500">
                         🔉 Low Volume
                       </Badge>
