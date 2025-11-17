@@ -107,8 +107,10 @@ const SermonViewer = () => {
   const [showFastSpeech, setShowFastSpeech] = useState(true);
   const [showVerbalPauses, setShowVerbalPauses] = useState(false);
   const [showSlowSpeech, setShowSlowSpeech] = useState(false);
+  const [showVolumeChanges, setShowVolumeChanges] = useState(false);
   const [fastSpeechThreshold, setFastSpeechThreshold] = useState(1.2);
   const [slowSpeechThreshold, setSlowSpeechThreshold] = useState(0.75);
+  const [volumeChangeThreshold, setVolumeChangeThreshold] = useState(1.5);
   const [waveformData, setWaveformData] = useState<number[]>([]);
 
   useEffect(() => {
@@ -180,6 +182,30 @@ const SermonViewer = () => {
     
     // Consider it quiet if average amplitude is less than half the overall average
     return avgAmplitude < (overallAverage * 0.5);
+  };
+
+  const hasSignificantVolumeChange = (paragraph: Sentence[], threshold: number): boolean => {
+    if (!sermon?.duration_seconds || waveformData.length === 0) return false;
+    
+    const firstSentence = paragraph[0];
+    const lastSentence = paragraph[paragraph.length - 1];
+    const startTime = firstSentence.start_time_ms;
+    const endTime = lastSentence.end_time_ms;
+    const totalDuration = sermon.duration_seconds * 1000;
+    
+    // Calculate overall average amplitude of the entire audio
+    const overallAverage = waveformData.reduce((sum, amp) => sum + amp, 0) / waveformData.length;
+    
+    // Map paragraph time range to waveform indices
+    const startIdx = Math.floor((startTime / totalDuration) * waveformData.length);
+    const endIdx = Math.ceil((endTime / totalDuration) * waveformData.length);
+    
+    // Calculate average amplitude for this paragraph
+    const paragraphAmplitudes = waveformData.slice(startIdx, endIdx);
+    const avgAmplitude = paragraphAmplitudes.reduce((sum, amp) => sum + amp, 0) / paragraphAmplitudes.length;
+    
+    // Check if volume is significantly higher or lower than average
+    return avgAmplitude > (overallAverage * threshold) || avgAmplitude < (overallAverage / threshold);
   };
 
   const calculateSpeechRate = (paragraph: Sentence[]): number => {
@@ -283,6 +309,22 @@ const SermonViewer = () => {
       const rate = calculateSpeechRate(p);
       return rate < averageRate * threshold;
     });
+  };
+
+  const countVolumeChangeParagraphs = (threshold: number = 1.5): number => {
+    if (sentences.length === 0) return 0;
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    
+    return paragraphs.filter(p => hasSignificantVolumeChange(p, threshold)).length;
+  };
+
+  const getVolumeChangeParagraphs = (threshold: number = 1.5) => {
+    if (sentences.length === 0) return [];
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    
+    return paragraphs.filter(p => hasSignificantVolumeChange(p, threshold));
   };
 
   const checkAuth = async () => {
@@ -1059,6 +1101,26 @@ const SermonViewer = () => {
                             />
                           );
                         })}
+                        
+                        {/* Volume change overlays */}
+                        {showVolumeChanges && getVolumeChangeParagraphs(volumeChangeThreshold).map((paragraph, idx) => {
+                          const start = paragraph[0].start_time_ms;
+                          const end = paragraph[paragraph.length - 1].end_time_ms;
+                          const left = (start / totalDuration) * 100;
+                          const width = ((end - start) / totalDuration) * 100;
+                          
+                          return (
+                            <div
+                              key={`volume-${idx}`}
+                              className="absolute h-full bg-emerald-500/50 border-t-2 border-b-2 border-emerald-600"
+                              style={{
+                                left: `${left}%`,
+                                width: `${width}%`,
+                              }}
+                              title={`Volume change at ${Math.floor(start / 1000 / 60)}:${String(Math.floor((start / 1000) % 60)).padStart(2, "0")}`}
+                            />
+                          );
+                        })}
                       </>
                     );
                   })()}
@@ -1093,7 +1155,7 @@ const SermonViewer = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-2 bg-green-500/60 rounded" />
                 <span>Sermon Audio</span>
@@ -1105,6 +1167,18 @@ const SermonViewer = () => {
               <div className="flex items-center gap-2">
                 <div className="w-4 h-2 bg-fuchsia-500/50 border-t border-b border-fuchsia-600 rounded" />
                 <span>Fast Speech</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 bg-orange-500/50 border-t border-b border-orange-600 rounded" />
+                <span>Verbal Pauses</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 bg-blue-500/50 border-t border-b border-blue-600 rounded" />
+                <span>Slow Speech</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-2 bg-emerald-500/50 border-t border-b border-emerald-600 rounded" />
+                <span>Volume Changes</span>
               </div>
             </div>
           </div>
@@ -1226,6 +1300,43 @@ const SermonViewer = () => {
                   min={0.5}
                   max={1.0}
                   step={0.05}
+                  className="w-full"
+                />
+              </div>
+            </Card>
+
+            <Card 
+              className="p-4 bg-emerald-500/5 cursor-pointer hover:bg-emerald-500/10 transition-colors"
+              onClick={() => setShowVolumeChanges(!showVolumeChanges)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-sm font-medium text-emerald-700">Volume Changes</h3>
+                <Checkbox
+                  checked={showVolumeChanges}
+                  onCheckedChange={(checked) => setShowVolumeChanges(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex flex-col items-center text-center mb-3">
+                <div className="text-3xl font-bold text-emerald-600">
+                  {countVolumeChangeParagraphs(volumeChangeThreshold)}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Noticeable Volume Shifts ({volumeChangeThreshold.toFixed(1)}x)
+                </div>
+              </div>
+              <div className="px-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>Threshold</span>
+                  <span>{volumeChangeThreshold.toFixed(1)}x</span>
+                </div>
+                <Slider
+                  value={[volumeChangeThreshold]}
+                  onValueChange={([value]) => setVolumeChangeThreshold(value)}
+                  min={1.2}
+                  max={3.0}
+                  step={0.1}
                   className="w-full"
                 />
               </div>
