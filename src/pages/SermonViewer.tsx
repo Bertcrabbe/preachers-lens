@@ -19,6 +19,9 @@ import {
   MessageSquare,
   X,
   Sparkles,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import {
   Dialog,
@@ -113,6 +116,8 @@ const SermonViewer = () => {
   const [slowSpeechThreshold, setSlowSpeechThreshold] = useState(0.75);
   const [volumeChangeThreshold, setVolumeChangeThreshold] = useState(1.0);
   const [waveformData, setWaveformData] = useState<number[]>([]);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [viewStart, setViewStart] = useState(0); // percentage of audio (0-100)
 
   useEffect(() => {
     checkAuth();
@@ -972,46 +977,106 @@ const SermonViewer = () => {
 
         <Card className="mb-6 p-6">
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null}>
                 {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
               </Button>
-              <div className="flex-1 space-y-2">
-                <audio
-                  ref={audioRef}
-                  src={audioUrl}
-                  onTimeUpdate={handleTimeUpdate}
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                />
+              
+              <div className="flex items-center gap-2 border-l pl-4">
+                <span className="text-sm text-muted-foreground">Zoom:</span>
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => setZoomLevel(Math.max(1, zoomLevel - 1))}
+                  disabled={zoomLevel <= 1}
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium min-w-[3rem] text-center">{zoomLevel}x</span>
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => setZoomLevel(Math.min(10, zoomLevel + 1))}
+                  disabled={zoomLevel >= 10}
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                {zoomLevel > 1 && (
+                  <Button 
+                    size="icon" 
+                    variant="outline"
+                    onClick={() => {
+                      setZoomLevel(1);
+                      setViewStart(0);
+                    }}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex-1 space-y-2">
+              <audio
+                ref={audioRef}
+                src={audioUrl}
+                onTimeUpdate={handleTimeUpdate}
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+              />
                 
                 {/* Timeline with sermon and comment segments */}
                 <div 
-                  className="relative h-12 bg-secondary/30 rounded-lg overflow-hidden border border-border cursor-pointer"
+                  className="relative h-12 bg-secondary/30 rounded-lg overflow-x-auto border border-border cursor-pointer"
+                  onScroll={(e) => {
+                    if (zoomLevel > 1 && sermon.duration_seconds) {
+                      const scrollLeft = e.currentTarget.scrollLeft;
+                      const scrollWidth = e.currentTarget.scrollWidth - e.currentTarget.clientWidth;
+                      const scrollPercentage = scrollWidth > 0 ? (scrollLeft / scrollWidth) * 100 : 0;
+                      setViewStart(scrollPercentage * (zoomLevel - 1) / zoomLevel);
+                    }
+                  }}
                   onClick={(e) => {
                     if (!sermon.duration_seconds) return;
                     const rect = e.currentTarget.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const percentage = clickX / rect.width;
-                    const newTime = percentage * sermon.duration_seconds * 1000;
+                    const clickX = e.clientX - rect.left + e.currentTarget.scrollLeft;
+                    const totalWidth = zoomLevel > 1 ? rect.width * zoomLevel : rect.width;
+                    const percentage = clickX / totalWidth;
+                    
+                    // Calculate the actual time based on zoom and view
+                    const viewWindowSize = 100 / zoomLevel; // percentage of total duration visible
+                    const actualPercentage = (viewStart / 100) + (percentage * viewWindowSize / 100);
+                    const newTime = actualPercentage * sermon.duration_seconds * 1000;
                     seekTo(newTime);
                   }}
                 >
-                  {/* Waveform visualization */}
-                  {waveformData.length > 0 && (
-                    <div className="absolute inset-0 flex items-center justify-around">
-                      {waveformData.map((amplitude, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-foreground/30 rounded-full"
-                          style={{
-                            width: '2px',
-                            height: `${Math.max(amplitude * 100, 4)}%`,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <div style={{ width: `${zoomLevel * 100}%`, position: 'relative', height: '100%' }}>
+                    {/* Waveform visualization */}
+                    {waveformData.length > 0 && (
+                      <div className="absolute inset-0 flex items-center justify-around">
+                        {waveformData.map((amplitude, idx) => {
+                          // Only render waveform bars in the visible window
+                          const barPosition = (idx / waveformData.length) * 100;
+                          const viewWindowSize = 100 / zoomLevel;
+                          const viewEnd = viewStart + viewWindowSize;
+                          
+                          if (zoomLevel > 1 && (barPosition < viewStart || barPosition > viewEnd)) {
+                            return null;
+                          }
+                          
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-foreground/30 rounded-full"
+                              style={{
+                                width: '2px',
+                                height: `${Math.max(amplitude * 100, 4)}%`,
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
 
                   {/* Sermon segments (green) and comment segments (red) */}
                   {sermon.duration_seconds && (() => {
@@ -1176,20 +1241,20 @@ const SermonViewer = () => {
                     <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full" />
                   </div>
                 </div>
+              </div>
 
-                {/* Time display */}
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    {Math.floor(currentTime / 1000 / 60)}:
-                    {String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")}
-                  </span>
-                  <span>
-                    {sermon.duration_seconds 
-                      ? `${Math.floor(sermon.duration_seconds / 60)}:${String(Math.floor(sermon.duration_seconds % 60)).padStart(2, "0")}`
-                      : "0:00"
-                    }
-                  </span>
-                </div>
+              {/* Time display */}
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>
+                  {Math.floor(currentTime / 1000 / 60)}:
+                  {String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")}
+                </span>
+                <span>
+                  {sermon.duration_seconds 
+                    ? `${Math.floor(sermon.duration_seconds / 60)}:${String(Math.floor(sermon.duration_seconds % 60)).padStart(2, "0")}`
+                    : "0:00"
+                  }
+                </span>
               </div>
             </div>
 
