@@ -108,6 +108,7 @@ const SermonViewer = () => {
   const [showVerbalPauses, setShowVerbalPauses] = useState(false);
   const [showSlowSpeech, setShowSlowSpeech] = useState(false);
   const [showVolumeChanges, setShowVolumeChanges] = useState(false);
+  const [visibleFillerWords, setVisibleFillerWords] = useState<Set<string>>(new Set());
   const [fastSpeechThreshold, setFastSpeechThreshold] = useState(1.2);
   const [slowSpeechThreshold, setSlowSpeechThreshold] = useState(0.75);
   const [volumeChangeThreshold, setVolumeChangeThreshold] = useState(1.0);
@@ -254,22 +255,74 @@ const SermonViewer = () => {
   };
 
   const countVerbalPauses = (): number => {
+    const fillerWords = ['um', 'uh', 'er', 'ah', 'like', 'you know', 'so', 'well'];
     let pauseCount = 0;
     
-    for (let i = 1; i < sentences.length; i++) {
-      const prevSentence = sentences[i - 1];
-      const currentSentence = sentences[i];
-      
-      // Gap between sentences in seconds
-      const gap = (currentSentence.start_time_ms - prevSentence.end_time_ms) / 1000;
-      
-      // Consider gaps longer than 1 second as verbal pauses
-      if (gap > 1) {
-        pauseCount++;
-      }
-    }
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      fillerWords.forEach(filler => {
+        const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          pauseCount += matches.length;
+        }
+      });
+    });
     
     return pauseCount;
+  };
+
+  const getTopFillerWords = (): { word: string; count: number; color: string }[] => {
+    const fillerWords = ['um', 'uh', 'er', 'ah', 'like', 'you know', 'so', 'well', 'basically', 'actually', 'literally'];
+    const colors = ['#f97316', '#fb923c', '#fdba74']; // orange variations
+    const wordCounts: { [key: string]: number } = {};
+    
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      fillerWords.forEach(filler => {
+        const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          wordCounts[filler] = (wordCounts[filler] || 0) + matches.length;
+        }
+      });
+    });
+    
+    return Object.entries(wordCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map((entry, idx) => ({
+        word: entry[0],
+        count: entry[1],
+        color: colors[idx]
+      }));
+  };
+
+  const getFillerWordTimestamps = (fillerWord: string): { start: number; end: number }[] => {
+    const timestamps: { start: number; end: number }[] = [];
+    
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      const regex = new RegExp(`\\b${fillerWord}\\b`, 'gi');
+      if (regex.test(text)) {
+        timestamps.push({
+          start: sentence.start_time_ms,
+          end: sentence.end_time_ms
+        });
+      }
+    });
+    
+    return timestamps;
+  };
+
+  const toggleFillerWord = (word: string) => {
+    const newSet = new Set(visibleFillerWords);
+    if (newSet.has(word)) {
+      newSet.delete(word);
+    } else {
+      newSet.add(word);
+    }
+    setVisibleFillerWords(newSet);
   };
 
   const countSlowSpeechParagraphs = (threshold: number = 0.75): number => {
@@ -282,26 +335,6 @@ const SermonViewer = () => {
       const rate = calculateSpeechRate(p);
       return rate < averageRate * threshold;
     }).length;
-  };
-
-  const getVerbalPauseTimestamps = (): { start: number; end: number }[] => {
-    const pauses: { start: number; end: number }[] = [];
-    
-    for (let i = 1; i < sentences.length; i++) {
-      const prevSentence = sentences[i - 1];
-      const currentSentence = sentences[i];
-      
-      const gap = (currentSentence.start_time_ms - prevSentence.end_time_ms) / 1000;
-      
-      if (gap > 1) {
-        pauses.push({
-          start: prevSentence.end_time_ms,
-          end: currentSentence.start_time_ms
-        });
-      }
-    }
-    
-    return pauses;
   };
 
   const getSlowSpeechParagraphs = (threshold: number = 0.75) => {
@@ -1064,22 +1097,28 @@ const SermonViewer = () => {
                           );
                         })}
                         
-                        {/* Verbal pause overlays */}
-                        {showVerbalPauses && getVerbalPauseTimestamps().map((pause, idx) => {
-                          const left = (pause.start / totalDuration) * 100;
-                          const width = ((pause.end - pause.start) / totalDuration) * 100;
+                        {/* Filler word overlays */}
+                        {getTopFillerWords().map((filler) => {
+                          if (!visibleFillerWords.has(filler.word)) return null;
                           
-                          return (
-                            <div
-                              key={`pause-${idx}`}
-                              className="absolute h-full bg-orange-500/50 border-t-2 border-b-2 border-orange-600"
-                              style={{
-                                left: `${left}%`,
-                                width: `${width}%`,
-                              }}
-                              title={`Verbal pause at ${Math.floor(pause.start / 1000 / 60)}:${String(Math.floor((pause.start / 1000) % 60)).padStart(2, "0")}`}
-                            />
-                          );
+                          return getFillerWordTimestamps(filler.word).map((timestamp, idx) => {
+                            const left = (timestamp.start / totalDuration) * 100;
+                            const width = ((timestamp.end - timestamp.start) / totalDuration) * 100;
+                            
+                            return (
+                              <div
+                                key={`filler-${filler.word}-${idx}`}
+                                className="absolute h-full border-t-2 border-b-2"
+                                style={{
+                                  left: `${left}%`,
+                                  width: `${width}%`,
+                                  backgroundColor: `${filler.color}50`,
+                                  borderColor: filler.color,
+                                }}
+                                title={`"${filler.word}" at ${Math.floor(timestamp.start / 1000 / 60)}:${String(Math.floor((timestamp.start / 1000) % 60)).padStart(2, "0")}`}
+                              />
+                            );
+                          });
                         })}
                         
                         {/* Slow speech overlays */}
@@ -1164,10 +1203,18 @@ const SermonViewer = () => {
                 <div className="w-4 h-2 bg-fuchsia-500/50 border-t border-b border-fuchsia-600 rounded" />
                 <span>Fast Speech</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-2 bg-orange-500/50 border-t border-b border-orange-600 rounded" />
-                <span>Verbal Pauses</span>
-              </div>
+              {getTopFillerWords().map((filler) => (
+                <div key={filler.word} className="flex items-center gap-2">
+                  <div 
+                    className="w-4 h-2 border-t border-b rounded" 
+                    style={{
+                      backgroundColor: `${filler.color}50`,
+                      borderColor: filler.color
+                    }}
+                  />
+                  <span className="capitalize">{filler.word}</span>
+                </div>
+              ))}
               <div className="flex items-center gap-2">
                 <div className="w-4 h-2 bg-blue-500/50 border-t border-b border-blue-600 rounded" />
                 <span>Slow Speech</span>
@@ -1240,27 +1287,37 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-orange-500/5 cursor-pointer hover:bg-orange-500/10 transition-colors"
-              onClick={() => setShowVerbalPauses(!showVerbalPauses)}
+              className="p-4 bg-orange-500/5"
             >
-              <div className="flex items-start justify-between mb-2">
-                <input
-                  type="checkbox"
-                  checked={showVerbalPauses}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setShowVerbalPauses(e.target.checked);
-                  }}
-                  className="mt-1"
-                />
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-sm font-medium text-orange-700">Verbal Pauses</h3>
               </div>
-              <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-orange-600">
                   {countVerbalPauses()}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Verbal Pauses Detected
+                  Total Filler Words
                 </div>
+              </div>
+              <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                <div className="text-xs font-medium text-muted-foreground mb-2">Top 3 Filler Words:</div>
+                {getTopFillerWords().map((filler) => (
+                  <div key={filler.word} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={visibleFillerWords.has(filler.word)}
+                        onCheckedChange={() => toggleFillerWord(filler.word)}
+                      />
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: filler.color }}
+                      />
+                      <span className="text-sm capitalize">{filler.word}</span>
+                    </div>
+                    <span className="text-sm font-medium">{filler.count}</span>
+                  </div>
+                ))}
               </div>
             </Card>
 
