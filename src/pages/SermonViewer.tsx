@@ -12,6 +12,8 @@ import {
   Download,
   Loader2,
   FileText,
+  List,
+  AlignLeft,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,6 +50,7 @@ const SermonViewer = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [viewMode, setViewMode] = useState<"sentence" | "paragraph">("sentence");
 
   useEffect(() => {
     checkAuth();
@@ -181,6 +184,39 @@ const SermonViewer = () => {
     return currentMs >= sentence.start_time_ms && currentMs <= sentence.end_time_ms;
   };
 
+  const groupIntoParagraphs = () => {
+    const paragraphs: Array<{
+      sentences: Sentence[];
+      startTime: number;
+      endTime: number;
+      text: string;
+    }> = [];
+    
+    let currentParagraph: Sentence[] = [];
+    const sentencesPerParagraph = 5; // Group every 5 sentences
+    
+    sentences.forEach((sentence, index) => {
+      currentParagraph.push(sentence);
+      
+      if (currentParagraph.length === sentencesPerParagraph || index === sentences.length - 1) {
+        paragraphs.push({
+          sentences: [...currentParagraph],
+          startTime: currentParagraph[0].start_time_ms,
+          endTime: currentParagraph[currentParagraph.length - 1].end_time_ms,
+          text: currentParagraph.map(s => s.sentence_text).join(" "),
+        });
+        currentParagraph = [];
+      }
+    });
+    
+    return paragraphs;
+  };
+
+  const isCurrentParagraph = (paragraph: { startTime: number; endTime: number }) => {
+    const currentMs = currentTime * 1000;
+    return currentMs >= paragraph.startTime && currentMs <= paragraph.endTime;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -284,13 +320,33 @@ const SermonViewer = () => {
         )}
 
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold mb-4">Transcript</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Transcript</h2>
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "sentence" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("sentence")}
+              >
+                <List className="h-4 w-4 mr-2" />
+                Sentences
+              </Button>
+              <Button
+                variant={viewMode === "paragraph" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("paragraph")}
+              >
+                <AlignLeft className="h-4 w-4 mr-2" />
+                Paragraphs
+              </Button>
+            </div>
+          </div>
           {sentences.length === 0 ? (
             <Card className="p-8 text-center text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
               <p>Transcription in progress...</p>
             </Card>
-          ) : (
+          ) : viewMode === "sentence" ? (
             <div className="space-y-1">
               {sentences.map((sentence) => (
                 <div
@@ -307,6 +363,27 @@ const SermonViewer = () => {
                       {formatTimestamp(sentence.start_time_ms)}
                     </span>
                     <p className="flex-1">{sentence.sentence_text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {groupIntoParagraphs().map((paragraph, index) => (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg cursor-pointer transition-colors ${
+                    isCurrentParagraph(paragraph)
+                      ? "bg-primary/10 border-l-4 border-primary"
+                      : "hover:bg-muted"
+                  }`}
+                  onClick={() => seekToTime(paragraph.startTime)}
+                >
+                  <div className="flex gap-3">
+                    <span className="text-sm font-mono text-muted-foreground min-w-[60px]">
+                      {formatTimestamp(paragraph.startTime)}
+                    </span>
+                    <p className="flex-1 leading-relaxed">{paragraph.text}</p>
                   </div>
                 </div>
               ))}
