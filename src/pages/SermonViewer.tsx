@@ -1941,31 +1941,31 @@ const SermonViewer = () => {
                 } else if (isActiveFastSpeech) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {
-                    backgroundColor: '#d946ef20',
+                    backgroundColor: '#d946ef80',
                     borderColor: '#d946ef'
                   };
                 } else if (isSlowSpeech) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {
-                    backgroundColor: '#06b6d420',
+                    backgroundColor: '#06b6d480',
                     borderColor: '#06b6d4'
                   };
                 } else if (hasVolumeChange) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {
-                    backgroundColor: '#f59e0b20',
+                    backgroundColor: '#f59e0b80',
                     borderColor: '#f59e0b'
                   };
                 } else if (hasVerbalPause && verbalPauseColor) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {
-                    backgroundColor: `${verbalPauseColor}20`,
+                    backgroundColor: `${verbalPauseColor}80`,
                     borderColor: verbalPauseColor
                   };
                 } else if (hasInsiderTerm && insiderTermColor) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {
-                    backgroundColor: `${insiderTermColor}20`,
+                    backgroundColor: `${insiderTermColor}80`,
                     borderColor: insiderTermColor
                   };
                 } else if (hasPeak) {
@@ -1986,17 +1986,17 @@ const SermonViewer = () => {
                       </Badge>
                     )}
                     {!hasAudioComment && isActiveFastSpeech && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-fuchsia-500/20 border-fuchsia-500">
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-fuchsia-500/50 border-fuchsia-500">
                         ⚡ Fast Speech
                       </Badge>
                     )}
                     {!hasAudioComment && !isActiveFastSpeech && isSlowSpeech && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-cyan-500/20 border-cyan-500">
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-cyan-500/50 border-cyan-500">
                         🐌 Slow Speech
                       </Badge>
                     )}
                     {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && hasVolumeChange && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-amber-500/20 border-amber-500">
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-amber-500/50 border-amber-500">
                         📊 Volume Change
                       </Badge>
                     )}
@@ -2005,7 +2005,7 @@ const SermonViewer = () => {
                         variant="outline" 
                         className="absolute top-2 right-2 text-xs"
                         style={{
-                          backgroundColor: `${verbalPauseColor}20`,
+                          backgroundColor: `${verbalPauseColor}80`,
                           borderColor: verbalPauseColor
                         }}
                       >
@@ -2017,7 +2017,7 @@ const SermonViewer = () => {
                         variant="outline" 
                         className="absolute top-2 right-2 text-xs"
                         style={{
-                          backgroundColor: `${insiderTermColor}20`,
+                          backgroundColor: `${insiderTermColor}80`,
                           borderColor: insiderTermColor
                         }}
                       >
