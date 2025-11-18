@@ -598,12 +598,39 @@ const SermonViewer = () => {
     return counts;
   };
 
-  const getVolumeChangeParagraphs = (threshold: number = 1.5) => {
+  const getParagraphVolumeLevel = (paragraph: Sentence[]): number => {
+    if (!sermon?.duration_seconds || waveformData.length === 0) return 0;
+    
+    const firstSentence = paragraph[0];
+    const lastSentence = paragraph[paragraph.length - 1];
+    
+    const startIndex = Math.floor((firstSentence.start_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+    const endIndex = Math.ceil((lastSentence.end_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+    
+    if (startIndex >= waveformData.length || endIndex > waveformData.length) return 0;
+    
+    const paragraphData = waveformData.slice(startIndex, endIndex);
+    if (paragraphData.length === 0) return 0;
+    
+    const baselineAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
+    const paragraphAverage = paragraphData.reduce((sum, val) => sum + val, 0) / paragraphData.length;
+    
+    const volumeRatio = paragraphAverage / baselineAverage;
+    
+    if (volumeRatio >= 2.0) return 2;
+    if (volumeRatio >= 1.5) return 1;
+    if (volumeRatio <= 0.5) return -2;
+    if (volumeRatio <= 0.67) return -1;
+    return 0;
+  };
+
+  const getVolumeChangeParagraphs = () => {
     if (sentences.length === 0) return [];
     
     const paragraphs = groupIntoParagraphs(sentences);
     
-    return paragraphs.filter(p => hasSignificantVolumeChange(p, threshold) !== null);
+    // Only return paragraphs with non-baseline volume (not level 0)
+    return paragraphs.filter(p => getParagraphVolumeLevel(p) !== 0);
   };
 
   const checkAuth = async () => {
@@ -1441,7 +1468,7 @@ const SermonViewer = () => {
                         })}
                         
                         {/* Volume change overlays */}
-                        {showVolumeChanges && getVolumeChangeParagraphs(volumeChangeThreshold).map((paragraph, idx) => {
+                        {showVolumeChanges && getVolumeChangeParagraphs().map((paragraph, idx) => {
                           const start = paragraph[0].start_time_ms;
                           const end = paragraph[paragraph.length - 1].end_time_ms;
                           const left = (start / totalDuration) * 100;
@@ -1871,7 +1898,7 @@ const SermonViewer = () => {
                   const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
                   return paragraph.some(s => regex.test(s.sentence_text));
                 });
-                const hasVolumeChange = showVolumeChanges && hasSignificantVolumeChange(paragraph, volumeChangeThreshold);
+                const hasVolumeChange = showVolumeChanges && getParagraphVolumeLevel(paragraph) !== 0;
                 const isActiveFastSpeech = showFastSpeech && isFastSpeech;
                 
                 // Determine highlight color and style based on active analytics
