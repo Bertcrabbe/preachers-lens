@@ -1885,7 +1885,7 @@ const SermonViewer = () => {
                   c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.end_time_ms <= lastSentence.end_time_ms
                 );
                 const hasPeak = paragraphHasPeak(paragraph);
-                const isFastSpeech = hasFastSpeechRate(paragraph);
+                const isFastSpeech = hasFastSpeechRate(paragraph, fastSpeechThreshold);
                 
                 // Determine active analytics highlights
                 const isSlowSpeech = showSlowSpeech && getSlowSpeechParagraphs(slowSpeechThreshold).some(
