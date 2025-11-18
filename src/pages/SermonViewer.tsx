@@ -461,7 +461,7 @@ const SermonViewer = () => {
                 'accountability group', 'contemporary christian music', 'ccm']
     };
     
-    const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd']; // purple variations
+    const colors = ['#6366f1', '#818cf8', '#a5b4fc']; // indigo variations
     const termCounts: { [key: string]: number } = {};
     
     sentences.forEach(sentence => {
@@ -1457,7 +1457,7 @@ const SermonViewer = () => {
                           return (
                             <div
                               key={`slow-${idx}`}
-                              className="absolute h-full bg-blue-500/50 border-t-2 border-b-2 border-blue-600"
+                              className="absolute h-full bg-cyan-500/50 border-t-2 border-b-2 border-cyan-600"
                               style={{
                                 left: `${left}%`,
                                 width: `${width}%`,
@@ -1477,7 +1477,7 @@ const SermonViewer = () => {
                           return (
                             <div
                               key={`volume-${idx}`}
-                              className="absolute h-full bg-emerald-500/50 border-t-2 border-b-2 border-emerald-600"
+                              className="absolute h-full bg-amber-500/50 border-t-2 border-b-2 border-amber-600"
                               style={{
                                 left: `${left}%`,
                                 width: `${width}%`,
@@ -1566,11 +1566,11 @@ const SermonViewer = () => {
                 </div>
               ))}
               <div className="flex items-center gap-2">
-                <div className="w-4 h-2 bg-blue-500/50 border-t border-b border-blue-600 rounded" />
+                <div className="w-4 h-2 bg-cyan-500/50 border-t border-b border-cyan-600 rounded" />
                 <span>Slow Speech</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-2 bg-emerald-500/50 border-t border-b border-emerald-600 rounded" />
+                <div className="w-4 h-2 bg-amber-500/50 border-t border-b border-amber-600 rounded" />
                 <span>Volume Changes</span>
               </div>
               {getTopInsiderTerms().map((term) => (
@@ -1687,11 +1687,11 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-blue-500/5 cursor-pointer hover:bg-blue-500/10 transition-colors"
+              className="p-4 bg-cyan-500/5 cursor-pointer hover:bg-cyan-500/10 transition-colors"
               onClick={() => setShowSlowSpeech(!showSlowSpeech)}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-blue-700">Slow Speech</h3>
+                <h3 className="text-sm font-medium text-cyan-700">Slow Speech</h3>
                 <Checkbox
                   checked={showSlowSpeech}
                   onCheckedChange={(checked) => setShowSlowSpeech(checked === true)}
@@ -1700,7 +1700,7 @@ const SermonViewer = () => {
                 />
               </div>
               <div className="flex flex-col items-center text-center mb-3">
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-3xl font-bold text-cyan-600">
                   {countSlowSpeechParagraphs(slowSpeechThreshold)}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
@@ -1724,11 +1724,11 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-emerald-500/5 cursor-pointer hover:bg-emerald-500/10 transition-colors"
+              className="p-4 bg-amber-500/5 cursor-pointer hover:bg-amber-500/10 transition-colors"
               onClick={() => setShowVolumeChanges(!showVolumeChanges)}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-emerald-700">Volume Changes</h3>
+                <h3 className="text-sm font-medium text-amber-700">Volume Changes</h3>
                 <Checkbox
                   checked={showVolumeChanges}
                   onCheckedChange={(checked) => setShowVolumeChanges(checked === true)}
@@ -1740,7 +1740,7 @@ const SermonViewer = () => {
                 <div className="grid grid-cols-5 gap-2 w-full px-2">
                   {[-2, -1, 0, 1, 2].map(level => (
                     <div key={level} className="flex flex-col items-center">
-                      <div className="text-lg font-bold text-emerald-600">
+                      <div className="text-lg font-bold text-amber-600">
                         {countVolumeChangeParagraphs()[level]}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -1770,13 +1770,13 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-purple-500/5"
+              className="p-4 bg-indigo-500/5"
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-medium text-purple-700">Insider Language</h3>
+                <h3 className="text-sm font-medium text-indigo-700">Insider Language</h3>
               </div>
               <div className="flex flex-col items-center text-center mb-4">
-                <div className="text-3xl font-bold text-purple-600">
+                <div className="text-3xl font-bold text-indigo-600">
                   {countInsiderLanguage()}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
@@ -1912,13 +1912,13 @@ const SermonViewer = () => {
                 } else if (isActiveFastSpeech) {
                   highlightClass = "bg-fuchsia-500/20 border-2 border-fuchsia-500 hover:bg-fuchsia-500/30";
                 } else if (isSlowSpeech) {
-                  highlightClass = "bg-blue-500/20 border-2 border-blue-500 hover:bg-blue-500/30";
+                  highlightClass = "bg-cyan-500/20 border-2 border-cyan-500 hover:bg-cyan-500/30";
                 } else if (hasVolumeChange) {
-                  highlightClass = "bg-emerald-500/20 border-2 border-emerald-500 hover:bg-emerald-500/30";
+                  highlightClass = "bg-amber-500/20 border-2 border-amber-500 hover:bg-amber-500/30";
                 } else if (hasVerbalPause) {
                   highlightClass = "bg-orange-500/20 border-2 border-orange-500 hover:bg-orange-500/30";
                 } else if (hasInsiderTerm) {
-                  highlightClass = "bg-purple-500/20 border-2 border-purple-500 hover:bg-purple-500/30";
+                  highlightClass = "bg-indigo-500/20 border-2 border-indigo-500 hover:bg-indigo-500/30";
                 } else if (hasPeak) {
                   highlightClass = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
                 } else {
@@ -1943,12 +1943,12 @@ const SermonViewer = () => {
                       </Badge>
                     )}
                     {!hasAudioComment && !isActiveFastSpeech && isSlowSpeech && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-blue-500/20 border-blue-500">
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-cyan-500/20 border-cyan-500">
                         🐌 Slow Speech
                       </Badge>
                     )}
                     {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && hasVolumeChange && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-emerald-500/20 border-emerald-500">
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-amber-500/20 border-amber-500">
                         📊 Volume Change
                       </Badge>
                     )}
@@ -1958,7 +1958,7 @@ const SermonViewer = () => {
                       </Badge>
                     )}
                     {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && hasInsiderTerm && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-purple-500/20 border-purple-500">
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-indigo-500/20 border-indigo-500">
                         📖 Insider Language
                       </Badge>
                     )}
