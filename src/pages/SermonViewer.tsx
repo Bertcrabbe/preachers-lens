@@ -88,7 +88,7 @@ const SermonViewer = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [viewMode, setViewMode] = useState<"sentence" | "paragraph">("sentence");
+  const [viewMode, setViewMode] = useState<"sentence" | "paragraph">("paragraph");
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [selectedTimeRange, setSelectedTimeRange] = useState<{ start: number; end: number } | null>(null);
