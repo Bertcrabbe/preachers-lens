@@ -1891,44 +1891,92 @@ const SermonViewer = () => {
                 const isSlowSpeech = showSlowSpeech && getSlowSpeechParagraphs(slowSpeechThreshold).some(
                   p => p[0].start_time_ms === firstSentence.start_time_ms
                 );
-                const hasVerbalPause = showVerbalPauses && Array.from(visibleFillerWords).some(word =>
-                  paragraph.some(s => s.sentence_text.toLowerCase().includes(word.toLowerCase()))
-                );
-                const hasInsiderTerm = showInsiderLanguage && Array.from(visibleInsiderTerms).some(term => {
-                  const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-                  return paragraph.some(s => regex.test(s.sentence_text));
-                });
+                
+                // Find which filler word this paragraph contains (for color matching)
+                let verbalPauseColor = null;
+                if (showVerbalPauses) {
+                  const topFillers = getTopFillerWords();
+                  for (const filler of topFillers) {
+                    if (visibleFillerWords.has(filler.word)) {
+                      const hasThisFiller = paragraph.some(s => 
+                        s.sentence_text.toLowerCase().includes(filler.word.toLowerCase())
+                      );
+                      if (hasThisFiller) {
+                        verbalPauseColor = filler.color;
+                        break;
+                      }
+                    }
+                  }
+                }
+                const hasVerbalPause = verbalPauseColor !== null;
+                
+                // Find which insider term this paragraph contains (for color matching)
+                let insiderTermColor = null;
+                if (showInsiderLanguage) {
+                  const topTerms = getTopInsiderTerms();
+                  for (const term of topTerms) {
+                    if (visibleInsiderTerms.has(term.word)) {
+                      const regex = new RegExp(`\\b${term.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+                      const hasThisTerm = paragraph.some(s => regex.test(s.sentence_text));
+                      if (hasThisTerm) {
+                        insiderTermColor = term.color;
+                        break;
+                      }
+                    }
+                  }
+                }
+                const hasInsiderTerm = insiderTermColor !== null;
+                
                 const hasVolumeChange = showVolumeChanges && getParagraphVolumeLevel(paragraph) !== 0;
                 const isActiveFastSpeech = showFastSpeech && isFastSpeech;
                 
                 // Determine highlight color and style based on active analytics
                 let highlightStyle = "hover:bg-muted";
-                let highlightClass = "";
+                let customStyle: React.CSSProperties = {};
                 
                 if (isCurrentParagraph(paragraph)) {
-                  highlightClass = "bg-primary/10 border border-primary";
+                  highlightStyle = "bg-primary/10 border border-primary";
                 } else if (previewingParagraph === idx) {
-                  highlightClass = "bg-accent/20 border border-accent";
+                  highlightStyle = "bg-accent/20 border border-accent";
                 } else if (isActiveFastSpeech) {
-                  highlightClass = "bg-fuchsia-500/20 border-2 border-fuchsia-500 hover:bg-fuchsia-500/30";
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#d946ef20',
+                    borderColor: '#d946ef'
+                  };
                 } else if (isSlowSpeech) {
-                  highlightClass = "bg-cyan-500/20 border-2 border-cyan-500 hover:bg-cyan-500/30";
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#06b6d420',
+                    borderColor: '#06b6d4'
+                  };
                 } else if (hasVolumeChange) {
-                  highlightClass = "bg-amber-500/20 border-2 border-amber-500 hover:bg-amber-500/30";
-                } else if (hasVerbalPause) {
-                  highlightClass = "bg-orange-500/20 border-2 border-orange-500 hover:bg-orange-500/30";
-                } else if (hasInsiderTerm) {
-                  highlightClass = "bg-indigo-500/20 border-2 border-indigo-500 hover:bg-indigo-500/30";
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#f59e0b20',
+                    borderColor: '#f59e0b'
+                  };
+                } else if (hasVerbalPause && verbalPauseColor) {
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: `${verbalPauseColor}20`,
+                    borderColor: verbalPauseColor
+                  };
+                } else if (hasInsiderTerm && insiderTermColor) {
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: `${insiderTermColor}20`,
+                    borderColor: insiderTermColor
+                  };
                 } else if (hasPeak) {
-                  highlightClass = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
-                } else {
-                  highlightClass = highlightStyle;
+                  highlightStyle = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
                 }
                 
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-lg transition-colors cursor-pointer relative ${highlightClass}`}
+                    className={`p-4 rounded-lg transition-colors cursor-pointer relative ${highlightStyle}`}
+                    style={customStyle}
                     onClick={() => handlePreviewParagraph(idx)}
                   >
                     {hasAudioComment && (
@@ -1952,13 +2000,27 @@ const SermonViewer = () => {
                         📊 Volume Change
                       </Badge>
                     )}
-                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && hasVerbalPause && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-orange-500/20 border-orange-500">
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && hasVerbalPause && verbalPauseColor && (
+                      <Badge 
+                        variant="outline" 
+                        className="absolute top-2 right-2 text-xs"
+                        style={{
+                          backgroundColor: `${verbalPauseColor}20`,
+                          borderColor: verbalPauseColor
+                        }}
+                      >
                         🔁 Verbal Pause
                       </Badge>
                     )}
-                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && hasInsiderTerm && (
-                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-indigo-500/20 border-indigo-500">
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && hasInsiderTerm && insiderTermColor && (
+                      <Badge 
+                        variant="outline" 
+                        className="absolute top-2 right-2 text-xs"
+                        style={{
+                          backgroundColor: `${insiderTermColor}20`,
+                          borderColor: insiderTermColor
+                        }}
+                      >
                         📖 Insider Language
                       </Badge>
                     )}
