@@ -31,6 +31,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
@@ -119,6 +124,12 @@ const SermonViewer = () => {
   const [volumeChangeThreshold, setVolumeChangeThreshold] = useState(1.0);
   const [waveformData, setWaveformData] = useState<number[]>([]);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [commentSummary, setCommentSummary] = useState<{
+    summary: string;
+    bulletPoints: string[];
+  } | null>(null);
   const [viewStart, setViewStart] = useState(0); // percentage of audio (0-100)
 
   useEffect(() => {
@@ -761,6 +772,42 @@ const SermonViewer = () => {
       });
     } finally {
       setEvaluating(false);
+    }
+  };
+
+  const handleSummarizeComments = async () => {
+    if (comments.length === 0) {
+      toast({
+        title: "No comments to summarize",
+        description: "Add some comments first before generating a summary",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSummarizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("summarize-comments", {
+        body: { sermonId: id },
+      });
+
+      if (error) throw error;
+
+      setCommentSummary(data);
+      setSummaryOpen(true);
+
+      toast({
+        title: "Summary generated",
+        description: "AI analysis of all sermon comments complete",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Summary failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSummarizing(false);
     }
   };
 
@@ -1807,6 +1854,65 @@ const SermonViewer = () => {
               </div>
             </Card>
           </div>
+
+          {/* Comment Summary Section */}
+          <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen} className="mt-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">AI Comment Summary</h3>
+                </CollapsibleTrigger>
+                <Button
+                  onClick={handleSummarizeComments}
+                  disabled={summarizing || comments.length === 0}
+                  variant="outline"
+                  size="sm"
+                >
+                  {summarizing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      {commentSummary ? 'Refresh' : 'Generate'} Summary
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <CollapsibleContent className="space-y-4">
+                {commentSummary ? (
+                  <>
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">Overall Assessment</h4>
+                      <p className="text-sm leading-relaxed">{commentSummary.summary}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm text-muted-foreground">Key Improvement Areas</h4>
+                      <ul className="space-y-2">
+                        {commentSummary.bulletPoints.map((point, index) => (
+                          <li key={index} className="flex items-start gap-3">
+                            <Badge variant="outline" className="mt-0.5 shrink-0">
+                              {index + 1}
+                            </Badge>
+                            <span className="text-sm leading-relaxed">{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Click "Generate Summary" to analyze all comments and get AI-powered improvement suggestions.
+                  </p>
+                )}
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         </Card>
 
         <Card className="p-6">
