@@ -119,10 +119,19 @@ Focus on constructive, specific recommendations that the speaker can act on.`;
 
     console.log('AI response received:', content);
 
-    // Parse the JSON response
+    // Parse the JSON response - strip markdown code blocks if present
     let result;
     try {
-      result = JSON.parse(content);
+      let jsonStr = content.trim();
+      
+      // Remove markdown code blocks if present
+      if (jsonStr.startsWith('```json')) {
+        jsonStr = jsonStr.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      result = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', content);
       // Fallback: try to extract summary and bullet points from text
