@@ -19,8 +19,6 @@ import {
   MessageSquare,
   X,
   Sparkles,
-  ZoomIn,
-  ZoomOut,
   RotateCcw,
 } from "lucide-react";
 import {
@@ -1294,24 +1292,37 @@ const SermonViewer = () => {
               
               <div className="flex items-center gap-2 border-l pl-4">
                 <span className="text-sm text-muted-foreground">Zoom:</span>
-                <Button 
-                  size="icon" 
-                  variant="outline"
-                  onClick={() => setZoomLevel(Math.max(1, zoomLevel - 1))}
-                  disabled={zoomLevel <= 1}
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium min-w-[3rem] text-center">{zoomLevel}x</span>
-                <Button 
-                  size="icon" 
-                  variant="outline"
-                  onClick={() => setZoomLevel(Math.min(10, zoomLevel + 1))}
-                  disabled={zoomLevel >= 10}
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                {zoomLevel > 1 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="min-w-[5rem]">
+                      {zoomLevel}x
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => { setZoomLevel(0.75); setViewStart(0); }}>
+                      0.75x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(1); setViewStart(0); }}>
+                      1x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(1.25); setViewStart(0); }}>
+                      1.25x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(1.5); setViewStart(0); }}>
+                      1.5x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(2); setViewStart(0); }}>
+                      2x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(3); setViewStart(0); }}>
+                      3x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(4); setViewStart(0); }}>
+                      4x
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {zoomLevel !== 1 && (
                   <Button 
                     size="icon" 
                     variant="outline"
