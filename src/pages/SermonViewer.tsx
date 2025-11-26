@@ -129,6 +129,12 @@ const SermonViewer = () => {
     bulletPoints: string[];
   } | null>(null);
   const [viewStart, setViewStart] = useState(0); // percentage of audio (0-100)
+  const [scriptureRefs, setScriptureRefs] = useState<{
+    references: Array<{ reference: string; context: string }>;
+    total_count: number;
+  } | null>(null);
+  const [loadingScriptures, setLoadingScriptures] = useState(false);
+  const [showScriptureRefs, setShowScriptureRefs] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -137,6 +143,7 @@ const SermonViewer = () => {
       fetchSentences();
       fetchComments();
       fetchRules();
+      fetchScriptureReferences();
     }
   }, [id]);
 
@@ -642,6 +649,19 @@ const SermonViewer = () => {
     return paragraphs.filter(p => getParagraphVolumeLevel(p) !== 0);
   };
 
+  const paragraphContainsScripture = (paragraph: Sentence[]): boolean => {
+    if (!scriptureRefs || !showScriptureRefs) return false;
+    
+    const paragraphText = paragraph.map(s => s.sentence_text).join(" ");
+    
+    // Check if any scripture reference context appears in this paragraph
+    return scriptureRefs.references.some(ref => {
+      // Extract a meaningful snippet from the context to search for
+      const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
+      return paragraphText.includes(contextWords) || paragraphText.includes(ref.reference);
+    });
+  };
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -806,6 +826,28 @@ const SermonViewer = () => {
       });
     } finally {
       setSummarizing(false);
+    }
+  };
+
+  const fetchScriptureReferences = async () => {
+    setLoadingScriptures(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("count-scripture-refs", {
+        body: { sermonId: id },
+      });
+
+      if (error) throw error;
+
+      setScriptureRefs(data);
+    } catch (error: any) {
+      console.error("Failed to load scripture references:", error);
+      toast({
+        title: "Failed to load scripture references",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingScriptures(false);
     }
   };
 
@@ -1568,6 +1610,28 @@ const SermonViewer = () => {
                             );
                           });
                         })}
+                        
+                        {/* Scripture reference overlays */}
+                        {showScriptureRefs && groupIntoParagraphs(sentences).map((paragraph, idx) => {
+                          if (!paragraphContainsScripture(paragraph)) return null;
+                          
+                          const start = paragraph[0].start_time_ms;
+                          const end = paragraph[paragraph.length - 1].end_time_ms;
+                          const left = (start / totalDuration) * 100;
+                          const width = ((end - start) / totalDuration) * 100;
+                          
+                          return (
+                            <div
+                              key={`scripture-${idx}`}
+                              className="absolute h-full bg-emerald-500/50 border-t-2 border-b-2 border-emerald-600"
+                              style={{
+                                left: `${left}%`,
+                                width: `${width}%`,
+                              }}
+                              title={`Scripture reference at ${Math.floor(start / 1000 / 60)}:${String(Math.floor((start / 1000) % 60)).padStart(2, "0")}`}
+                            />
+                          );
+                        })}
                       </>
                     );
                   })()}
@@ -1643,6 +1707,12 @@ const SermonViewer = () => {
                   <span className="capitalize">{term.word}</span>
                 </div>
               ))}
+              {showScriptureRefs && (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-2 bg-emerald-500/50 border-t border-b border-emerald-600 rounded" />
+                  <span>Scripture References</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1864,6 +1934,53 @@ const SermonViewer = () => {
                 ))}
               </div>
             </Card>
+
+            <Card 
+              className="p-4 bg-emerald-500/5 cursor-pointer hover:bg-emerald-500/10 transition-colors"
+              onClick={() => setShowScriptureRefs(!showScriptureRefs)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-sm font-medium text-emerald-700">Scripture References</h3>
+                <Checkbox
+                  checked={showScriptureRefs}
+                  onCheckedChange={(checked) => setShowScriptureRefs(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex flex-col items-center text-center mb-3">
+                <div className="text-3xl font-bold text-emerald-600">
+                  {loadingScriptures ? (
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  ) : (
+                    scriptureRefs?.total_count || 0
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Biblical Citations
+                </div>
+              </div>
+              {scriptureRefs && scriptureRefs.references.length > 0 && (
+                <div className="space-y-2 max-h-40 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <p className="font-medium">Scripture References:</p>
+                  </div>
+                  {scriptureRefs.references.map((ref, idx) => (
+                    <div key={idx} className="text-sm border-l-2 border-emerald-500 pl-2 py-1">
+                      <div className="font-medium text-emerald-700">{ref.reference}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                        {ref.context.substring(0, 100)}...
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!scriptureRefs && !loadingScriptures && (
+                <div className="text-xs text-center text-muted-foreground">
+                  Click to load scripture references
+                </div>
+              )}
+            </Card>
           </div>
 
           {/* Comment Summary Section */}
@@ -2046,6 +2163,7 @@ const SermonViewer = () => {
                 
                 const hasVolumeChange = showVolumeChanges && getParagraphVolumeLevel(paragraph) !== 0;
                 const isActiveFastSpeech = showFastSpeech && isFastSpeech;
+                const hasScripture = paragraphContainsScripture(paragraph);
                 
                 // Determine highlight color and style based on active analytics
                 let highlightStyle = "hover:bg-muted";
@@ -2084,6 +2202,12 @@ const SermonViewer = () => {
                   customStyle = {
                     backgroundColor: `${insiderTermColor}80`,
                     borderColor: insiderTermColor
+                  };
+                } else if (hasScripture) {
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#10b98180',
+                    borderColor: '#10b981'
                   };
                 } else if (hasPeak) {
                   highlightStyle = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
