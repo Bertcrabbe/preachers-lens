@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.summarize-comments]
 verify_jwt = true
+
+[functions.count-scripture-refs]
+verify_jwt = false
