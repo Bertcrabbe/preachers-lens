@@ -1776,7 +1776,7 @@ const SermonViewer = () => {
         {/* Sermon Dashboard */}
         <Card className="mb-6 p-6">
           <h2 className="text-xl font-semibold mb-4">Sermon Analytics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-4 bg-primary/5">
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-primary">
