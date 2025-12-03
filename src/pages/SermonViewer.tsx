@@ -1864,39 +1864,40 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-cyan-500/5 cursor-pointer hover:bg-cyan-500/10 transition-colors"
-              onClick={() => setShowSlowSpeech(!showSlowSpeech)}
+              className="p-4 bg-indigo-500/5"
             >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-cyan-700">Slow Speech</h3>
-                <Checkbox
-                  checked={showSlowSpeech}
-                  onCheckedChange={(checked) => setShowSlowSpeech(checked === true)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="mt-1"
-                />
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-sm font-medium text-indigo-700">Insider Language</h3>
               </div>
-              <div className="flex flex-col items-center text-center mb-3">
-                <div className="text-3xl font-bold text-cyan-600">
-                  {countSlowSpeechParagraphs(slowSpeechThreshold)}
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="text-3xl font-bold text-indigo-600">
+                  {countInsiderLanguage()}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Slow Speech Sections ({slowSpeechThreshold.toFixed(2)}x)
+                  Churchy Terms Used
                 </div>
               </div>
-              <div className="px-2" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>Threshold</span>
-                  <span>{slowSpeechThreshold.toFixed(2)}x</span>
+              <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                <div className="text-xs text-muted-foreground mb-2">
+                  <p className="font-medium">Top 3 Church Terms:</p>
+                  <p className="mt-1 text-xs opacity-80">May be unclear to unchurched guests</p>
                 </div>
-                <Slider
-                  value={[slowSpeechThreshold]}
-                  onValueChange={([value]) => setSlowSpeechThreshold(value)}
-                  min={0.5}
-                  max={1.0}
-                  step={0.05}
-                  className="w-full"
-                />
+                {getTopInsiderTerms().map((term) => (
+                  <div key={term.word} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={visibleInsiderTerms.has(term.word)}
+                        onCheckedChange={() => toggleInsiderTerm(term.word)}
+                      />
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: term.color }}
+                      />
+                      <span className="text-sm capitalize">{term.word}</span>
+                    </div>
+                    <span className="text-sm font-medium">{term.count}</span>
+                  </div>
+                ))}
               </div>
             </Card>
 
@@ -1947,40 +1948,39 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-indigo-500/5"
+              className="p-4 bg-cyan-500/5 cursor-pointer hover:bg-cyan-500/10 transition-colors"
+              onClick={() => setShowSlowSpeech(!showSlowSpeech)}
             >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-medium text-indigo-700">Insider Language</h3>
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-sm font-medium text-cyan-700">Slow Speech</h3>
+                <Checkbox
+                  checked={showSlowSpeech}
+                  onCheckedChange={(checked) => setShowSlowSpeech(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                />
               </div>
-              <div className="flex flex-col items-center text-center mb-4">
-                <div className="text-3xl font-bold text-indigo-600">
-                  {countInsiderLanguage()}
+              <div className="flex flex-col items-center text-center mb-3">
+                <div className="text-3xl font-bold text-cyan-600">
+                  {countSlowSpeechParagraphs(slowSpeechThreshold)}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Churchy Terms Used
+                  Slow Speech Sections ({slowSpeechThreshold.toFixed(2)}x)
                 </div>
               </div>
-              <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                <div className="text-xs text-muted-foreground mb-2">
-                  <p className="font-medium">Top 3 Church Terms:</p>
-                  <p className="mt-1 text-xs opacity-80">May be unclear to unchurched guests</p>
+              <div className="px-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>Threshold</span>
+                  <span>{slowSpeechThreshold.toFixed(2)}x</span>
                 </div>
-                {getTopInsiderTerms().map((term) => (
-                  <div key={term.word} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={visibleInsiderTerms.has(term.word)}
-                        onCheckedChange={() => toggleInsiderTerm(term.word)}
-                      />
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: term.color }}
-                      />
-                      <span className="text-sm capitalize">{term.word}</span>
-                    </div>
-                    <span className="text-sm font-medium">{term.count}</span>
-                  </div>
-                ))}
+                <Slider
+                  value={[slowSpeechThreshold]}
+                  onValueChange={([value]) => setSlowSpeechThreshold(value)}
+                  min={0.5}
+                  max={1.0}
+                  step={0.05}
+                  className="w-full"
+                />
               </div>
             </Card>
 
