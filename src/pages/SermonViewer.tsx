@@ -1363,6 +1363,66 @@ const SermonViewer = () => {
     }
   };
 
+  const [transcribingCommentId, setTranscribingCommentId] = useState<string | null>(null);
+
+  const handleTranscribeComment = async (comment: Comment) => {
+    if (!comment.audio_url) return;
+
+    setTranscribingCommentId(comment.id);
+    try {
+      // Download the audio file
+      const { data: audioData, error: downloadError } = await supabase.storage
+        .from("sermon-comments-audio")
+        .download(comment.audio_url);
+
+      if (downloadError || !audioData) {
+        throw new Error("Failed to download audio");
+      }
+
+      // Create form data for transcription
+      const formData = new FormData();
+      formData.append('audio', audioData, 'audio.webm');
+
+      const transcribeResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio-comment`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!transcribeResponse.ok) {
+        const errorData = await transcribeResponse.json();
+        throw new Error(errorData.error || "Transcription failed");
+      }
+
+      const { text } = await transcribeResponse.json();
+
+      // Update the comment with the transcription
+      const { error: updateError } = await supabase
+        .from("sermon_comments")
+        .update({ comment_text: text })
+        .eq("id", comment.id);
+
+      if (updateError) throw updateError;
+
+      toast({ title: "Transcription complete" });
+      fetchComments();
+    } catch (error: any) {
+      console.error("Transcription error:", error);
+      toast({
+        title: "Transcription failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTranscribingCommentId(null);
+    }
+  };
+
   const getCommentsForRange = (start: number, end: number) => {
     return comments.filter(
       (c) => c.start_time_ms === start && c.end_time_ms === end
@@ -2451,6 +2511,27 @@ const SermonViewer = () => {
                             </Badge>
                           )}
                           <p className="text-sm">{comment.comment_text}</p>
+                          {comment.audio_url && comment.comment_text === "Audio comment" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-1"
+                              onClick={() => handleTranscribeComment(comment)}
+                              disabled={transcribingCommentId === comment.id}
+                            >
+                              {transcribingCommentId === comment.id ? (
+                                <>
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                  Transcribing...
+                                </>
+                              ) : (
+                                <>
+                                  <FileText className="mr-1 h-3 w-3" />
+                                  Transcribe
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
                         <Button
                           size="icon"
@@ -2665,6 +2746,27 @@ const SermonViewer = () => {
                               </Badge>
                             )}
                             <p className="text-sm">{comment.comment_text}</p>
+                            {comment.audio_url && comment.comment_text === "Audio comment" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="mt-1"
+                                onClick={() => handleTranscribeComment(comment)}
+                                disabled={transcribingCommentId === comment.id}
+                              >
+                                {transcribingCommentId === comment.id ? (
+                                  <>
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                    Transcribing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <FileText className="mr-1 h-3 w-3" />
+                                    Transcribe
+                                  </>
+                                )}
+                              </Button>
+                            )}
                           </div>
                           <Button
                             size="icon"
