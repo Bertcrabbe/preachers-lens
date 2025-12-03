@@ -20,6 +20,7 @@ import {
   X,
   Sparkles,
   RotateCcw,
+  Mic,
 } from "lucide-react";
 import {
   Dialog,
@@ -38,6 +39,7 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,6 +137,10 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingScriptures, setLoadingScriptures] = useState(false);
   const [showScriptureRefs, setShowScriptureRefs] = useState(false);
+  const [previewWithComments, setPreviewWithComments] = useState(false);
+  const [playingCommentId, setPlayingCommentId] = useState<string | null>(null);
+  const commentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     checkAuth();
@@ -982,9 +988,50 @@ const SermonViewer = () => {
     }
   };
 
-  const handleTimeUpdate = () => {
+  const handleTimeUpdate = async () => {
     if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime * 1000);
+      const currentMs = audioRef.current.currentTime * 1000;
+      setCurrentTime(currentMs);
+      
+      // Check if we should play an audio comment
+      if (previewWithComments && playing && !playingCommentId) {
+        const audioComments = comments.filter(c => c.audio_url);
+        for (const comment of audioComments) {
+          // Check if we just reached a comment timestamp (within 100ms)
+          if (currentMs >= comment.start_time_ms && currentMs < comment.start_time_ms + 100) {
+            // Pause sermon and play comment
+            audioRef.current.pause();
+            setPlayingCommentId(comment.id);
+            
+            // Get signed URL if we don't have it
+            let url = commentSignedUrls[comment.id];
+            if (!url) {
+              const { data } = await supabase.storage
+                .from("sermon-comments-audio")
+                .createSignedUrl(comment.audio_url!, 3600);
+              if (data?.signedUrl) {
+                url = data.signedUrl;
+                setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
+              }
+            }
+            
+            if (url) {
+              const audio = new Audio(url);
+              commentAudioRef.current = audio;
+              audio.onended = () => {
+                setPlayingCommentId(null);
+                commentAudioRef.current = null;
+                // Resume sermon playback
+                if (audioRef.current) {
+                  audioRef.current.play();
+                }
+              };
+              audio.play();
+            }
+            break;
+          }
+        }
+      }
     }
   };
 
@@ -1521,6 +1568,28 @@ const SermonViewer = () => {
                   </Button>
                 )}
               </div>
+              
+              {comments.filter(c => c.audio_url).length > 0 && (
+                <div className="flex items-center gap-2 border-l pl-4">
+                  <Switch
+                    id="preview-comments"
+                    checked={previewWithComments}
+                    onCheckedChange={setPreviewWithComments}
+                  />
+                  <label 
+                    htmlFor="preview-comments" 
+                    className="text-sm text-muted-foreground cursor-pointer"
+                  >
+                    Preview with comments
+                  </label>
+                  {playingCommentId && (
+                    <Badge variant="secondary" className="animate-pulse">
+                      <Mic className="h-3 w-3 mr-1" />
+                      Playing comment
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="flex-1 space-y-2">
