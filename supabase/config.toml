@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.generate-sermon-report]
 verify_jwt = true
+
+[functions.transcribe-audio-comment]
+verify_jwt = true

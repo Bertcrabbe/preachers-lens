@@ -142,6 +142,8 @@ const SermonViewer = () => {
   const commentAudioRef = useRef<HTMLAudioElement | null>(null);
   const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
 
+  const [transcribing, setTranscribing] = useState(false);
+
   useEffect(() => {
     checkAuth();
     if (id) {
@@ -1048,9 +1050,38 @@ const SermonViewer = () => {
       if (!user) throw new Error("Not authenticated");
 
       let audioUrl = null;
+      let commentText = newComment;
 
-      // Upload audio if present
+      // Upload and transcribe audio if present
       if (audioBlob) {
+        setTranscribing(true);
+        
+        // Transcribe the audio first
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'audio.webm');
+        
+        const transcribeResponse = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio-comment`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (transcribeResponse.ok) {
+          const { text } = await transcribeResponse.json();
+          commentText = text || "Audio comment (transcription failed)";
+        } else {
+          console.error('Transcription failed, using fallback');
+          commentText = "Audio comment";
+        }
+        
+        setTranscribing(false);
+
+        // Upload the audio file
         const audioPath = `${user.id}/${crypto.randomUUID()}.webm`;
         const { error: uploadError } = await supabase.storage
           .from("sermon-comments-audio")
@@ -1067,7 +1098,7 @@ const SermonViewer = () => {
           user_id: user.id,
           start_time_ms: selectedTimeRange.start,
           end_time_ms: selectedTimeRange.end,
-          comment_text: newComment || "Audio comment",
+          comment_text: commentText,
           audio_url: audioUrl,
         }]);
 
@@ -1079,6 +1110,7 @@ const SermonViewer = () => {
       setAudioBlob(null);
       fetchComments();
     } catch (error: any) {
+      setTranscribing(false);
       toast({
         title: "Error adding comment",
         description: error.message,
@@ -2689,11 +2721,18 @@ const SermonViewer = () => {
               setCommentDialogOpen(false);
               setNewComment("");
               setAudioBlob(null);
-            }}>
+            }} disabled={transcribing}>
               Cancel
             </Button>
-            <Button onClick={handleAddComment} disabled={!newComment.trim() && !audioBlob}>
-              Add Comment
+            <Button onClick={handleAddComment} disabled={(!newComment.trim() && !audioBlob) || transcribing}>
+              {transcribing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Transcribing...
+                </>
+              ) : (
+                "Add Comment"
+              )}
             </Button>
           </div>
         </DialogContent>
