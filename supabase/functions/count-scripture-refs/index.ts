@@ -51,11 +51,18 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a biblical scholar assistant. Identify all scripture references in the given text."
+            content: "You are a biblical scholar assistant. Identify all scripture references in the given text. IMPORTANT: Consecutive verses from the same book/chapter that are read back-to-back should be consolidated into a single reference range (e.g., 'Romans 1:29, Romans 1:30, Romans 1:31' should become 'Romans 1:29-31'). Do not count individual verses separately if they form a continuous passage."
           },
           {
             role: "user",
-            content: `Please analyze this sermon transcript and identify ALL scripture references (books, chapters, verses). List each unique reference. Include references that are mentioned by name (like "Romans 6") as well as any quoted verses. Format your response as a JSON object with a "references" array containing objects with "reference" (the scripture citation like "Romans 6:1-4") and "context" (brief quote showing how it was referenced). Here's the transcript:\n\n${fullTranscript}`
+            content: `Please analyze this sermon transcript and identify ALL scripture references (books, chapters, verses). IMPORTANT RULES:
+1. Consolidate consecutive verses into ranges - if verses 29, 30, and 31 from the same chapter are mentioned together, count it as ONE reference (e.g., "Romans 1:29-31")
+2. Only count distinct, separate scripture passages as individual references
+3. Include references mentioned by name (like "Romans 6") as well as quoted verses
+
+Format each reference as a citation (e.g., "Romans 6:1-4") with brief context showing how it was referenced.
+
+Here's the transcript:\n\n${fullTranscript}`
           }
         ],
         tools: [
