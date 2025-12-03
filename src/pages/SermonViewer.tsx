@@ -512,6 +512,62 @@ const SermonViewer = () => {
       }));
   };
 
+  const getAllInsiderTerms = (): { word: string; count: number }[] => {
+    const insiderTerms = {
+      single: ['sanctification', 'justification', 'redemption', 'atonement', 'repentance', 
+               'trinity', 'gospel', 'salvation', 'saved', 'resurrection', 'discipleship',
+               'covenant', 'righteousness', 'idolatry', 'pharisee', 'sadducee', 'propitiation',
+               'disciple', 'apostle', 'shepherding', 'iniquity', 'transgression', 'missional',
+               'elders', 'deacons', 'liturgy', 'narthex', 'vestibule', 'sanctuary', 'anointed',
+               'revival', 'holiness', 'calvinist', 'arminian', 'eucharist', 'apologetics',
+               'legalism', 'benediction'],
+      phrases: ['quiet time', 'devotional time', 'prayer warrior', 'love offering', 'fellowship',
+                'covered by the blood', 'hedge of protection', 'being led', 'i feel led',
+                'doing life together', 'on fire for god', 'being called', 'baby christian',
+                'mature christian', 'servant leadership', 'missional living', 'the church',
+                'accountability partner', 'small group', 'community group', 'life group',
+                'spiritual disciplines', 'worship time', 'church home', 'church family',
+                'church plant', 'doing ministry', 'sin nature', 'spiritual gifts',
+                'spiritual warfare', 'holy spirit', 'the spirit', 'born again', 'new birth',
+                'altar call', "the lord's supper", 'passing the plate', 'worship leader',
+                'sermon series', 'asking jesus into your heart', 'personal relationship with jesus',
+                'lost people', 'the lost', 'reaching the unreached', 'the great commission',
+                'spiritual attack', 'prayer covering', 'kingdom work', 'called to ministry',
+                'faith step', 'prosperity gospel', 'fruit of the spirit', 'armor of god',
+                'kingdom of heaven', 'kingdom of god', 'lamb of god', 'ministry team',
+                'global partners', 'pastoral care', 'shepherding team', 'church polity',
+                'praise and worship', 'praise & worship', 'worship experience', 'spirit moving',
+                'worship night', 'vacation bible school', 'vbs', 'testimony', 'purity culture',
+                'accountability group', 'contemporary christian music', 'ccm']
+    };
+    
+    const termCounts: { [key: string]: number } = {};
+    
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      
+      insiderTerms.phrases.forEach(term => {
+        const regex = new RegExp(`\\b${term.replace(/\s+/g, '\\s+').replace(/'/g, "\\'")}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          termCounts[term] = (termCounts[term] || 0) + matches.length;
+        }
+      });
+      
+      insiderTerms.single.forEach(term => {
+        const regex = new RegExp(`\\b${term}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          termCounts[term] = (termCounts[term] || 0) + matches.length;
+        }
+      });
+    });
+    
+    return Object.entries(termCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([word, count]) => ({ word, count }));
+  };
+
   const getInsiderTermTimestamps = (term: string): { start: number; end: number }[] => {
     const timestamps: { start: number; end: number }[] = [];
     
@@ -1919,6 +1975,34 @@ const SermonViewer = () => {
             >
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-sm font-medium text-indigo-700">Insider Language</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2">
+                      View All
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto bg-background border shadow-lg z-50">
+                    {getAllInsiderTerms().length === 0 ? (
+                      <DropdownMenuItem disabled className="text-muted-foreground">
+                        No insider terms found
+                      </DropdownMenuItem>
+                    ) : (
+                      getAllInsiderTerms().map((term) => (
+                        <DropdownMenuItem 
+                          key={term.word}
+                          className="flex justify-between cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleInsiderTerm(term.word);
+                          }}
+                        >
+                          <span className="capitalize truncate mr-2">{term.word}</span>
+                          <span className="font-semibold text-indigo-600">{term.count}</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-indigo-600">
