@@ -365,6 +365,45 @@ const SermonViewer = () => {
       }));
   };
 
+  const getAllFillerWords = (): { word: string; count: number }[] => {
+    const fillerWords = {
+      single: ['uh', 'um', 'like', 'so', 'well', 'okay', 'right', 'actually', 'basically', 
+               'literally', 'honestly', 'seriously', 'anyway', 'just', 'really', 'maybe', 
+               'perhaps', 'possibly', 'hmm', 'er', 'ah', 'oh'],
+      phrases: ['you know', 'i mean', 'sort of', 'kind of', 'you know what i mean', 
+                'the thing is', 'at the end of the day', 'in a sense', 'to be honest', 
+                'if you will', 'so yeah', 'well you see', 'i guess', 'i suppose', 
+                'its like', 'i was gonna say', 'i think', 'i feel like', 'im not sure but',
+                'uh-huh', 'mm-hmm']
+    };
+    
+    const wordCounts: { [key: string]: number } = {};
+    
+    sentences.forEach(sentence => {
+      const text = sentence.sentence_text.toLowerCase();
+      
+      fillerWords.phrases.forEach(filler => {
+        const regex = new RegExp(`\\b${filler.replace(/\s+/g, '\\s+')}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          wordCounts[filler] = (wordCounts[filler] || 0) + matches.length;
+        }
+      });
+      
+      fillerWords.single.forEach(filler => {
+        const regex = new RegExp(`\\b${filler}\\b`, 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          wordCounts[filler] = (wordCounts[filler] || 0) + matches.length;
+        }
+      });
+    });
+    
+    return Object.entries(wordCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([word, count]) => ({ word, count }));
+  };
+
   const getFillerWordTimestamps = (fillerWord: string): { start: number; end: number }[] => {
     const timestamps: { start: number; end: number }[] = [];
     
@@ -2087,6 +2126,34 @@ const SermonViewer = () => {
             >
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-sm font-medium text-orange-700">Filler Words</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2">
+                      View All
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto bg-background border shadow-lg z-50">
+                    {getAllFillerWords().length === 0 ? (
+                      <DropdownMenuItem disabled className="text-muted-foreground">
+                        No filler words found
+                      </DropdownMenuItem>
+                    ) : (
+                      getAllFillerWords().map((filler) => (
+                        <DropdownMenuItem 
+                          key={filler.word}
+                          className="flex justify-between cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFillerWord(filler.word);
+                          }}
+                        >
+                          <span className="capitalize truncate mr-2">{filler.word}</span>
+                          <span className="font-semibold text-orange-600">{filler.count}</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-orange-600">
