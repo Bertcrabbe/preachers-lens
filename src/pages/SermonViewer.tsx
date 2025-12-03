@@ -1709,6 +1709,12 @@ const SermonViewer = () => {
                     <DropdownMenuItem onClick={() => { setZoomLevel(4); setViewStart(0); }}>
                       4x
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(6); setViewStart(0); }}>
+                      6x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setZoomLevel(8); setViewStart(0); }}>
+                      8x
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 {zoomLevel !== 1 && (
