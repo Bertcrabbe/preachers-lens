@@ -32,9 +32,43 @@ export const AudioRecorder = ({ onRecordingComplete, onClear }: AudioRecorderPro
     };
   }, [audioUrl]);
 
+  const getPreferredMicrophone = async (): Promise<string | undefined> => {
+    try {
+      // Request permission first to get device labels
+      await navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+      });
+      
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      
+      // Look for Shure microphone (case-insensitive)
+      const shureMic = audioInputs.find(device => 
+        device.label.toLowerCase().includes('shure')
+      );
+      
+      if (shureMic) {
+        console.log('Found Shure microphone:', shureMic.label);
+        return shureMic.deviceId;
+      }
+      
+      console.log('Shure mic not found, using default. Available mics:', audioInputs.map(d => d.label));
+      return undefined;
+    } catch (error) {
+      console.error('Error enumerating devices:', error);
+      return undefined;
+    }
+  };
+
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferredDeviceId = await getPreferredMicrophone();
+      
+      const audioConstraints: MediaTrackConstraints | boolean = preferredDeviceId 
+        ? { deviceId: { exact: preferredDeviceId } }
+        : true;
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints as MediaTrackConstraints });
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
       });
