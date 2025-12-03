@@ -1794,12 +1794,38 @@ const SermonViewer = () => {
             >
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-sm font-medium text-fuchsia-700">Fast Speech</h3>
-                <Checkbox
-                  checked={showFastSpeech}
-                  onCheckedChange={(checked) => setShowFastSpeech(checked === true)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="mt-1"
-                />
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="outline" size="sm" className="h-6 text-xs px-2">
+                        View All
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-background border shadow-lg z-50">
+                      {[1.25, 1.3, 1.35, 1.4, 1.45, 1.5].map((threshold) => (
+                        <DropdownMenuItem 
+                          key={threshold}
+                          className="flex justify-between cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFastSpeechThreshold(threshold);
+                          }}
+                        >
+                          <span>{threshold.toFixed(2)}x</span>
+                          <span className="font-semibold text-fuchsia-600">
+                            {countFastSpeechParagraphs(threshold)}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Checkbox
+                    checked={showFastSpeech}
+                    onCheckedChange={(checked) => setShowFastSpeech(checked === true)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1"
+                  />
+                </div>
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-fuchsia-600">
