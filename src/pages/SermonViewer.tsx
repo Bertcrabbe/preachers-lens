@@ -141,6 +141,8 @@ const SermonViewer = () => {
   const [playingCommentId, setPlayingCommentId] = useState<string | null>(null);
   const commentAudioRef = useRef<HTMLAudioElement | null>(null);
   const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
+  const [playedCommentIds, setPlayedCommentIds] = useState<Set<string>>(new Set());
+  const lastTimeRef = useRef<number>(0);
 
   const [transcribing, setTranscribing] = useState(false);
 
@@ -160,6 +162,15 @@ const SermonViewer = () => {
       generateWaveform(audioUrl);
     }
   }, [audioUrl]);
+
+  // Reset played comments when preview mode is toggled
+  useEffect(() => {
+    if (previewWithComments) {
+      // Reset all played comments when enabling preview mode
+      setPlayedCommentIds(new Set());
+      lastTimeRef.current = audioRef.current?.currentTime ? audioRef.current.currentTime * 1000 : 0;
+    }
+  }, [previewWithComments]);
 
   const generateWaveform = async (url: string) => {
     try {
@@ -993,14 +1004,28 @@ const SermonViewer = () => {
   const handleTimeUpdate = async () => {
     if (audioRef.current) {
       const currentMs = audioRef.current.currentTime * 1000;
+      const previousMs = lastTimeRef.current;
+      lastTimeRef.current = currentMs;
       setCurrentTime(currentMs);
       
       // Check if we should play an audio comment
       if (previewWithComments && playing && !playingCommentId) {
         const audioComments = comments.filter(c => c.audio_url);
+        
+        // Find comments whose start time we've crossed over since last update
+        // Also handle the case where we're within 500ms of the start time (for slower update intervals)
         for (const comment of audioComments) {
-          // Check if we just reached a comment timestamp (within 100ms)
-          if (currentMs >= comment.start_time_ms && currentMs < comment.start_time_ms + 100) {
+          // Skip if we've already played this comment
+          if (playedCommentIds.has(comment.id)) continue;
+          
+          // Check if we've crossed over the comment start time, or are within range
+          const crossedOver = previousMs < comment.start_time_ms && currentMs >= comment.start_time_ms;
+          const withinRange = currentMs >= comment.start_time_ms && currentMs < comment.start_time_ms + 500;
+          
+          if (crossedOver || withinRange) {
+            // Mark this comment as played
+            setPlayedCommentIds(prev => new Set([...prev, comment.id]));
+            
             // Pause sermon and play comment
             audioRef.current.pause();
             setPlayingCommentId(comment.id);
@@ -1028,12 +1053,51 @@ const SermonViewer = () => {
                   audioRef.current.play();
                 }
               };
-              audio.play();
+              audio.onerror = () => {
+                console.error('Error playing comment audio');
+                setPlayingCommentId(null);
+                commentAudioRef.current = null;
+                if (audioRef.current) {
+                  audioRef.current.play();
+                }
+              };
+              audio.play().catch(err => {
+                console.error('Failed to play comment:', err);
+                setPlayingCommentId(null);
+                if (audioRef.current) {
+                  audioRef.current.play();
+                }
+              });
+            } else {
+              // If we couldn't get the URL, continue playback
+              setPlayingCommentId(null);
+              if (audioRef.current) {
+                audioRef.current.play();
+              }
             }
             break;
           }
         }
       }
+    }
+  };
+  
+  // Reset played comments when seeking backwards or toggling preview mode
+  const handleSeeked = () => {
+    if (audioRef.current) {
+      const currentMs = audioRef.current.currentTime * 1000;
+      // Reset played comments that are after the current position
+      setPlayedCommentIds(prev => {
+        const newSet = new Set<string>();
+        prev.forEach(id => {
+          const comment = comments.find(c => c.id === id);
+          if (comment && comment.start_time_ms < currentMs) {
+            newSet.add(id);
+          }
+        });
+        return newSet;
+      });
+      lastTimeRef.current = currentMs;
     }
   };
 
@@ -1689,6 +1753,7 @@ const SermonViewer = () => {
                 ref={audioRef}
                 src={audioUrl}
                 onTimeUpdate={handleTimeUpdate}
+                onSeeked={handleSeeked}
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
               />
