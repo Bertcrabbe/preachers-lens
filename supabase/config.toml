@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.count-scripture-refs]
 verify_jwt = false
+
+[functions.generate-sermon-report]
+verify_jwt = true

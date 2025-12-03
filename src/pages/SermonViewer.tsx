@@ -1224,6 +1224,51 @@ const SermonViewer = () => {
     }
   };
 
+  const handleExportReport = async () => {
+    setExporting(true);
+    try {
+      const analyticsData = {
+        averageWPM: Math.round(getAverageSpeechRate()),
+        fastSpeechCount: countFastSpeechParagraphs(fastSpeechThreshold),
+        fastSpeechThreshold,
+        slowSpeechCount: countSlowSpeechParagraphs(slowSpeechThreshold),
+        slowSpeechThreshold,
+        verbalPausesCount: countVerbalPauses(),
+        insiderLanguageCount: countInsiderLanguage(),
+        topFillerWords: getTopFillerWords().map(fw => ({ word: fw.word, count: fw.count })),
+        topInsiderTerms: getTopInsiderTerms().map(t => ({ word: t.word, count: t.count })),
+      };
+
+      const { data, error } = await supabase.functions.invoke("generate-sermon-report", {
+        body: { 
+          sermonId: id, 
+          analyticsData,
+          scriptureRefs,
+        },
+      });
+
+      if (error) throw error;
+
+      const blob = new Blob([data.content], { type: data.mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Report exported successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Report export failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1310,6 +1355,10 @@ const SermonViewer = () => {
                 <DropdownMenuItem onClick={() => handleExport("docx")}>
                   <FileText className="mr-2 h-4 w-4" />
                   Export as DOCX
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportReport} className="border-t mt-1 pt-1">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Export Detailed Report
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
