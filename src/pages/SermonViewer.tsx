@@ -2086,7 +2086,7 @@ const SermonViewer = () => {
               className="p-4 bg-orange-500/5"
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-medium text-orange-700">Communication Opportunity</h3>
+                <h3 className="text-sm font-medium text-orange-700">Filler Words</h3>
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-orange-600">
