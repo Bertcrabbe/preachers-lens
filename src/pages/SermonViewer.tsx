@@ -2161,12 +2161,18 @@ const SermonViewer = () => {
               </div>
 
               {/* Time display */}
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>
+              <div className="flex justify-between text-sm">
+                <span className="font-mono text-foreground font-medium">
                   {Math.floor(currentTime / 1000 / 60)}:
                   {String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")}
                 </span>
-                <span>
+                <span className="text-muted-foreground">
+                  {sermon.duration_seconds 
+                    ? `-${Math.floor((sermon.duration_seconds * 1000 - currentTime) / 1000 / 60)}:${String(Math.floor(((sermon.duration_seconds * 1000 - currentTime) / 1000) % 60)).padStart(2, "0")}`
+                    : "-0:00"
+                  }
+                </span>
+                <span className="font-mono text-muted-foreground">
                   {sermon.duration_seconds 
                     ? `${Math.floor(sermon.duration_seconds / 60)}:${String(Math.floor(sermon.duration_seconds % 60)).padStart(2, "0")}`
                     : "0:00"
