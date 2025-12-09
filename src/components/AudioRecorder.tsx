@@ -42,17 +42,56 @@ export const AudioRecorder = ({ onRecordingComplete, onClear }: AudioRecorderPro
       const devices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = devices.filter(device => device.kind === 'audioinput');
       
-      // Look for Shure microphone (case-insensitive)
+      console.log('Available audio inputs:', audioInputs.map(d => ({ label: d.label, deviceId: d.deviceId })));
+      
+      // Priority 1: Look for Shure microphone (case-insensitive)
       const shureMic = audioInputs.find(device => 
         device.label.toLowerCase().includes('shure')
       );
       
       if (shureMic) {
-        console.log('Found Shure microphone:', shureMic.label);
+        console.log('Using Shure microphone:', shureMic.label);
         return shureMic.deviceId;
       }
       
-      console.log('Shure mic not found, using default. Available mics:', audioInputs.map(d => d.label));
+      // Priority 2: Look for built-in laptop microphone (avoid phone/external devices)
+      const builtInMic = audioInputs.find(device => {
+        const label = device.label.toLowerCase();
+        return (
+          label.includes('built-in') ||
+          label.includes('builtin') ||
+          label.includes('internal') ||
+          label.includes('macbook') ||
+          label.includes('laptop') ||
+          label.includes('realtek') ||
+          label.includes('integrated')
+        );
+      });
+      
+      if (builtInMic) {
+        console.log('Using built-in microphone:', builtInMic.label);
+        return builtInMic.deviceId;
+      }
+      
+      // Priority 3: Avoid phone/mobile devices, pick first non-phone device
+      const nonPhoneMic = audioInputs.find(device => {
+        const label = device.label.toLowerCase();
+        return !(
+          label.includes('iphone') ||
+          label.includes('android') ||
+          label.includes('phone') ||
+          label.includes('bluetooth') ||
+          label.includes('airpods') ||
+          label.includes('wireless')
+        );
+      });
+      
+      if (nonPhoneMic) {
+        console.log('Using non-phone microphone:', nonPhoneMic.label);
+        return nonPhoneMic.deviceId;
+      }
+      
+      console.log('No preferred mic found, using system default');
       return undefined;
     } catch (error) {
       console.error('Error enumerating devices:', error);
