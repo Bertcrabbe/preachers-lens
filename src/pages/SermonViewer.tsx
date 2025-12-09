@@ -789,9 +789,20 @@ const SermonViewer = () => {
         .from("sermons")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      if (!data) {
+        toast({
+          title: "Sermon not found",
+          description: "This sermon doesn't exist or you don't have access to it.",
+          variant: "destructive",
+        });
+        navigate("/dashboard");
+        return;
+      }
+      
       setSermon(data);
 
       const { data: urlData } = await supabase.storage
