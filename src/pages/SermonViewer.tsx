@@ -2595,6 +2595,18 @@ const SermonViewer = () => {
         </Card>
 
         <Card className="p-6">
+          {/* Add intro comment button at top */}
+          <div className="flex justify-center mb-4 pb-4 border-b border-dashed border-border">
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full h-8 px-4 bg-background shadow-sm border-dashed"
+              onClick={() => openCommentDialog(0, sentences.length > 0 ? sentences[0].start_time_ms : 0)}
+            >
+              <MessageSquare className="h-3 w-3 mr-2" />
+              <span className="text-xs">Add intro comment</span>
+            </Button>
+          </div>
           <div className="space-y-4">
             {viewMode === "sentence" ? (
               sentences.map((sentence) => (
