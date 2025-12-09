@@ -1150,36 +1150,52 @@ const SermonViewer = () => {
             if (url) {
               // Stop any existing comment audio before playing new one
               if (commentAudioRef.current) {
-                commentAudioRef.current.pause();
-                commentAudioRef.current.src = '';
+                try {
+                  commentAudioRef.current.pause();
+                  commentAudioRef.current.src = '';
+                } catch (e) {
+                  // Ignore errors when stopping
+                }
                 commentAudioRef.current = null;
               }
               
               const audio = new Audio(url);
               commentAudioRef.current = audio;
-              audio.onended = () => {
+              
+              // Use a flag to prevent double-handling
+              let handled = false;
+              
+              const cleanup = () => {
+                if (handled) return;
+                handled = true;
                 setPlayingCommentId(null);
                 commentAudioRef.current = null;
                 // Resume sermon playback
                 if (audioRef.current) {
-                  audioRef.current.play();
+                  audioRef.current.play().catch(() => {});
                 }
               };
-              audio.onerror = () => {
-                console.error('Error playing comment audio');
-                setPlayingCommentId(null);
-                commentAudioRef.current = null;
-                if (audioRef.current) {
-                  audioRef.current.play();
+              
+              audio.onended = cleanup;
+              
+              // Only handle actual network/decode errors, not abort errors
+              audio.onerror = (e) => {
+                const mediaError = audio.error;
+                if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                  console.error('Error playing comment audio:', mediaError.message);
+                  cleanup();
                 }
               };
-              audio.play().catch(err => {
-                console.error('Failed to play comment:', err);
-                setPlayingCommentId(null);
-                if (audioRef.current) {
-                  audioRef.current.play();
+              
+              try {
+                await audio.play();
+              } catch (err: any) {
+                // Only log and cleanup for non-abort errors
+                if (err.name !== 'AbortError') {
+                  console.error('Failed to play comment:', err);
+                  cleanup();
                 }
-              });
+              }
             } else {
               // If we couldn't get the URL, continue playback
               setPlayingCommentId(null);
