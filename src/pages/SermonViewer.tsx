@@ -141,7 +141,7 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingScriptures, setLoadingScriptures] = useState(false);
   const [showScriptureRefs, setShowScriptureRefs] = useState(false);
-  const [previewWithComments, setPreviewWithComments] = useState(false);
+  const [previewWithComments, setPreviewWithComments] = useState(true);
   const [playingCommentId, setPlayingCommentId] = useState<string | null>(null);
   const commentAudioRef = useRef<HTMLAudioElement | null>(null);
   const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
