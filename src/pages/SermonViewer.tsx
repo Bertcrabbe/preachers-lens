@@ -1924,16 +1924,6 @@ const SermonViewer = () => {
                 </DropdownMenu>
               </div>
 
-              <div className="flex items-center gap-2 border-l pl-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openCommentDialog(0, 0)}
-                >
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Add Intro Comment
-                </Button>
-              </div>
               
               {comments.filter(c => c.audio_url).length > 0 && (
                 <div className="flex items-center gap-2 border-l pl-4">
