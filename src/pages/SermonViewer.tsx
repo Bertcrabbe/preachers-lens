@@ -190,7 +190,7 @@ const SermonViewer = () => {
     }
   }, [playbackRate]);
 
-  // Keyboard shortcuts for audio player
+  // Keyboard shortcuts for audio player (works for both sermon and comment audio)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input/textarea
@@ -198,32 +198,52 @@ const SermonViewer = () => {
         return;
       }
 
-      const audio = audioRef.current;
-      if (!audio) return;
+      const sermonAudio = audioRef.current;
+      const commentAudio = commentAudioRef.current;
 
       switch (e.code) {
         case "Space":
           e.preventDefault();
-          if (playing) {
-            audio.pause();
-          } else {
-            audio.play();
+          // If comment is playing, control comment audio
+          if (commentAudio && playingCommentId) {
+            if (commentAudio.paused) {
+              commentAudio.play();
+            } else {
+              commentAudio.pause();
+            }
+          } else if (sermonAudio) {
+            // Otherwise control sermon audio
+            if (playing) {
+              sermonAudio.pause();
+            } else {
+              sermonAudio.play();
+            }
           }
           break;
         case "ArrowLeft":
           e.preventDefault();
-          audio.currentTime = Math.max(0, audio.currentTime - 5);
+          // If comment is playing, seek within comment
+          if (commentAudio && playingCommentId) {
+            commentAudio.currentTime = Math.max(0, commentAudio.currentTime - 5);
+          } else if (sermonAudio) {
+            sermonAudio.currentTime = Math.max(0, sermonAudio.currentTime - 5);
+          }
           break;
         case "ArrowRight":
           e.preventDefault();
-          audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 5);
+          // If comment is playing, seek within comment
+          if (commentAudio && playingCommentId) {
+            commentAudio.currentTime = Math.min(commentAudio.duration || 0, commentAudio.currentTime + 5);
+          } else if (sermonAudio) {
+            sermonAudio.currentTime = Math.min(sermonAudio.duration || 0, sermonAudio.currentTime + 5);
+          }
           break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [playing]);
+  }, [playing, playingCommentId]);
 
   // Calculate time since last comment in audio timeline
   const timeSinceLastCommentInAudio = (() => {
