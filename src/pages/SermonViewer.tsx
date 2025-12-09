@@ -1133,6 +1133,73 @@ const SermonViewer = () => {
     setCommentDialogOpen(true);
   };
 
+  const handleAutoSaveAudioComment = async (blob: Blob) => {
+    if (!selectedTimeRange) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      setTranscribing(true);
+      
+      // Transcribe the audio first
+      const formData = new FormData();
+      formData.append('audio', blob, 'audio.webm');
+      
+      let commentText = "Audio comment";
+      
+      const transcribeResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-audio-comment`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (transcribeResponse.ok) {
+        const { text } = await transcribeResponse.json();
+        commentText = text || "Audio comment (transcription failed)";
+      }
+      
+      // Upload the audio file
+      const audioPath = `${user.id}/${crypto.randomUUID()}.webm`;
+      const { error: uploadError } = await supabase.storage
+        .from("sermon-comments-audio")
+        .upload(audioPath, blob);
+
+      if (uploadError) throw uploadError;
+
+      const { error } = await supabase
+        .from("sermon_comments")
+        .insert([{
+          sermon_id: id,
+          user_id: user.id,
+          start_time_ms: selectedTimeRange.start,
+          end_time_ms: selectedTimeRange.end,
+          comment_text: commentText,
+          audio_url: audioPath,
+        }]);
+
+      if (error) throw error;
+
+      toast({ title: "Audio comment saved" });
+      setCommentDialogOpen(false);
+      setAudioBlob(null);
+      fetchComments();
+    } catch (error: any) {
+      toast({
+        title: "Error saving audio comment",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
   const handleAddComment = async () => {
     if ((!newComment.trim() && !audioBlob) || !selectedTimeRange) return;
 
@@ -2986,13 +3053,23 @@ const SermonViewer = () => {
             
             <TabsContent value="audio" className="space-y-4">
               <AudioRecorder
-                onRecordingComplete={(blob) => setAudioBlob(blob)}
+                onRecordingComplete={(blob) => {
+                  setAudioBlob(blob);
+                  // Auto-save audio comment immediately after recording
+                  handleAutoSaveAudioComment(blob);
+                }}
                 onClear={() => setAudioBlob(null)}
                 selectedDeviceId={selectedDeviceId}
                 onRecordingStateChange={(isRecording, time, stopFn) => {
                   setFloatingRecording({ isRecording, time, stopFn });
                 }}
               />
+              {transcribing && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving and transcribing...
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 
