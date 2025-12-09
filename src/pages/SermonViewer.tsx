@@ -2781,7 +2781,7 @@ const SermonViewer = () => {
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-lg transition-colors cursor-pointer relative ${highlightStyle}`}
+                    className={`p-4 rounded-lg transition-colors cursor-pointer relative group ${highlightStyle}`}
                     style={customStyle}
                     onClick={() => handlePreviewParagraph(idx)}
                   >
@@ -2841,74 +2841,83 @@ const SermonViewer = () => {
                         {String(Math.floor((firstSentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
                       </Badge>
                       <p className="flex-1">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
+                    </div>
+                    {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="p-2 rounded"
+                            style={{
+                              backgroundColor: comment.evaluation_rules?.color
+                                ? `${comment.evaluation_rules.color}20`
+                                : "hsl(var(--muted))",
+                              borderLeft: comment.evaluation_rules?.color
+                                ? `3px solid ${comment.evaluation_rules.color}`
+                                : "3px solid hsl(var(--border))",
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                {comment.evaluation_rules && (
+                                  <Badge
+                                    variant="outline"
+                                    className="mb-1"
+                                    style={{ borderColor: comment.evaluation_rules.color }}
+                                  >
+                                    {comment.evaluation_rules.name}
+                                  </Badge>
+                                )}
+                                <p className="text-sm">{comment.comment_text}</p>
+                                {comment.audio_url && comment.comment_text === "Audio comment" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="mt-1"
+                                    onClick={() => handleTranscribeComment(comment)}
+                                    disabled={transcribingCommentId === comment.id}
+                                  >
+                                    {transcribingCommentId === comment.id ? (
+                                      <>
+                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                        Transcribing...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FileText className="mr-1 h-3 w-3" />
+                                        Transcribe
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteComment(comment.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Insert comment button between paragraphs */}
+                    <div className="flex justify-center -mb-6 mt-2 relative z-10">
                       <Button
-                        size="icon"
-                        variant="ghost"
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full h-8 px-3 bg-background shadow-sm border-dashed opacity-0 hover:opacity-100 group-hover:opacity-60 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
                           openCommentDialog(firstSentence.start_time_ms, lastSentence.end_time_ms);
                         }}
                       >
-                        <MessageSquare className="h-4 w-4" />
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        <span className="text-xs">Add comment</span>
                       </Button>
                     </div>
-                    {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).map((comment) => (
-                      <div
-                        key={comment.id}
-                        className="mt-2 p-2 rounded"
-                        style={{
-                          backgroundColor: comment.evaluation_rules?.color
-                            ? `${comment.evaluation_rules.color}20`
-                            : "hsl(var(--muted))",
-                          borderLeft: comment.evaluation_rules?.color
-                            ? `3px solid ${comment.evaluation_rules.color}`
-                            : "3px solid hsl(var(--border))",
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            {comment.evaluation_rules && (
-                              <Badge
-                                variant="outline"
-                                className="mb-1"
-                                style={{ borderColor: comment.evaluation_rules.color }}
-                              >
-                                {comment.evaluation_rules.name}
-                              </Badge>
-                            )}
-                            <p className="text-sm">{comment.comment_text}</p>
-                            {comment.audio_url && comment.comment_text === "Audio comment" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="mt-1"
-                                onClick={() => handleTranscribeComment(comment)}
-                                disabled={transcribingCommentId === comment.id}
-                              >
-                                {transcribingCommentId === comment.id ? (
-                                  <>
-                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                    Transcribing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <FileText className="mr-1 h-3 w-3" />
-                                    Transcribe
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleDeleteComment(comment.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 );
               })
