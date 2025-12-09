@@ -197,18 +197,18 @@ const SermonViewer = () => {
     // currentTime is already in milliseconds
     const currentTimeMs = currentTime;
     
-    // Find comments that are before the current playback position
-    const pastComments = comments.filter(c => c.end_time_ms <= currentTimeMs);
+    // Find comments that have started before or at the current playback position
+    const pastComments = comments.filter(c => c.start_time_ms <= currentTimeMs);
     
     if (pastComments.length === 0) return null;
     
-    // Get the most recent comment before current position
+    // Get the most recent comment before current position (by start time)
     const lastComment = pastComments.reduce((latest, comment) => 
-      comment.end_time_ms > latest.end_time_ms ? comment : latest
+      comment.start_time_ms > latest.start_time_ms ? comment : latest
     , pastComments[0]);
     
-    // Return time elapsed in seconds since that comment
-    return Math.floor((currentTimeMs - lastComment.end_time_ms) / 1000);
+    // Return time elapsed in seconds since that comment started
+    return Math.floor((currentTimeMs - lastComment.start_time_ms) / 1000);
   })();
 
   const generateWaveform = async (url: string) => {
