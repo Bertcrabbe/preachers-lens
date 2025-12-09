@@ -155,6 +155,7 @@ const SermonViewer = () => {
     time: number;
     stopFn: (() => void) | null;
   }>({ isRecording: false, time: 0, stopFn: null });
+  const [timeSinceLastComment, setTimeSinceLastComment] = useState<number | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -188,6 +189,29 @@ const SermonViewer = () => {
       audioRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
+
+  // Calculate and update time since last comment
+  useEffect(() => {
+    const updateTimeSinceLastComment = () => {
+      if (comments.length === 0) {
+        setTimeSinceLastComment(null);
+        return;
+      }
+      
+      const mostRecentComment = comments.reduce((latest, comment) => {
+        const commentTime = new Date(comment.created_at).getTime();
+        const latestTime = new Date(latest.created_at).getTime();
+        return commentTime > latestTime ? comment : latest;
+      }, comments[0]);
+      
+      const elapsed = Math.floor((Date.now() - new Date(mostRecentComment.created_at).getTime()) / 1000);
+      setTimeSinceLastComment(elapsed);
+    };
+
+    updateTimeSinceLastComment();
+    const interval = setInterval(updateTimeSinceLastComment, 1000);
+    return () => clearInterval(interval);
+  }, [comments]);
 
   const generateWaveform = async (url: string) => {
     try {
@@ -1863,6 +1887,17 @@ const SermonViewer = () => {
                   </Button>
                 )}
               </div>
+
+              {timeSinceLastComment !== null && (
+                <div className="flex items-center gap-2 border-l pl-4">
+                  <span className="text-sm text-muted-foreground">Last comment:</span>
+                  <span className="text-sm font-medium font-mono">
+                    {Math.floor(timeSinceLastComment / 3600) > 0 && `${Math.floor(timeSinceLastComment / 3600)}:`}
+                    {String(Math.floor((timeSinceLastComment % 3600) / 60)).padStart(Math.floor(timeSinceLastComment / 3600) > 0 ? 2 : 1, '0')}:
+                    {String(timeSinceLastComment % 60).padStart(2, '0')} ago
+                  </span>
+                </div>
+              )}
               
               <div className="flex items-center gap-2 border-l pl-4">
                 <DropdownMenu>
