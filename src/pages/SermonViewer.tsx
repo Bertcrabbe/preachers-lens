@@ -205,19 +205,24 @@ const SermonViewer = () => {
       switch (e.code) {
         case "Space":
           e.preventDefault();
-          // If comment is playing, control comment audio
-          if (commentAudio && playingCommentId) {
-            if (commentAudio.paused) {
-              commentAudio.play();
-            } else {
-              commentAudio.pause();
+          // If a comment is currently playing, control comment audio only
+          if (playingCommentId) {
+            if (commentAudio) {
+              if (commentAudio.paused) {
+                commentAudio.play().catch(() => {});
+              } else {
+                commentAudio.pause();
+              }
             }
-          } else if (sermonAudio) {
-            // Otherwise control sermon audio
+            // Don't fall through to sermon audio when comment is playing
+            return;
+          }
+          // Otherwise control sermon audio
+          if (sermonAudio) {
             if (playing) {
               sermonAudio.pause();
             } else {
-              sermonAudio.play();
+              sermonAudio.play().catch(() => {});
             }
           }
           break;
