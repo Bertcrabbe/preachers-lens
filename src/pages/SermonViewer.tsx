@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
+import { useMicrophoneSelector } from "@/hooks/useMicrophoneSelector";
 import {
   ArrowLeft,
   Play,
@@ -21,6 +22,7 @@ import {
   Sparkles,
   RotateCcw,
   Mic,
+  ChevronDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -85,6 +87,7 @@ const SermonViewer = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { audioDevices, selectedDeviceId, setSelectedDeviceId, getSelectedDeviceLabel } = useMicrophoneSelector();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [sermon, setSermon] = useState<Sermon | null>(null);
   const [sentences, setSentences] = useState<Sentence[]>([]);
@@ -1743,6 +1746,35 @@ const SermonViewer = () => {
               </div>
               
               <div className="flex items-center gap-2 border-l pl-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="max-w-[200px]">
+                      <Mic className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="truncate">{getSelectedDeviceLabel()}</span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[300px] bg-popover z-50" align="start">
+                    {audioDevices.map((device) => (
+                      <DropdownMenuItem
+                        key={device.deviceId}
+                        onClick={() => setSelectedDeviceId(device.deviceId)}
+                        className={selectedDeviceId === device.deviceId ? "bg-accent" : ""}
+                      >
+                        <Mic className="mr-2 h-4 w-4" />
+                        <span className="truncate">{device.label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                    {audioDevices.length === 0 && (
+                      <DropdownMenuItem disabled>
+                        No microphones found
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="flex items-center gap-2 border-l pl-4">
                 <Button
                   variant="outline"
                   size="sm"
@@ -2907,6 +2939,7 @@ const SermonViewer = () => {
               <AudioRecorder
                 onRecordingComplete={(blob) => setAudioBlob(blob)}
                 onClear={() => setAudioBlob(null)}
+                selectedDeviceId={selectedDeviceId}
               />
             </TabsContent>
           </Tabs>
