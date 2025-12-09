@@ -1063,6 +1063,13 @@ const SermonViewer = () => {
             }
             
             if (url) {
+              // Stop any existing comment audio before playing new one
+              if (commentAudioRef.current) {
+                commentAudioRef.current.pause();
+                commentAudioRef.current.src = '';
+                commentAudioRef.current = null;
+              }
+              
               const audio = new Audio(url);
               commentAudioRef.current = audio;
               audio.onended = () => {
