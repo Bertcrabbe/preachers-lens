@@ -7,9 +7,10 @@ interface AudioRecorderProps {
   onRecordingComplete: (audioBlob: Blob) => void;
   onClear: () => void;
   selectedDeviceId?: string | null;
+  onRecordingStateChange?: (isRecording: boolean, time: number, stopFn: () => void) => void;
 }
 
-export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId }: AudioRecorderProps) => {
+export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, onRecordingStateChange }: AudioRecorderProps) => {
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -68,8 +69,15 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId }
       setIsRecording(true);
       setRecordingTime(0);
       
+      // Notify parent of recording state
+      onRecordingStateChange?.(true, 0, stopRecording);
+      
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime(prev => {
+          const newTime = prev + 1;
+          onRecordingStateChange?.(true, newTime, stopRecording);
+          return newTime;
+        });
       }, 1000);
     } catch (error: any) {
       toast({
@@ -84,6 +92,7 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId }
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      onRecordingStateChange?.(false, 0, stopRecording);
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }

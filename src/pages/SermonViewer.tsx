@@ -38,6 +38,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { AudioRecorder } from "@/components/AudioRecorder";
+import { FloatingRecordingIndicator } from "@/components/FloatingRecordingIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
 import { Progress } from "@/components/ui/progress";
@@ -148,6 +149,11 @@ const SermonViewer = () => {
   const lastTimeRef = useRef<number>(0);
 
   const [transcribing, setTranscribing] = useState(false);
+  const [floatingRecording, setFloatingRecording] = useState<{
+    isRecording: boolean;
+    time: number;
+    stopFn: (() => void) | null;
+  }>({ isRecording: false, time: 0, stopFn: null });
 
   useEffect(() => {
     checkAuth();
@@ -2940,6 +2946,9 @@ const SermonViewer = () => {
                 onRecordingComplete={(blob) => setAudioBlob(blob)}
                 onClear={() => setAudioBlob(null)}
                 selectedDeviceId={selectedDeviceId}
+                onRecordingStateChange={(isRecording, time, stopFn) => {
+                  setFloatingRecording({ isRecording, time, stopFn });
+                }}
               />
             </TabsContent>
           </Tabs>
@@ -3021,6 +3030,12 @@ const SermonViewer = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <FloatingRecordingIndicator
+        isRecording={floatingRecording.isRecording}
+        recordingTime={floatingRecording.time}
+        onStopRecording={() => floatingRecording.stopFn?.()}
+      />
     </div>
   );
 };
