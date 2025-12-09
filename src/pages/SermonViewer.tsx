@@ -1721,9 +1721,12 @@ const SermonViewer = () => {
   };
 
   const getCommentsForRange = (start: number, end: number) => {
-    return comments.filter(
-      (c) => c.start_time_ms === start && c.end_time_ms === end
-    );
+    return comments.filter((c) => {
+      // Exclude intro comments (start=0, end=0)
+      if (c.start_time_ms === 0 && c.end_time_ms === 0) return false;
+      // Check if comment overlaps with the range
+      return c.start_time_ms >= start && c.start_time_ms <= end;
+    });
   };
 
   const handleExport = async (format: string) => {
@@ -2193,7 +2196,7 @@ const SermonViewer = () => {
                   {sermon.duration_seconds && (() => {
                     const totalDuration = sermon.duration_seconds * 1000;
                     const sortedComments = [...comments]
-                      .filter(c => c.audio_url)
+                      .filter(c => c.audio_url && !(c.start_time_ms === 0 && c.end_time_ms === 0)) // Exclude intro comments
                       .sort((a, b) => a.start_time_ms - b.start_time_ms);
                     
                     const segments: Array<{ start: number; end: number; type: 'sermon' | 'comment' | 'fast-speech'; comment?: Comment }> = [];
@@ -3099,13 +3102,86 @@ const SermonViewer = () => {
                             </Button>
                           )}
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDeleteComment(comment.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          {comment.audio_url && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                
+                                // If this comment is already playing, toggle pause/play
+                                if (playingCommentId === comment.id && commentAudioRef.current) {
+                                  if (commentAudioRef.current.paused) {
+                                    commentAudioRef.current.play().catch(() => {});
+                                  } else {
+                                    commentAudioRef.current.pause();
+                                  }
+                                  return;
+                                }
+                                
+                                // Stop any current audio
+                                stopCommentAudio();
+                                if (audioRef.current) {
+                                  audioRef.current.pause();
+                                }
+                                
+                                setPlayingCommentId(comment.id);
+                                
+                                let url = commentSignedUrls[comment.id];
+                                if (!url) {
+                                  const { data } = await supabase.storage
+                                    .from("sermon-comments-audio")
+                                    .createSignedUrl(comment.audio_url!, 3600);
+                                  if (data?.signedUrl) {
+                                    url = data.signedUrl;
+                                    setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
+                                  }
+                                }
+                                
+                                if (url) {
+                                  const audio = new Audio(url);
+                                  commentAudioRef.current = audio;
+                                  let handled = false;
+                                  const cleanup = () => {
+                                    if (handled) return;
+                                    handled = true;
+                                    setPlayingCommentId(null);
+                                    commentAudioRef.current = null;
+                                  };
+                                  audio.onended = cleanup;
+                                  audio.onerror = () => {
+                                    const mediaError = audio.error;
+                                    if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                      cleanup();
+                                    }
+                                  };
+                                  try {
+                                    await audio.play();
+                                  } catch (err: any) {
+                                    if (err.name !== 'AbortError') {
+                                      cleanup();
+                                    }
+                                  }
+                                }
+                              }}
+                            >
+                              {playingCommentId === comment.id ? (
+                                <Pause className="h-4 w-4" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDeleteComment(comment.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -3326,13 +3402,86 @@ const SermonViewer = () => {
                                   </Button>
                                 )}
                               </div>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleDeleteComment(comment.id)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                {comment.audio_url && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      
+                                      // If this comment is already playing, toggle pause/play
+                                      if (playingCommentId === comment.id && commentAudioRef.current) {
+                                        if (commentAudioRef.current.paused) {
+                                          commentAudioRef.current.play().catch(() => {});
+                                        } else {
+                                          commentAudioRef.current.pause();
+                                        }
+                                        return;
+                                      }
+                                      
+                                      // Stop any current audio
+                                      stopCommentAudio();
+                                      if (audioRef.current) {
+                                        audioRef.current.pause();
+                                      }
+                                      
+                                      setPlayingCommentId(comment.id);
+                                      
+                                      let url = commentSignedUrls[comment.id];
+                                      if (!url) {
+                                        const { data } = await supabase.storage
+                                          .from("sermon-comments-audio")
+                                          .createSignedUrl(comment.audio_url!, 3600);
+                                        if (data?.signedUrl) {
+                                          url = data.signedUrl;
+                                          setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
+                                        }
+                                      }
+                                      
+                                      if (url) {
+                                        const audio = new Audio(url);
+                                        commentAudioRef.current = audio;
+                                        let handled = false;
+                                        const cleanup = () => {
+                                          if (handled) return;
+                                          handled = true;
+                                          setPlayingCommentId(null);
+                                          commentAudioRef.current = null;
+                                        };
+                                        audio.onended = cleanup;
+                                        audio.onerror = () => {
+                                          const mediaError = audio.error;
+                                          if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                            cleanup();
+                                          }
+                                        };
+                                        try {
+                                          await audio.play();
+                                        } catch (err: any) {
+                                          if (err.name !== 'AbortError') {
+                                            cleanup();
+                                          }
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    {playingCommentId === comment.id ? (
+                                      <Pause className="h-4 w-4" />
+                                    ) : (
+                                      <Play className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         ))}
