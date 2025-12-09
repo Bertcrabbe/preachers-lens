@@ -155,7 +155,7 @@ const SermonViewer = () => {
     time: number;
     stopFn: (() => void) | null;
   }>({ isRecording: false, time: 0, stopFn: null });
-  const [timeSinceLastComment, setTimeSinceLastComment] = useState<number | null>(null);
+  
 
   useEffect(() => {
     checkAuth();
@@ -190,28 +190,25 @@ const SermonViewer = () => {
     }
   }, [playbackRate]);
 
-  // Calculate and update time since last comment
-  useEffect(() => {
-    const updateTimeSinceLastComment = () => {
-      if (comments.length === 0) {
-        setTimeSinceLastComment(null);
-        return;
-      }
-      
-      const mostRecentComment = comments.reduce((latest, comment) => {
-        const commentTime = new Date(comment.created_at).getTime();
-        const latestTime = new Date(latest.created_at).getTime();
-        return commentTime > latestTime ? comment : latest;
-      }, comments[0]);
-      
-      const elapsed = Math.floor((Date.now() - new Date(mostRecentComment.created_at).getTime()) / 1000);
-      setTimeSinceLastComment(elapsed);
-    };
-
-    updateTimeSinceLastComment();
-    const interval = setInterval(updateTimeSinceLastComment, 1000);
-    return () => clearInterval(interval);
-  }, [comments]);
+  // Calculate time since last comment in audio timeline
+  const timeSinceLastCommentInAudio = (() => {
+    if (comments.length === 0) return null;
+    
+    const currentTimeMs = currentTime * 1000;
+    
+    // Find comments that are before the current playback position
+    const pastComments = comments.filter(c => c.end_time_ms <= currentTimeMs);
+    
+    if (pastComments.length === 0) return null;
+    
+    // Get the most recent comment before current position
+    const lastComment = pastComments.reduce((latest, comment) => 
+      comment.end_time_ms > latest.end_time_ms ? comment : latest
+    , pastComments[0]);
+    
+    // Return time elapsed in seconds since that comment
+    return Math.floor((currentTimeMs - lastComment.end_time_ms) / 1000);
+  })();
 
   const generateWaveform = async (url: string) => {
     try {
@@ -1888,13 +1885,13 @@ const SermonViewer = () => {
                 )}
               </div>
 
-              {timeSinceLastComment !== null && (
+              {timeSinceLastCommentInAudio !== null && (
                 <div className="flex items-center gap-2 border-l pl-4">
-                  <span className="text-sm text-muted-foreground">Last comment:</span>
+                  <span className="text-sm text-muted-foreground">Since last comment:</span>
                   <span className="text-sm font-medium font-mono">
-                    {Math.floor(timeSinceLastComment / 3600) > 0 && `${Math.floor(timeSinceLastComment / 3600)}:`}
-                    {String(Math.floor((timeSinceLastComment % 3600) / 60)).padStart(Math.floor(timeSinceLastComment / 3600) > 0 ? 2 : 1, '0')}:
-                    {String(timeSinceLastComment % 60).padStart(2, '0')} ago
+                    {Math.floor(timeSinceLastCommentInAudio / 3600) > 0 && `${Math.floor(timeSinceLastCommentInAudio / 3600)}:`}
+                    {String(Math.floor((timeSinceLastCommentInAudio % 3600) / 60)).padStart(Math.floor(timeSinceLastCommentInAudio / 3600) > 0 ? 2 : 1, '0')}:
+                    {String(timeSinceLastCommentInAudio % 60).padStart(2, '0')}
                   </span>
                 </div>
               )}
