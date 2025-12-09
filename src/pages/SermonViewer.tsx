@@ -1889,9 +1889,7 @@ const SermonViewer = () => {
                 <div className="flex items-center gap-2 border-l pl-4">
                   <span className="text-sm text-muted-foreground">Since last comment:</span>
                   <span className="text-sm font-medium font-mono">
-                    {Math.floor(timeSinceLastCommentInAudio / 3600) > 0 && `${Math.floor(timeSinceLastCommentInAudio / 3600)}:`}
-                    {String(Math.floor((timeSinceLastCommentInAudio % 3600) / 60)).padStart(Math.floor(timeSinceLastCommentInAudio / 3600) > 0 ? 2 : 1, '0')}:
-                    {String(timeSinceLastCommentInAudio % 60).padStart(2, '0')}
+                    {Math.floor(timeSinceLastCommentInAudio / 60)}:{String(timeSinceLastCommentInAudio % 60).padStart(2, '0')}
                   </span>
                 </div>
               )}
