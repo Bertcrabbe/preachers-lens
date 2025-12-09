@@ -2928,6 +2928,17 @@ const SermonViewer = () => {
                       className="h-8 w-8"
                       onClick={async (e) => {
                         e.stopPropagation();
+                        
+                        // If this comment is already playing, toggle pause/play
+                        if (playingCommentId === comment.id && commentAudioRef.current) {
+                          if (commentAudioRef.current.paused) {
+                            commentAudioRef.current.play().catch(() => {});
+                          } else {
+                            commentAudioRef.current.pause();
+                          }
+                          return;
+                        }
+                        
                         // Stop any current audio
                         stopCommentAudio();
                         if (audioRef.current) {
