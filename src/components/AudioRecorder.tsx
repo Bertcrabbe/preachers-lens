@@ -22,6 +22,24 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout>();
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Use a ref-based stop function that can be called from anywhere
+  const stopRecordingRef = useRef<() => void>(() => {});
+  
+  stopRecordingRef.current = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      onRecordingStateChange?.(false, 0, () => {});
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -42,6 +60,7 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
         : {};
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
       });
@@ -61,21 +80,20 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         onRecordingComplete(blob);
-        
-        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
       
-      // Notify parent of recording state
-      onRecordingStateChange?.(true, 0, stopRecording);
+      // Notify parent of recording state - pass a wrapper that calls the ref
+      const stopFn = () => stopRecordingRef.current();
+      onRecordingStateChange?.(true, 0, stopFn);
       
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => {
           const newTime = prev + 1;
-          onRecordingStateChange?.(true, newTime, stopRecording);
+          onRecordingStateChange?.(true, newTime, stopFn);
           return newTime;
         });
       }, 1000);
@@ -89,14 +107,7 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      onRecordingStateChange?.(false, 0, stopRecording);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    }
+    stopRecordingRef.current();
   };
 
   const togglePlayback = () => {
