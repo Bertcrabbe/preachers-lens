@@ -1174,8 +1174,21 @@ const SermonViewer = () => {
     }
   };
   
+  // Helper to stop any currently playing comment audio
+  const stopCommentAudio = () => {
+    if (commentAudioRef.current) {
+      commentAudioRef.current.pause();
+      commentAudioRef.current.src = '';
+      commentAudioRef.current = null;
+    }
+    setPlayingCommentId(null);
+  };
+
   // Reset played comments when seeking backwards or toggling preview mode
   const handleSeeked = () => {
+    // Stop any playing comment when user seeks
+    stopCommentAudio();
+    
     if (audioRef.current) {
       const currentMs = audioRef.current.currentTime * 1000;
       // Reset played comments that are after the current position
@@ -1191,6 +1204,12 @@ const SermonViewer = () => {
       });
       lastTimeRef.current = currentMs;
     }
+  };
+
+  // Handle main audio pause - stop comment audio too
+  const handleAudioPause = () => {
+    setPlaying(false);
+    stopCommentAudio();
   };
 
   const openCommentDialog = (start: number, end: number) => {
@@ -1990,7 +2009,7 @@ const SermonViewer = () => {
                 onTimeUpdate={handleTimeUpdate}
                 onSeeked={handleSeeked}
                 onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
+                onPause={handleAudioPause}
               />
                 
                 {/* Timeline with sermon and comment segments */}
