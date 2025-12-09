@@ -1909,12 +1909,65 @@ const SermonViewer = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => {
+                onClick={async () => {
                   if (audioRef.current) {
                     stopCommentAudio();
                     setPlayedCommentIds(new Set());
                     audioRef.current.currentTime = 0;
-                    audioRef.current.play().catch(() => {});
+                    
+                    // Check if there's an intro comment (at time 0)
+                    const introComment = comments.find(c => c.audio_url && c.start_time_ms === 0);
+                    if (introComment && previewWithComments) {
+                      // Play the intro comment first
+                      audioRef.current.pause();
+                      setPlayingCommentId(introComment.id);
+                      setPlayedCommentIds(new Set([introComment.id]));
+                      
+                      let url = commentSignedUrls[introComment.id];
+                      if (!url) {
+                        const { data } = await supabase.storage
+                          .from("sermon-comments-audio")
+                          .createSignedUrl(introComment.audio_url!, 3600);
+                        if (data?.signedUrl) {
+                          url = data.signedUrl;
+                          setCommentSignedUrls(prev => ({ ...prev, [introComment.id]: url }));
+                        }
+                      }
+                      
+                      if (url) {
+                        const audio = new Audio(url);
+                        commentAudioRef.current = audio;
+                        let handled = false;
+                        const cleanup = () => {
+                          if (handled) return;
+                          handled = true;
+                          setPlayingCommentId(null);
+                          commentAudioRef.current = null;
+                          if (audioRef.current) {
+                            audioRef.current.play().catch(() => {});
+                          }
+                        };
+                        audio.onended = cleanup;
+                        audio.onerror = (e) => {
+                          const mediaError = audio.error;
+                          if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                            cleanup();
+                          }
+                        };
+                        try {
+                          await audio.play();
+                        } catch (err: any) {
+                          if (err.name !== 'AbortError') {
+                            cleanup();
+                          }
+                        }
+                      } else {
+                        setPlayingCommentId(null);
+                        audioRef.current.play().catch(() => {});
+                      }
+                    } else {
+                      audioRef.current.play().catch(() => {});
+                    }
                   }
                 }}
                 disabled={previewingParagraph !== null}
