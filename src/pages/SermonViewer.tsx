@@ -1096,11 +1096,24 @@ const SermonViewer = () => {
   };
 
   const togglePlayPause = () => {
+    const commentAudio = commentAudioRef.current;
+    
+    // If comment is playing, control comment audio
+    if (commentAudio && playingCommentId) {
+      if (commentAudio.paused) {
+        commentAudio.play().catch(() => {});
+      } else {
+        commentAudio.pause();
+      }
+      return;
+    }
+    
+    // Otherwise control sermon audio
     if (audioRef.current) {
       if (playing) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        audioRef.current.play().catch(() => {});
       }
       setPlaying(!playing);
     }
