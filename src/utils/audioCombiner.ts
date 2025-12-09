@@ -176,7 +176,7 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
     offset += 2;
   }
   
-  return new Blob([arrayBuffer], { type: 'audio/wav' });
+  return new Blob([arrayBuffer], { type: 'audio/mpeg' });
 }
 
 function writeString(view: DataView, offset: number, string: string) {
