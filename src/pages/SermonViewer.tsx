@@ -194,7 +194,8 @@ const SermonViewer = () => {
   const timeSinceLastCommentInAudio = (() => {
     if (comments.length === 0) return null;
     
-    const currentTimeMs = currentTime * 1000;
+    // currentTime is already in milliseconds
+    const currentTimeMs = currentTime;
     
     // Find comments that are before the current playback position
     const pastComments = comments.filter(c => c.end_time_ms <= currentTimeMs);
