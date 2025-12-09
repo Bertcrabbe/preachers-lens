@@ -2942,6 +2942,21 @@ const SermonViewer = () => {
               })
             )}
           </div>
+          {/* Add outro comment button at bottom */}
+          <div className="flex justify-center mt-4 pt-4 border-t border-dashed border-border">
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full h-8 px-4 bg-background shadow-sm border-dashed"
+              onClick={() => {
+                const lastSentence = sentences[sentences.length - 1];
+                openCommentDialog(lastSentence?.end_time_ms || 0, lastSentence?.end_time_ms || 0);
+              }}
+            >
+              <MessageSquare className="h-3 w-3 mr-2" />
+              <span className="text-xs">Add outro comment</span>
+            </Button>
+          </div>
         </Card>
       </div>
 
