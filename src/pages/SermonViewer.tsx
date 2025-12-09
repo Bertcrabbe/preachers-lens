@@ -1977,37 +1977,6 @@ const SermonViewer = () => {
               </Button>
               
               <div className="flex items-center gap-2 border-l pl-4">
-                <span className="text-sm text-muted-foreground">Speed:</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="min-w-[4rem]">
-                      {playbackRate}x
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => setPlaybackRate(0.5)}>
-                      0.5x
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setPlaybackRate(0.75)}>
-                      0.75x
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setPlaybackRate(1)}>
-                      1x
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setPlaybackRate(1.25)}>
-                      1.25x
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setPlaybackRate(1.5)}>
-                      1.5x
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setPlaybackRate(2)}>
-                      2x
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              
-              <div className="flex items-center gap-2 border-l pl-4">
                 <span className="text-sm text-muted-foreground">Zoom:</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -2015,7 +1984,7 @@ const SermonViewer = () => {
                       {zoomLevel}x
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="start">
                     <DropdownMenuItem onClick={() => { setZoomLevel(0.75); setViewStart(0); }}>
                       0.75x
                     </DropdownMenuItem>
@@ -2057,6 +2026,37 @@ const SermonViewer = () => {
                     <RotateCcw className="h-4 w-4" />
                   </Button>
                 )}
+              </div>
+              
+              <div className="flex items-center gap-2 border-l pl-4">
+                <span className="text-sm text-muted-foreground">Speed:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="min-w-[4rem]">
+                      {playbackRate}x
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setPlaybackRate(0.5)}>
+                      0.5x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(0.75)}>
+                      0.75x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(1)}>
+                      1x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(1.25)}>
+                      1.25x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(1.5)}>
+                      1.5x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(2)}>
+                      2x
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {timeSinceLastCommentInAudio !== null && (
