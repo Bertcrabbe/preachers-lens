@@ -1893,6 +1893,23 @@ const SermonViewer = () => {
                 {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
               </Button>
               
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  if (audioRef.current) {
+                    stopCommentAudio();
+                    setPlayedCommentIds(new Set());
+                    audioRef.current.currentTime = 0;
+                    audioRef.current.play().catch(() => {});
+                  }
+                }}
+                disabled={previewingParagraph !== null}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Play from start
+              </Button>
+              
               <div className="flex items-center gap-2 border-l pl-4">
                 <span className="text-sm text-muted-foreground">Speed:</span>
                 <DropdownMenu>
