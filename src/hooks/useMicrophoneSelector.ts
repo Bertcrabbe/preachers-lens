@@ -86,6 +86,15 @@ export const useMicrophoneSelector = () => {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = devices
         .filter(device => device.kind === 'audioinput')
+        .filter(device => {
+          // Exclude phone/mobile devices
+          const label = device.label.toLowerCase();
+          return !(
+            label.includes('iphone') ||
+            label.includes('android') ||
+            label.includes('phone')
+          );
+        })
         .map(device => ({
           deviceId: device.deviceId,
           label: device.label || `Microphone ${device.deviceId.slice(0, 8)}`
