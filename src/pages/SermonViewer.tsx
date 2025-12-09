@@ -149,6 +149,7 @@ const SermonViewer = () => {
   const lastTimeRef = useRef<number>(0);
 
   const [transcribing, setTranscribing] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [floatingRecording, setFloatingRecording] = useState<{
     isRecording: boolean;
     time: number;
@@ -180,6 +181,13 @@ const SermonViewer = () => {
       lastTimeRef.current = audioRef.current?.currentTime ? audioRef.current.currentTime * 1000 : 0;
     }
   }, [previewWithComments]);
+
+  // Apply playback rate to audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
 
   const generateWaveform = async (url: string) => {
     try {
@@ -1772,6 +1780,37 @@ const SermonViewer = () => {
               <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null}>
                 {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
               </Button>
+              
+              <div className="flex items-center gap-2 border-l pl-4">
+                <span className="text-sm text-muted-foreground">Speed:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="min-w-[4rem]">
+                      {playbackRate}x
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setPlaybackRate(0.5)}>
+                      0.5x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(0.75)}>
+                      0.75x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(1)}>
+                      1x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(1.25)}>
+                      1.25x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(1.5)}>
+                      1.5x
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPlaybackRate(2)}>
+                      2x
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               
               <div className="flex items-center gap-2 border-l pl-4">
                 <span className="text-sm text-muted-foreground">Zoom:</span>
