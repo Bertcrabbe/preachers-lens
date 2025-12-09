@@ -190,6 +190,41 @@ const SermonViewer = () => {
     }
   }, [playbackRate]);
 
+  // Keyboard shortcuts for audio player
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      switch (e.code) {
+        case "Space":
+          e.preventDefault();
+          if (playing) {
+            audio.pause();
+          } else {
+            audio.play();
+          }
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          audio.currentTime = Math.max(0, audio.currentTime - 5);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 5);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [playing]);
+
   // Calculate time since last comment in audio timeline
   const timeSinceLastCommentInAudio = (() => {
     if (comments.length === 0) return null;
