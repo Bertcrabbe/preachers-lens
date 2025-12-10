@@ -107,7 +107,7 @@ const SermonViewer = () => {
   const [evaluationDialogOpen, setEvaluationDialogOpen] = useState(false);
   const [selectedRuleIds, setSelectedRuleIds] = useState<string[]>([]);
   const [evaluating, setEvaluating] = useState(false);
-  const [commentType, setCommentType] = useState<"text" | "audio">("text");
+  const [commentType, setCommentType] = useState<"text" | "audio">("audio");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [combiningAudio, setCombiningAudio] = useState(false);
   const [combineProgress, setCombineProgress] = useState(0);
