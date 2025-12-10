@@ -2167,24 +2167,19 @@ const SermonViewer = () => {
                   <div style={{ width: `${zoomLevel * 100}%`, position: 'relative', height: '100%' }}>
                     {/* Waveform visualization */}
                     {waveformData.length > 0 && (
-                      <div className="absolute inset-0 flex items-center justify-around">
+                      <div className="absolute inset-0 flex items-center">
                         {waveformData.map((amplitude, idx) => {
-                          // Only render waveform bars in the visible window
                           const barPosition = (idx / waveformData.length) * 100;
-                          const viewWindowSize = 100 / zoomLevel;
-                          const viewEnd = viewStart + viewWindowSize;
-                          
-                          if (zoomLevel > 1 && (barPosition < viewStart || barPosition > viewEnd)) {
-                            return null;
-                          }
                           
                           return (
                             <div
                               key={idx}
-                              className="bg-foreground/30 rounded-full"
+                              className="bg-foreground/30 rounded-full absolute"
                               style={{
                                 width: '2px',
                                 height: `${Math.max(amplitude * 100, 4)}%`,
+                                left: `${barPosition}%`,
+                                transform: 'translateX(-50%)',
                               }}
                             />
                           );
