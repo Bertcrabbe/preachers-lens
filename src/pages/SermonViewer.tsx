@@ -2196,7 +2196,7 @@ const SermonViewer = () => {
                   {sermon.duration_seconds && (() => {
                     const totalDuration = sermon.duration_seconds * 1000;
                     const sortedComments = [...comments]
-                      .filter(c => c.audio_url && !(c.start_time_ms === 0 && c.end_time_ms === 0)) // Exclude intro comments
+                      .filter(c => c.audio_url) // Include all comments with audio (including intro)
                       .sort((a, b) => a.start_time_ms - b.start_time_ms);
                     
                     const segments: Array<{ start: number; end: number; type: 'sermon' | 'comment' | 'fast-speech'; comment?: Comment }> = [];
