@@ -2561,7 +2561,7 @@ const SermonViewer = () => {
               onClick={() => setShowFastSpeech(!showFastSpeech)}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-fuchsia-700">Fast Speech</h3>
+                <h3 className="text-base font-bold text-fuchsia-700">Fast Speech</h3>
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -2624,7 +2624,7 @@ const SermonViewer = () => {
               onClick={() => setShowSlowSpeech(!showSlowSpeech)}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-cyan-700">Slow Speech</h3>
+                <h3 className="text-base font-bold text-cyan-700">Slow Speech</h3>
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -2686,7 +2686,7 @@ const SermonViewer = () => {
               className="p-4 bg-indigo-500/5"
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-medium text-indigo-700">Insider Language</h3>
+                <h3 className="text-base font-bold text-indigo-700">Insider Language</h3>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2">
@@ -2753,7 +2753,7 @@ const SermonViewer = () => {
               onClick={() => setShowVolumeChanges(!showVolumeChanges)}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-amber-700">Volume Changes</h3>
+                <h3 className="text-base font-bold text-amber-700">Volume Changes</h3>
                 <Checkbox
                   checked={showVolumeChanges}
                   onCheckedChange={(checked) => setShowVolumeChanges(checked === true)}
@@ -2798,7 +2798,7 @@ const SermonViewer = () => {
               className="p-4 bg-orange-500/5"
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-sm font-medium text-orange-700">Filler Words</h3>
+                <h3 className="text-base font-bold text-orange-700">Filler Words</h3>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2">
@@ -2865,7 +2865,7 @@ const SermonViewer = () => {
               onClick={() => setShowScriptureRefs(!showScriptureRefs)}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-emerald-700">Scripture References</h3>
+                <h3 className="text-base font-bold text-emerald-700">Scripture References</h3>
                 <Checkbox
                   checked={showScriptureRefs}
                   onCheckedChange={(checked) => setShowScriptureRefs(checked === true)}
@@ -2909,7 +2909,7 @@ const SermonViewer = () => {
 
             <Card className="p-4 bg-violet-500/5">
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-medium text-violet-700">My Comments</h3>
+                <h3 className="text-base font-bold text-violet-700">My Comments</h3>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-violet-600">
