@@ -151,8 +151,8 @@ const SermonViewer = () => {
   const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
   const [playedCommentIds, setPlayedCommentIds] = useState<Set<string>>(new Set());
   const lastTimeRef = useRef<number>(0);
-  const [wpmChartClickedTime, setWpmChartClickedTime] = useState<number | null>(null);
-  const [volumeChartClickedTime, setVolumeChartClickedTime] = useState<number | null>(null);
+  const [wpmChartClockActive, setWpmChartClockActive] = useState(false);
+  const [volumeChartClockActive, setVolumeChartClockActive] = useState(false);
 
   const [transcribing, setTranscribing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -3041,7 +3041,7 @@ const SermonViewer = () => {
                         audioRef.current.currentTime = timeMs / 1000;
                         audioRef.current.play();
                         setPlaying(true);
-                        setWpmChartClickedTime(timeMs);
+                        setWpmChartClockActive(true);
                       }
                     }}
                   >
@@ -3106,9 +3106,9 @@ const SermonViewer = () => {
                   <span>Average ({Math.round(getAverageSpeechRate())} WPM)</span>
                 </div>
               </div>
-              {wpmChartClickedTime !== null && (
+              {wpmChartClockActive && (
                 <div className="text-center mt-2 text-sm font-medium text-primary">
-                  ▶ {Math.floor(wpmChartClickedTime / 60000)}:{String(Math.floor((wpmChartClickedTime % 60000) / 1000)).padStart(2, '0')}
+                  ▶ {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')}
                 </div>
               )}
             </div>
@@ -3129,7 +3129,7 @@ const SermonViewer = () => {
                         audioRef.current.currentTime = timeMs / 1000;
                         audioRef.current.play();
                         setPlaying(true);
-                        setVolumeChartClickedTime(timeMs);
+                        setVolumeChartClockActive(true);
                       }
                     }}
                   >
@@ -3195,9 +3195,9 @@ const SermonViewer = () => {
                   <span>Baseline (100%)</span>
                 </div>
               </div>
-              {volumeChartClickedTime !== null && (
+              {volumeChartClockActive && (
                 <div className="text-center mt-2 text-sm font-medium text-primary">
-                  ▶ {Math.floor(volumeChartClickedTime / 60000)}:{String(Math.floor((volumeChartClickedTime % 60000) / 1000)).padStart(2, '0')}
+                  ▶ {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')}
                 </div>
               )}
             </div>
