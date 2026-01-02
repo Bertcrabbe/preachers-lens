@@ -2546,12 +2546,15 @@ const SermonViewer = () => {
           <h2 className="text-xl font-semibold mb-4">Sermon Analytics</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-4 bg-primary/5">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-base font-bold text-primary">Words Per Minute</h3>
+              </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-primary">
                   {Math.round(getAverageSpeechRate())}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Average Words Per Minute
+                  Average WPM
                 </div>
               </div>
             </Card>
