@@ -244,12 +244,25 @@ const SermonViewer = () => {
             sermonAudio.currentTime = Math.min(sermonAudio.duration || 0, sermonAudio.currentTime + 5);
           }
           break;
+        case "KeyC":
+          // Add comment at current timestamp when audio is paused
+          if (!playing && !playingCommentId && audioUrl && currentTime > 0) {
+            e.preventDefault();
+            const currentSentence = sentences.find(
+              s => currentTime >= s.start_time_ms && currentTime <= s.end_time_ms
+            );
+            const timeMs = currentSentence ? currentSentence.start_time_ms : Math.round(currentTime);
+            const endMs = currentSentence ? currentSentence.end_time_ms : Math.round(currentTime) + 1000;
+            setSelectedTimeRange({ start: timeMs, end: endMs });
+            setCommentDialogOpen(true);
+          }
+          break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [playing, playingCommentId]);
+  }, [playing, playingCommentId, audioUrl, currentTime, sentences]);
 
   // Calculate time since last comment in audio timeline
   const timeSinceLastCommentInAudio = (() => {
