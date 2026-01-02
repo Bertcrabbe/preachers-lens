@@ -2602,7 +2602,7 @@ const SermonViewer = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48 bg-background border shadow-lg z-50">
-                      {[0.75, 0.7, 0.65, 0.6, 0.55, 0.5].map((threshold) => (
+                      {[0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5].map((threshold) => (
                         <DropdownMenuItem 
                           key={threshold}
                           className="flex justify-between cursor-pointer"
