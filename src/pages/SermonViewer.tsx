@@ -3063,6 +3063,12 @@ const SermonViewer = () => {
                       strokeDasharray="5 5"
                       label={{ value: 'Avg', position: 'right', fontSize: 10 }}
                     />
+                    <ReferenceLine 
+                      x={`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`}
+                      stroke="hsl(var(--destructive))"
+                      strokeWidth={2}
+                      label={{ value: `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`, position: 'top', fontSize: 10, fill: 'hsl(var(--destructive))' }}
+                    />
                     <Line 
                       type="monotone" 
                       dataKey="wpm" 
@@ -3126,6 +3132,12 @@ const SermonViewer = () => {
                       stroke="hsl(var(--muted-foreground))" 
                       strokeDasharray="5 5"
                       label={{ value: 'Avg', position: 'right', fontSize: 10 }}
+                    />
+                    <ReferenceLine 
+                      x={`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`}
+                      stroke="hsl(var(--destructive))"
+                      strokeWidth={2}
+                      label={{ value: `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`, position: 'top', fontSize: 10, fill: 'hsl(var(--destructive))' }}
                     />
                     <Line 
                       type="monotone" 
