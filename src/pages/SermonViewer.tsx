@@ -3028,9 +3028,20 @@ const SermonViewer = () => {
           {getWpmTimelineData().length > 0 && (
             <div className="mt-6">
               <h3 className="text-base font-semibold mb-3">Speaking Pace Over Time</h3>
-              <div className="h-48 w-full">
+              <div className="h-48 w-full cursor-pointer">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getWpmTimelineData()} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <LineChart 
+                    data={getWpmTimelineData()} 
+                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                    onClick={(data) => {
+                      if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
+                        const timeMs = data.activePayload[0].payload.time;
+                        audioRef.current.currentTime = timeMs / 1000;
+                        audioRef.current.play();
+                        setPlaying(true);
+                      }
+                    }}
+                  >
                     <XAxis 
                       dataKey="timeLabel" 
                       tick={{ fontSize: 10 }} 
@@ -3080,9 +3091,20 @@ const SermonViewer = () => {
           {getVolumeTimelineData().length > 0 && (
             <div className="mt-6">
               <h3 className="text-base font-semibold mb-3">Speaking Volume Over Time</h3>
-              <div className="h-48 w-full">
+              <div className="h-48 w-full cursor-pointer">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getVolumeTimelineData()} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <LineChart 
+                    data={getVolumeTimelineData()} 
+                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                    onClick={(data) => {
+                      if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
+                        const timeMs = data.activePayload[0].payload.time;
+                        audioRef.current.currentTime = timeMs / 1000;
+                        audioRef.current.play();
+                        setPlaying(true);
+                      }
+                    }}
+                  >
                     <XAxis 
                       dataKey="timeLabel" 
                       tick={{ fontSize: 10 }} 
