@@ -3070,7 +3070,7 @@ const SermonViewer = () => {
                       x={currentTime * 1000}
                       stroke="hsl(var(--destructive))"
                       strokeWidth={3}
-                      ifOverflow="extendDomain"
+                      isFront={true}
                       label={{
                         value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
                         position: 'top',
@@ -3151,7 +3151,7 @@ const SermonViewer = () => {
                       x={currentTime * 1000}
                       stroke="hsl(var(--destructive))"
                       strokeWidth={3}
-                      ifOverflow="extendDomain"
+                      isFront={true}
                       label={{
                         value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
                         position: 'top',
