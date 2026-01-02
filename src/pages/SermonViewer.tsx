@@ -3066,20 +3066,22 @@ const SermonViewer = () => {
                       strokeDasharray="5 5"
                       label={{ value: 'Avg', position: 'right', fontSize: 10 }}
                     />
-                    <ReferenceLine 
-                      x={currentTime * 1000}
-                      stroke="hsl(var(--destructive))"
-                      strokeWidth={3}
-                      isFront={true}
-                      label={{
-                        value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
-                        position: 'top',
-                        fontSize: 11,
-                        fontWeight: 'bold',
-                        fill: 'hsl(var(--destructive))',
-                        offset: 5
-                      }}
-                    />
+                    {currentTime > 0 && (
+                      <ReferenceLine 
+                        x={currentTime * 1000}
+                        stroke="hsl(var(--destructive))"
+                        strokeWidth={3}
+                        isFront={true}
+                        label={{
+                          value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
+                          position: 'top',
+                          fontSize: 11,
+                          fontWeight: 'bold',
+                          fill: 'hsl(var(--destructive))',
+                          offset: 5
+                        }}
+                      />
+                    )}
                     <Line 
                       type="monotone" 
                       dataKey="wpm" 
@@ -3147,20 +3149,22 @@ const SermonViewer = () => {
                       strokeDasharray="5 5"
                       label={{ value: 'Avg', position: 'right', fontSize: 10 }}
                     />
-                    <ReferenceLine 
-                      x={currentTime * 1000}
-                      stroke="hsl(var(--destructive))"
-                      strokeWidth={3}
-                      isFront={true}
-                      label={{
-                        value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
-                        position: 'top',
-                        fontSize: 11,
-                        fontWeight: 'bold',
-                        fill: 'hsl(var(--destructive))',
-                        offset: 5
-                      }}
-                    />
+                    {currentTime > 0 && (
+                      <ReferenceLine 
+                        x={currentTime * 1000}
+                        stroke="hsl(var(--destructive))"
+                        strokeWidth={3}
+                        isFront={true}
+                        label={{
+                          value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
+                          position: 'top',
+                          fontSize: 11,
+                          fontWeight: 'bold',
+                          fill: 'hsl(var(--destructive))',
+                          offset: 5
+                        }}
+                      />
+                    )}
                     <Line 
                       type="monotone" 
                       dataKey="volume" 
