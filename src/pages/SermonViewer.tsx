@@ -3108,7 +3108,7 @@ const SermonViewer = () => {
               </div>
               {wpmChartClockActive && (
                 <div className="text-center mt-2 text-sm font-medium text-primary">
-                  ▶ {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')}
+                  ▶ {Math.floor(currentTime / 60)}m {String(Math.floor(currentTime % 60)).padStart(2, '0')}s
                 </div>
               )}
             </div>
@@ -3197,7 +3197,7 @@ const SermonViewer = () => {
               </div>
               {volumeChartClockActive && (
                 <div className="text-center mt-2 text-sm font-medium text-primary">
-                  ▶ {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')}
+                  ▶ {Math.floor(currentTime / 60)}m {String(Math.floor(currentTime % 60)).padStart(2, '0')}s
                 </div>
               )}
             </div>
