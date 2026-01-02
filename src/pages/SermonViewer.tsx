@@ -3668,6 +3668,28 @@ const SermonViewer = () => {
         recordingTime={floatingRecording.time}
         onStopRecording={() => floatingRecording.stopFn?.()}
       />
+
+      {/* Floating Add Comment button when audio is paused */}
+      {!playing && !playingCommentId && !floatingRecording.isRecording && audioUrl && currentTime > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <Button
+            size="lg"
+            className="shadow-lg gap-2"
+            onClick={() => {
+              // Find the sentence/paragraph at current time for context
+              const currentSentence = sentences.find(
+                s => currentTime >= s.start_time_ms && currentTime <= s.end_time_ms
+              );
+              const timeMs = currentSentence ? currentSentence.start_time_ms : Math.round(currentTime);
+              const endMs = currentSentence ? currentSentence.end_time_ms : Math.round(currentTime) + 1000;
+              openCommentDialog(timeMs, endMs);
+            }}
+          >
+            <MessageSquare className="h-5 w-5" />
+            Add comment at {Math.floor(currentTime / 1000 / 60)}:{String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
