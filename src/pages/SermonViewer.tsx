@@ -151,6 +151,8 @@ const SermonViewer = () => {
   const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
   const [playedCommentIds, setPlayedCommentIds] = useState<Set<string>>(new Set());
   const lastTimeRef = useRef<number>(0);
+  const [wpmChartClickedTime, setWpmChartClickedTime] = useState<number | null>(null);
+  const [volumeChartClickedTime, setVolumeChartClickedTime] = useState<number | null>(null);
 
   const [transcribing, setTranscribing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -3039,6 +3041,7 @@ const SermonViewer = () => {
                         audioRef.current.currentTime = timeMs / 1000;
                         audioRef.current.play();
                         setPlaying(true);
+                        setWpmChartClickedTime(timeMs);
                       }
                     }}
                   >
@@ -3103,6 +3106,11 @@ const SermonViewer = () => {
                   <span>Average ({Math.round(getAverageSpeechRate())} WPM)</span>
                 </div>
               </div>
+              {wpmChartClickedTime !== null && (
+                <div className="text-center mt-2 text-sm font-medium text-primary">
+                  ▶ {Math.floor(wpmChartClickedTime / 60000)}:{String(Math.floor((wpmChartClickedTime % 60000) / 1000)).padStart(2, '0')}
+                </div>
+              )}
             </div>
           )}
 
@@ -3121,6 +3129,7 @@ const SermonViewer = () => {
                         audioRef.current.currentTime = timeMs / 1000;
                         audioRef.current.play();
                         setPlaying(true);
+                        setVolumeChartClickedTime(timeMs);
                       }
                     }}
                   >
@@ -3186,6 +3195,11 @@ const SermonViewer = () => {
                   <span>Baseline (100%)</span>
                 </div>
               </div>
+              {volumeChartClickedTime !== null && (
+                <div className="text-center mt-2 text-sm font-medium text-primary">
+                  ▶ {Math.floor(volumeChartClickedTime / 60000)}:{String(Math.floor((volumeChartClickedTime % 60000) / 1000)).padStart(2, '0')}
+                </div>
+              )}
             </div>
           )}
           <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen} className="mt-6">
