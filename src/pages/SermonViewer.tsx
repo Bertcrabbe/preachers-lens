@@ -1877,40 +1877,6 @@ const SermonViewer = () => {
               {viewMode === "sentence" ? <AlignLeft className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
               {viewMode === "sentence" ? "Paragraph View" : "Sentence View"}
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={exporting}>
-                  {exporting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                  )}
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleExport("txt")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export as TXT
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("md")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export as Markdown
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("pdf")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export as PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("docx")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export as DOCX
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportReport} className="border-t mt-1 pt-1">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Export Detailed Report
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
