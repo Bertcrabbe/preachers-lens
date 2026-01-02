@@ -3069,8 +3069,16 @@ const SermonViewer = () => {
                     <ReferenceLine 
                       x={currentTime * 1000}
                       stroke="hsl(var(--destructive))"
-                      strokeWidth={2}
-                      label={{ value: `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`, position: 'top', fontSize: 10, fill: 'hsl(var(--destructive))' }}
+                      strokeWidth={3}
+                      ifOverflow="extendDomain"
+                      label={{
+                        value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
+                        position: 'top',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        fill: 'hsl(var(--destructive))',
+                        offset: 5
+                      }}
                     />
                     <Line 
                       type="monotone" 
@@ -3142,8 +3150,16 @@ const SermonViewer = () => {
                     <ReferenceLine 
                       x={currentTime * 1000}
                       stroke="hsl(var(--destructive))"
-                      strokeWidth={2}
-                      label={{ value: `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`, position: 'top', fontSize: 10, fill: 'hsl(var(--destructive))' }}
+                      strokeWidth={3}
+                      ifOverflow="extendDomain"
+                      label={{
+                        value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
+                        position: 'top',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        fill: 'hsl(var(--destructive))',
+                        offset: 5
+                      }}
                     />
                     <Line 
                       type="monotone" 
