@@ -42,6 +42,7 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { FloatingRecordingIndicator } from "@/components/FloatingRecordingIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -411,6 +412,58 @@ const SermonViewer = () => {
       const rate = calculateSpeechRate(p);
       return rate > averageRate * threshold;
     }).length;
+  };
+
+  // Speed Dynamics Functions
+  const getSpeedVariance = (): { min: number; max: number; stdDev: number; range: number } => {
+    if (sentences.length === 0) return { min: 0, max: 0, stdDev: 0, range: 0 };
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const rates = paragraphs.map(p => calculateSpeechRate(p));
+    
+    if (rates.length === 0) return { min: 0, max: 0, stdDev: 0, range: 0 };
+    
+    const min = Math.min(...rates);
+    const max = Math.max(...rates);
+    const avg = rates.reduce((sum, r) => sum + r, 0) / rates.length;
+    const variance = rates.reduce((sum, r) => sum + Math.pow(r - avg, 2), 0) / rates.length;
+    const stdDev = Math.sqrt(variance);
+    
+    return { min, max, stdDev, range: max - min };
+  };
+
+  const countSpeedTransitions = (thresholdWpm: number = 20): number => {
+    if (sentences.length === 0) return 0;
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const rates = paragraphs.map(p => calculateSpeechRate(p));
+    
+    let transitions = 0;
+    for (let i = 1; i < rates.length; i++) {
+      if (Math.abs(rates[i] - rates[i - 1]) >= thresholdWpm) {
+        transitions++;
+      }
+    }
+    
+    return transitions;
+  };
+
+  const getWpmTimelineData = (): { time: number; wpm: number; timeLabel: string }[] => {
+    if (sentences.length === 0) return [];
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    
+    return paragraphs.map((p, index) => {
+      const startMs = p[0].start_time_ms;
+      const minutes = Math.floor(startMs / 60000);
+      const seconds = Math.floor((startMs % 60000) / 1000);
+      
+      return {
+        time: startMs,
+        wpm: Math.round(calculateSpeechRate(p)),
+        timeLabel: `${minutes}:${String(seconds).padStart(2, '0')}`
+      };
+    });
   };
 
   const countVerbalPauses = (): number => {
@@ -2523,6 +2576,48 @@ const SermonViewer = () => {
                   Average WPM
                 </div>
               </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
+                <div>
+                  <div className="font-semibold text-primary">{Math.round(getSpeedVariance().min)}</div>
+                  <div className="text-muted-foreground">Min</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-primary">{Math.round(getSpeedVariance().max)}</div>
+                  <div className="text-muted-foreground">Max</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-primary">±{Math.round(getSpeedVariance().stdDev)}</div>
+                  <div className="text-muted-foreground">Std Dev</div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-rose-500/5">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-base font-bold text-rose-700">Speed Transitions</h3>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl font-bold text-rose-600">
+                  {countSpeedTransitions(20)}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Pace Changes (20+ WPM)
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
+                <div>
+                  <div className="font-semibold text-rose-600">{countSpeedTransitions(10)}</div>
+                  <div className="text-muted-foreground">10+ WPM</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-rose-600">{countSpeedTransitions(30)}</div>
+                  <div className="text-muted-foreground">30+ WPM</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-rose-600">{countSpeedTransitions(40)}</div>
+                  <div className="text-muted-foreground">40+ WPM</div>
+                </div>
+              </div>
             </Card>
 
             <Card 
@@ -2896,7 +2991,57 @@ const SermonViewer = () => {
             </Card>
           </div>
 
-          {/* Comment Summary Section */}
+          {/* WPM Timeline Chart */}
+          {getWpmTimelineData().length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-base font-semibold mb-3">Speaking Pace Over Time</h3>
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={getWpmTimelineData()} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <XAxis 
+                      dataKey="timeLabel" 
+                      tick={{ fontSize: 10 }} 
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }} 
+                      domain={['dataMin - 10', 'dataMax + 10']}
+                      width={40}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value} WPM`, 'Speed']}
+                      labelFormatter={(label) => `Time: ${label}`}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <ReferenceLine 
+                      y={Math.round(getAverageSpeechRate())} 
+                      stroke="hsl(var(--muted-foreground))" 
+                      strokeDasharray="5 5"
+                      label={{ value: 'Avg', position: 'right', fontSize: 10 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="wpm" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-0.5 bg-primary" />
+                  <span>WPM</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
+                  <span>Average ({Math.round(getAverageSpeechRate())} WPM)</span>
+                </div>
+              </div>
+            </div>
+          )}
           <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen} className="mt-6">
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
