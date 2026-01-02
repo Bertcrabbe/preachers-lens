@@ -2724,7 +2724,7 @@ const SermonViewer = () => {
                   {countInsiderLanguage()}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Insider Language
+                  Instances
                 </div>
               </div>
               <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
