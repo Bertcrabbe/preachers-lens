@@ -466,6 +466,39 @@ const SermonViewer = () => {
     });
   };
 
+  const getVolumeTimelineData = (): { time: number; volume: number; timeLabel: string }[] => {
+    if (sentences.length === 0 || !sermon?.duration_seconds || waveformData.length === 0) return [];
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const totalDuration = sermon.duration_seconds * 1000;
+    const baselineAverage = waveformData.reduce((sum, amp) => sum + amp, 0) / waveformData.length;
+    
+    return paragraphs.map((p) => {
+      const startMs = p[0].start_time_ms;
+      const endMs = p[p.length - 1].end_time_ms;
+      const minutes = Math.floor(startMs / 60000);
+      const seconds = Math.floor((startMs % 60000) / 1000);
+      
+      // Get waveform data for this paragraph
+      const startIdx = Math.floor((startMs / totalDuration) * waveformData.length);
+      const endIdx = Math.ceil((endMs / totalDuration) * waveformData.length);
+      const paragraphData = waveformData.slice(startIdx, endIdx);
+      
+      if (paragraphData.length === 0) {
+        return { time: startMs, volume: 100, timeLabel: `${minutes}:${String(seconds).padStart(2, '0')}` };
+      }
+      
+      const paragraphAverage = paragraphData.reduce((sum, amp) => sum + amp, 0) / paragraphData.length;
+      const volumePercent = Math.round((paragraphAverage / baselineAverage) * 100);
+      
+      return {
+        time: startMs,
+        volume: volumePercent,
+        timeLabel: `${minutes}:${String(seconds).padStart(2, '0')}`
+      };
+    });
+  };
+
   const countVerbalPauses = (): number => {
     const fillerWords = {
       single: ['uh', 'um', 'like', 'so', 'well', 'okay', 'right', 'actually', 'basically', 
@@ -3038,6 +3071,59 @@ const SermonViewer = () => {
                 <div className="flex items-center gap-1">
                   <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
                   <span>Average ({Math.round(getAverageSpeechRate())} WPM)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Volume Timeline Chart */}
+          {getVolumeTimelineData().length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-base font-semibold mb-3">Speaking Volume Over Time</h3>
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={getVolumeTimelineData()} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <XAxis 
+                      dataKey="timeLabel" 
+                      tick={{ fontSize: 10 }} 
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }} 
+                      domain={[0, 'dataMax + 20']}
+                      width={40}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value}%`, 'Volume']}
+                      labelFormatter={(label) => `Time: ${label}`}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <ReferenceLine 
+                      y={100} 
+                      stroke="hsl(var(--muted-foreground))" 
+                      strokeDasharray="5 5"
+                      label={{ value: 'Avg', position: 'right', fontSize: 10 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="volume" 
+                      stroke="hsl(var(--chart-3))" 
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-0.5" style={{ backgroundColor: 'hsl(var(--chart-3))' }} />
+                  <span>Volume</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
+                  <span>Baseline (100%)</span>
                 </div>
               </div>
             </div>
