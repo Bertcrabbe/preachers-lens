@@ -136,6 +136,8 @@ const SermonViewer = () => {
     bulletPoints: string[];
   } | null>(null);
   const [viewStart, setViewStart] = useState(0); // percentage of audio (0-100)
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<number | null>(null);
   const [scriptureRefs, setScriptureRefs] = useState<{
     references: Array<{ reference: string; context: string }>;
     total_count: number;
@@ -2176,8 +2178,56 @@ const SermonViewer = () => {
                     
                     seekTo(newTime);
                   }}
+                  onMouseMove={(e) => {
+                    if (!sermon.duration_seconds) return;
+                    const container = e.currentTarget;
+                    const rect = container.getBoundingClientRect();
+                    
+                    // Get hover position including scroll offset
+                    const hoverX = e.clientX - rect.left + container.scrollLeft;
+                    
+                    // Calculate total width of the zoomed timeline
+                    const totalWidth = rect.width * zoomLevel;
+                    
+                    // Calculate percentage of total duration
+                    const percentage = hoverX / totalWidth;
+                    
+                    // Convert to time in milliseconds
+                    const timeMs = percentage * sermon.duration_seconds * 1000;
+                    
+                    // Store position relative to container for tooltip placement
+                    const positionPercent = (hoverX / totalWidth) * 100;
+                    
+                    setHoverTime(timeMs);
+                    setHoverPosition(positionPercent);
+                  }}
+                  onMouseLeave={() => {
+                    setHoverTime(null);
+                    setHoverPosition(null);
+                  }}
                 >
                   <div style={{ width: `${zoomLevel * 100}%`, position: 'relative', height: '100%' }}>
+                    {/* Hover timestamp tooltip */}
+                    {hoverTime !== null && hoverPosition !== null && (
+                      <div 
+                        className="absolute z-20 bottom-full mb-2 px-2 py-1 bg-foreground text-background text-xs rounded shadow-lg pointer-events-none whitespace-nowrap"
+                        style={{
+                          left: `${hoverPosition}%`,
+                          transform: 'translateX(-50%)',
+                        }}
+                      >
+                        {Math.floor(hoverTime / 1000 / 60)}:{String(Math.floor((hoverTime / 1000) % 60)).padStart(2, "0")}
+                      </div>
+                    )}
+                    {/* Hover vertical line indicator */}
+                    {hoverTime !== null && hoverPosition !== null && (
+                      <div 
+                        className="absolute z-10 top-0 bottom-0 w-px bg-foreground/50 pointer-events-none"
+                        style={{
+                          left: `${hoverPosition}%`,
+                        }}
+                      />
+                    )}
                     {/* Waveform visualization */}
                     {waveformData.length > 0 && (
                       <div className="absolute inset-0 flex items-center">
