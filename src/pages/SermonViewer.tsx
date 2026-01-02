@@ -3043,8 +3043,11 @@ const SermonViewer = () => {
                     }}
                   >
                     <XAxis 
-                      dataKey="timeLabel" 
+                      dataKey="time" 
+                      type="number"
+                      domain={['dataMin', 'dataMax']}
                       tick={{ fontSize: 10 }} 
+                      tickFormatter={(ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
                       interval="preserveStartEnd"
                     />
                     <YAxis 
@@ -3054,7 +3057,7 @@ const SermonViewer = () => {
                     />
                     <Tooltip 
                       formatter={(value: number) => [`${value} WPM`, 'Speed']}
-                      labelFormatter={(label) => `Time: ${label}`}
+                      labelFormatter={(ms: number) => `Time: ${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
                       contentStyle={{ fontSize: 12 }}
                     />
                     <ReferenceLine 
@@ -3064,7 +3067,7 @@ const SermonViewer = () => {
                       label={{ value: 'Avg', position: 'right', fontSize: 10 }}
                     />
                     <ReferenceLine 
-                      x={`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`}
+                      x={currentTime * 1000}
                       stroke="hsl(var(--destructive))"
                       strokeWidth={2}
                       label={{ value: `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`, position: 'top', fontSize: 10, fill: 'hsl(var(--destructive))' }}
@@ -3112,8 +3115,11 @@ const SermonViewer = () => {
                     }}
                   >
                     <XAxis 
-                      dataKey="timeLabel" 
+                      dataKey="time" 
+                      type="number"
+                      domain={['dataMin', 'dataMax']}
                       tick={{ fontSize: 10 }} 
+                      tickFormatter={(ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
                       interval="preserveStartEnd"
                     />
                     <YAxis 
@@ -3124,7 +3130,7 @@ const SermonViewer = () => {
                     />
                     <Tooltip 
                       formatter={(value: number) => [`${value}%`, 'Volume']}
-                      labelFormatter={(label) => `Time: ${label}`}
+                      labelFormatter={(ms: number) => `Time: ${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
                       contentStyle={{ fontSize: 12 }}
                     />
                     <ReferenceLine 
@@ -3134,7 +3140,7 @@ const SermonViewer = () => {
                       label={{ value: 'Avg', position: 'right', fontSize: 10 }}
                     />
                     <ReferenceLine 
-                      x={`${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`}
+                      x={currentTime * 1000}
                       stroke="hsl(var(--destructive))"
                       strokeWidth={2}
                       label={{ value: `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`, position: 'top', fontSize: 10, fill: 'hsl(var(--destructive))' }}
