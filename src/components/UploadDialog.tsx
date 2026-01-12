@@ -124,13 +124,35 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
   const handleUrlUpload = async () => {
     if (!url) return;
 
-    // Basic URL validation
+    // URL validation
+    let parsedUrl: URL;
     try {
-      new URL(url);
+      parsedUrl = new URL(url);
     } catch {
       toast({
         title: "Invalid URL",
         description: "Please enter a valid URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate hostname - cannot start or end with hyphen
+    const hostname = parsedUrl.hostname;
+    if (hostname.startsWith('-') || hostname.includes('.-') || hostname.includes('-.')) {
+      toast({
+        title: "Invalid URL",
+        description: "The URL contains an invalid domain name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate it's http or https
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter an HTTP or HTTPS URL",
         variant: "destructive",
       });
       return;
