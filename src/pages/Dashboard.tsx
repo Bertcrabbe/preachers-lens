@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks } from "lucide-react";
+import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X } from "lucide-react";
 import { UploadDialog } from "@/components/UploadDialog";
 
 interface Sermon {
@@ -23,6 +24,8 @@ const Dashboard = () => {
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -90,6 +93,46 @@ const Dashboard = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleEditStart = (e: React.MouseEvent, sermon: Sermon) => {
+    e.stopPropagation();
+    setEditingId(sermon.id);
+    setEditingTitle(sermon.title || "");
+  };
+
+  const handleEditSave = async (e: React.MouseEvent, sermonId: string) => {
+    e.stopPropagation();
+    try {
+      const { error } = await supabase
+        .from("sermons")
+        .update({ title: editingTitle.trim() || null })
+        .eq("id", sermonId);
+
+      if (error) throw error;
+
+      setSermons(sermons.map(s => 
+        s.id === sermonId ? { ...s, title: editingTitle.trim() || null } : s
+      ));
+      toast({
+        title: "Title updated",
+        description: "Sermon title has been saved",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update title",
+        variant: "destructive",
+      });
+    } finally {
+      setEditingId(null);
+    }
+  };
+
+  const handleEditCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(null);
+    setEditingTitle("");
   };
 
   return (
@@ -160,9 +203,41 @@ const Dashboard = () => {
               >
                 <CardHeader>
                   <div className="flex justify-between items-start mb-2">
-                    <CardTitle className="text-lg">
-                      {sermon.title || "Untitled Sermon"}
-                    </CardTitle>
+                    {editingId === sermon.id ? (
+                      <div className="flex items-center gap-1 flex-1 mr-2" onClick={e => e.stopPropagation()}>
+                        <Input
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          className="h-8 text-sm"
+                          placeholder="Sermon title"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleEditSave(e as any, sermon.id);
+                            if (e.key === "Escape") handleEditCancel(e as any);
+                          }}
+                        />
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => handleEditSave(e, sermon.id)}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleEditCancel}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 group">
+                        <CardTitle className="text-lg">
+                          {sermon.title || "Untitled Sermon"}
+                        </CardTitle>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleEditStart(e, sermon)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                     {getStatusBadge(sermon.transcription_status)}
                   </div>
                   <CardDescription>
