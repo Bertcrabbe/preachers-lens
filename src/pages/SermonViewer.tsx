@@ -24,7 +24,10 @@ import {
   Mic,
   ChevronDown,
   Trash2,
+  Pencil,
+  Check,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -156,6 +159,8 @@ const SermonViewer = () => {
 
   const [transcribing, setTranscribing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState("");
   const [floatingRecording, setFloatingRecording] = useState<{
     isRecording: boolean;
     time: number;
@@ -538,6 +543,32 @@ const SermonViewer = () => {
     });
     
     return pauseCount;
+  };
+
+  const handleSaveTitle = async () => {
+    if (!sermon) return;
+    try {
+      const { error } = await supabase
+        .from("sermons")
+        .update({ title: titleInput.trim() || null })
+        .eq("id", sermon.id);
+
+      if (error) throw error;
+
+      setSermon({ ...sermon, title: titleInput.trim() || null });
+      toast({
+        title: "Title updated",
+        description: "Sermon title has been saved",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update title",
+        variant: "destructive",
+      });
+    } finally {
+      setEditingTitle(false);
+    }
   };
 
   const getTopFillerWords = (): { word: string; count: number; color: string }[] => {
@@ -1931,7 +1962,42 @@ const SermonViewer = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{sermon.title || "Untitled Sermon"}</h1>
+              {editingTitle ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={titleInput}
+                    onChange={(e) => setTitleInput(e.target.value)}
+                    className="h-10 text-2xl font-bold w-80"
+                    placeholder="Sermon title"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveTitle();
+                      if (e.key === "Escape") setEditingTitle(false);
+                    }}
+                  />
+                  <Button size="icon" variant="ghost" onClick={handleSaveTitle}>
+                    <Check className="h-5 w-5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingTitle(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <h1 className="text-3xl font-bold">{sermon.title || "Untitled Sermon"}</h1>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => {
+                      setTitleInput(sermon.title || "");
+                      setEditingTitle(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
               <Badge variant="outline" className="mt-2">
                 {sermon.transcription_status}
               </Badge>
