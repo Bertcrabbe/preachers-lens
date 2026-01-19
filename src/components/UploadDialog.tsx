@@ -18,9 +18,10 @@ interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUploadComplete: () => void;
+  communicatorId?: string;
 }
 
-export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDialogProps) => {
+export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicatorId }: UploadDialogProps) => {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -84,6 +85,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
           file_url: fileName,
           file_type: "audio",
           transcription_status: "pending",
+          communicator_id: communicatorId || null,
         })
         .select()
         .single();
@@ -200,7 +202,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
       const functionName = isApplePodcast ? 'download-podcast-url' : 'download-audio-url';
       
       const { data, error } = await supabase.functions.invoke(functionName, {
-        body: { url, title: title || undefined }
+        body: { url, title: title || undefined, communicatorId: communicatorId || undefined }
       });
 
       if (error) throw error;

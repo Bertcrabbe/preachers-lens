@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { url, title } = await req.json();
+    const { url, title, communicatorId } = await req.json();
 
     if (!url) {
       throw new Error("URL is required");
@@ -121,6 +121,7 @@ serve(async (req) => {
         file_url: fileName,
         file_type: "audio",
         transcription_status: "pending",
+        communicator_id: communicatorId || null,
       })
       .select()
       .single();

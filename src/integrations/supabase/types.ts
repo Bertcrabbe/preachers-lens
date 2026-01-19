@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      communicators: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       evaluation_rules: {
         Row: {
           color: string
@@ -141,6 +165,7 @@ export type Database = {
       }
       sermons: {
         Row: {
+          communicator_id: string | null
           created_at: string
           duration_seconds: number | null
           error_message: string | null
@@ -153,6 +178,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          communicator_id?: string | null
           created_at?: string
           duration_seconds?: number | null
           error_message?: string | null
@@ -165,6 +191,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          communicator_id?: string | null
           created_at?: string
           duration_seconds?: number | null
           error_message?: string | null
@@ -176,7 +203,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sermons_communicator_id_fkey"
+            columns: ["communicator_id"]
+            isOneToOne: false
+            referencedRelation: "communicators"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
