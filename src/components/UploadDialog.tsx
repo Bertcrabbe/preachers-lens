@@ -121,6 +121,16 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
     }
   };
 
+  // Check if URL is an Apple Podcasts link
+  const isApplePodcastsUrl = (urlString: string): boolean => {
+    try {
+      const parsed = new URL(urlString);
+      return parsed.hostname === 'podcasts.apple.com';
+    } catch {
+      return false;
+    }
+  };
+
   const handleUrlUpload = async () => {
     if (!url) return;
 
@@ -148,28 +158,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
       return;
     }
 
-    // Check for streaming service URLs that won't work
-    const streamingServices = [
-      { pattern: /spotify\.com/i, name: "Spotify" },
-      { pattern: /music\.apple\.com/i, name: "Apple Music" },
-      { pattern: /youtube\.com|youtu\.be/i, name: "YouTube" },
-      { pattern: /soundcloud\.com/i, name: "SoundCloud" },
-      { pattern: /podcasts\.apple\.com/i, name: "Apple Podcasts" },
-      { pattern: /podcasts\.google\.com/i, name: "Google Podcasts" },
-      { pattern: /deezer\.com/i, name: "Deezer" },
-      { pattern: /tidal\.com/i, name: "Tidal" },
-    ];
-    
-    const blockedService = streamingServices.find(s => s.pattern.test(hostname));
-    if (blockedService) {
-      toast({
-        title: "Streaming URL not supported",
-        description: `${blockedService.name} links don't provide direct audio access. Please use a direct link to an MP3, WAV, or M4A file.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Validate it's http or https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       toast({
@@ -180,9 +168,38 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
       return;
     }
 
+    // Check if it's an Apple Podcasts URL (supported)
+    const isApplePodcast = isApplePodcastsUrl(url);
+
+    // Check for streaming service URLs that won't work (excluding Apple Podcasts)
+    if (!isApplePodcast) {
+      const streamingServices = [
+        { pattern: /spotify\.com/i, name: "Spotify" },
+        { pattern: /music\.apple\.com/i, name: "Apple Music" },
+        { pattern: /youtube\.com|youtu\.be/i, name: "YouTube" },
+        { pattern: /soundcloud\.com/i, name: "SoundCloud" },
+        { pattern: /podcasts\.google\.com/i, name: "Google Podcasts" },
+        { pattern: /deezer\.com/i, name: "Deezer" },
+        { pattern: /tidal\.com/i, name: "Tidal" },
+      ];
+      
+      const blockedService = streamingServices.find(s => s.pattern.test(hostname));
+      if (blockedService) {
+        toast({
+          title: "Streaming URL not supported",
+          description: `${blockedService.name} links don't provide direct audio access. Please use a direct link to an MP3, WAV, or M4A file.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setUploading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('download-audio-url', {
+      // Use different endpoint for Apple Podcasts
+      const functionName = isApplePodcast ? 'download-podcast-url' : 'download-audio-url';
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: { url, title: title || undefined }
       });
 
@@ -191,7 +208,9 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
 
       toast({
         title: "Upload successful",
-        description: "Your sermon is being transcribed",
+        description: isApplePodcast 
+          ? `"${data.episodeTitle || 'Episode'}" is being transcribed`
+          : "Your sermon is being transcribed",
       });
 
       onUploadComplete();
@@ -274,7 +293,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
                 onChange={(e) => setUrl(e.target.value)}
               />
               <p className="text-sm text-muted-foreground">
-                Paste a direct link to an MP3, WAV, or M4A file
+                Paste a direct audio link (MP3, WAV, M4A) or an Apple Podcasts link
               </p>
             </TabsContent>
           </Tabs>
