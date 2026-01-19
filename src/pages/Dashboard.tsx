@@ -80,17 +80,17 @@ const Dashboard = () => {
       failed: "destructive",
     };
 
-    const labels: Record<string, string> = {
-      pending: "Pending",
-      processing: "Processing",
-      completed: "Transcript Completed",
-      failed: "Failed",
-    };
-
     return (
       <Badge variant={variants[status] || "outline"}>
         {status === "processing" && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-        {labels[status] || status}
+        {status === "completed" ? (
+          <>
+            Transcript
+            <Check className="ml-1 h-3 w-3" />
+          </>
+        ) : (
+          status.charAt(0).toUpperCase() + status.slice(1)
+        )}
       </Badge>
     );
   };
