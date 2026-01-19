@@ -148,6 +148,28 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete }: UploadDia
       return;
     }
 
+    // Check for streaming service URLs that won't work
+    const streamingServices = [
+      { pattern: /spotify\.com/i, name: "Spotify" },
+      { pattern: /music\.apple\.com/i, name: "Apple Music" },
+      { pattern: /youtube\.com|youtu\.be/i, name: "YouTube" },
+      { pattern: /soundcloud\.com/i, name: "SoundCloud" },
+      { pattern: /podcasts\.apple\.com/i, name: "Apple Podcasts" },
+      { pattern: /podcasts\.google\.com/i, name: "Google Podcasts" },
+      { pattern: /deezer\.com/i, name: "Deezer" },
+      { pattern: /tidal\.com/i, name: "Tidal" },
+    ];
+    
+    const blockedService = streamingServices.find(s => s.pattern.test(hostname));
+    if (blockedService) {
+      toast({
+        title: "Streaming URL not supported",
+        description: `${blockedService.name} links don't provide direct audio access. Please use a direct link to an MP3, WAV, or M4A file.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate it's http or https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       toast({
