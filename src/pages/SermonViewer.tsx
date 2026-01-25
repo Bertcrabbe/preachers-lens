@@ -162,8 +162,8 @@ const SermonViewer = () => {
 
   const [transcribing, setTranscribing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [sermonVolume, setSermonVolume] = useState(1);
-  const [commentVolume, setCommentVolume] = useState(1);
+  const [sermonVolume, setSermonVolume] = useState(0.75);
+  const [commentVolume, setCommentVolume] = useState(0.75);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
   const [floatingRecording, setFloatingRecording] = useState<{
