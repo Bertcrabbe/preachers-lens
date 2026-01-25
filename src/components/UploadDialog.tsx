@@ -133,17 +133,9 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
   };
 
-  // Check if URL is a YouTube link
-  const isYouTubeUrl = (urlString: string): boolean => {
-    try {
-      const parsed = new URL(urlString);
-      return parsed.hostname === 'youtube.com' || 
-             parsed.hostname === 'www.youtube.com' || 
-             parsed.hostname === 'youtu.be' ||
-             parsed.hostname === 'm.youtube.com';
-    } catch {
-      return false;
-    }
+  // Check if URL is a YouTube link - now disabled
+  const isYouTubeUrl = (_urlString: string): boolean => {
+    return false; // YouTube extraction not available from server
   };
 
   const handleUrlUpload = async () => {
@@ -317,7 +309,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
                 onChange={(e) => setUrl(e.target.value)}
               />
               <p className="text-sm text-muted-foreground">
-                Paste a direct audio link (MP3, WAV, M4A), YouTube link, or Apple Podcasts link
+                Paste a direct audio link (MP3, WAV, M4A) or Apple Podcasts link. For YouTube, please download the audio first using a converter tool, then upload the file.
               </p>
             </TabsContent>
           </Tabs>
