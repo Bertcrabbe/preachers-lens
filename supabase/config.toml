@@ -23,3 +23,12 @@ verify_jwt = true
 
 [functions.transcribe-audio-comment]
 verify_jwt = true
+
+[functions.download-audio-url]
+verify_jwt = false
+
+[functions.download-podcast-url]
+verify_jwt = false
+
+[functions.download-youtube-audio]
+verify_jwt = false
