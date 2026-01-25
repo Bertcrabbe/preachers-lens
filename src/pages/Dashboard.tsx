@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw } from "lucide-react";
 import { UploadDialog } from "@/components/UploadDialog";
 import {
   Dialog,
@@ -48,6 +48,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [communicators, setCommunicators] = useState<Communicator[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -104,6 +105,16 @@ const Dashboard = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+    toast({
+      title: "Data refreshed",
+      description: "Communicators and sermons have been updated",
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -441,10 +452,15 @@ const Dashboard = () => {
               <p className="text-xs text-muted-foreground">Sermon Transcription Tool</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
