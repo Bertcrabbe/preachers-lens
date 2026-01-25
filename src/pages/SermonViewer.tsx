@@ -1978,8 +1978,8 @@ const SermonViewer = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-8">
+    <div className="min-h-screen bg-gradient-surface">
+      <div className="container py-8 animate-fade-in">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
@@ -2008,7 +2008,7 @@ const SermonViewer = () => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 group">
-                  <h1 className="text-3xl font-bold">{sermon.title || "Untitled Sermon"}</h1>
+                  <h1 className="text-3xl font-bold text-gradient-primary">{sermon.title || "Untitled Sermon"}</h1>
                   <Button 
                     size="icon" 
                     variant="ghost" 
@@ -2022,7 +2022,7 @@ const SermonViewer = () => {
                   </Button>
                 </div>
               )}
-              <Badge variant="outline" className="mt-2">
+              <Badge className="mt-2 badge-gradient">
                 {sermon.transcription_status}
               </Badge>
             </div>
@@ -2083,11 +2083,16 @@ const SermonViewer = () => {
           />
         )}
 
-        <Card className="mb-6 p-6">
+        <Card className="mb-6 p-6 card-glow shadow-lg">
           <div className="space-y-4">
             <div className="flex items-center gap-4 flex-wrap">
-              <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null || showAudioEditor}>
-                {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              <Button 
+                size="icon" 
+                onClick={togglePlayPause} 
+                disabled={previewingParagraph !== null || showAudioEditor}
+                className="play-button h-12 w-12 text-primary-foreground"
+              >
+                {playing ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-0.5" />}
               </Button>
 
               <Button
@@ -2362,7 +2367,7 @@ const SermonViewer = () => {
                 
                 {/* Timeline with sermon and comment segments */}
                 <div 
-                  className="relative h-12 bg-secondary/30 rounded-lg overflow-x-auto border border-border cursor-pointer"
+                  className="timeline-track relative h-16 overflow-x-auto cursor-pointer custom-scrollbar"
                   onClick={(e) => {
                     if (!sermon.duration_seconds) return;
                     const container = e.currentTarget;
@@ -2437,14 +2442,16 @@ const SermonViewer = () => {
                       <div className="absolute inset-0 flex items-center">
                         {waveformData.map((amplitude, idx) => {
                           const barPosition = (idx / waveformData.length) * 100;
+                          const isPlayed = sermon.duration_seconds && 
+                            (barPosition / 100) * sermon.duration_seconds * 1000 < currentTime;
                           
                           return (
                             <div
                               key={idx}
-                              className="bg-foreground/30 rounded-full absolute"
+                              className={`waveform-bar absolute ${isPlayed ? 'waveform-bar-played' : ''}`}
                               style={{
-                                width: '2px',
-                                height: `${Math.max(amplitude * 100, 4)}%`,
+                                width: '3px',
+                                height: `${Math.max(amplitude * 100, 8)}%`,
                                 left: `${barPosition}%`,
                                 transform: 'translateX(-50%)',
                               }}
@@ -2510,13 +2517,15 @@ const SermonViewer = () => {
                           return (
                             <div
                               key={idx}
-                              className="absolute h-full bg-red-500 border-l-2 border-r-2 border-red-700"
+                              className="comment-marker absolute h-full"
                               style={{
                                 left: `${left}%`,
-                                width: '2px',
+                                width: '4px',
                               }}
                               title={`Commentary at ${Math.floor(segment.start / 1000 / 60)}:${String(Math.floor((segment.start / 1000) % 60)).padStart(2, "0")}`}
-                            />
+                            >
+                              <div className="w-full h-full bg-gradient-warm rounded-full shadow-glow-accent" />
+                            </div>
                           );
                         })}
                         
@@ -2653,14 +2662,14 @@ const SermonViewer = () => {
                   
                   {/* Playhead */}
                   <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-primary z-10"
+                    className="absolute top-0 bottom-0 w-1 bg-gradient-primary z-10 rounded-full shadow-glow-primary progress-glow"
                     style={{
                       left: sermon.duration_seconds
                         ? `${(currentTime / (sermon.duration_seconds * 1000)) * 100}%`
                         : "0%",
                     }}
                   >
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full" />
+                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-4 bg-gradient-primary rounded-full shadow-lg border-2 border-background" />
                   </div>
                 </div>
               </div>
@@ -2746,15 +2755,15 @@ const SermonViewer = () => {
         </Card>
 
         {/* Sermon Dashboard */}
-        <Card className="mb-6 p-6">
-          <h2 className="text-xl font-semibold mb-4">Sermon Analytics</h2>
+        <Card className="mb-6 p-6 shadow-lg animate-slide-up">
+          <h2 className="text-xl font-semibold mb-4 text-gradient-primary">Sermon Analytics</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="p-4 bg-primary/5">
+            <Card className="stats-card p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-base font-bold text-primary">Words Per Minute</h3>
               </div>
               <div className="flex flex-col items-center text-center">
-                <div className="text-3xl font-bold text-primary">
+                <div className="text-4xl font-bold text-gradient-primary">
                   {Math.round(getAverageSpeechRate())}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
@@ -3793,7 +3802,7 @@ const SermonViewer = () => {
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-lg transition-colors cursor-pointer relative group ${highlightStyle}`}
+                    className={`transcript-paragraph p-4 rounded-xl transition-all duration-200 cursor-pointer relative group shadow-sm hover:shadow-md ${highlightStyle}`}
                     style={customStyle}
                     onClick={() => handlePreviewParagraph(idx)}
                   >
@@ -3847,26 +3856,26 @@ const SermonViewer = () => {
                         🔉 Low Volume
                       </Badge>
                     )}
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline" className="text-xs">
+                    <div className="flex items-start gap-3">
+                      <Badge className="badge-gradient text-xs font-mono shrink-0">
                         {Math.floor(firstSentence.start_time_ms / 1000 / 60)}:
                         {String(Math.floor((firstSentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
                       </Badge>
-                      <p className="flex-1">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
+                      <p className="flex-1 leading-relaxed font-serif text-foreground/90">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
                     </div>
                     {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).length > 0 && (
                       <div className="mt-2 space-y-2">
                         {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).map((comment) => (
                           <div
                             key={comment.id}
-                            className="p-2 rounded"
+                            className="p-3 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
                             style={{
                               backgroundColor: comment.evaluation_rules?.color
-                                ? `${comment.evaluation_rules.color}20`
-                                : "hsl(var(--muted))",
+                                ? `${comment.evaluation_rules.color}15`
+                                : "hsl(var(--card))",
                               borderLeft: comment.evaluation_rules?.color
-                                ? `3px solid ${comment.evaluation_rules.color}`
-                                : "3px solid hsl(var(--border))",
+                                ? `4px solid ${comment.evaluation_rules.color}`
+                                : "4px solid hsl(var(--primary))",
                             }}
                           >
                             <div className="flex items-start justify-between gap-2">
