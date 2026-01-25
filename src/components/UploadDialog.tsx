@@ -186,18 +186,11 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     // Check if it's an Apple Podcasts URL (supported)
     const isApplePodcast = isApplePodcastsUrl(url);
     
-    // Check if it's a YouTube URL - not supported
-    if (isYouTubeUrl(url)) {
-      toast({
-        title: "YouTube not supported",
-        description: "Please download the audio using a YouTube to MP3 converter, then upload the file directly.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Check if it's a YouTube URL (supported)
+    const isYouTube = isYouTubeUrl(url);
 
-    // Check for streaming service URLs that won't work (excluding Apple Podcasts)
-    if (!isApplePodcast) {
+    // Check for streaming service URLs that won't work (excluding Apple Podcasts and YouTube)
+    if (!isApplePodcast && !isYouTube) {
       const streamingServices = [
         { pattern: /spotify\.com/i, name: "Spotify" },
         { pattern: /music\.apple\.com/i, name: "Apple Music" },
@@ -224,6 +217,8 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       let functionName = 'download-audio-url';
       if (isApplePodcast) {
         functionName = 'download-podcast-url';
+      } else if (isYouTube) {
+        functionName = 'download-youtube-audio';
       }
       
       const { data, error } = await supabase.functions.invoke(functionName, {
@@ -237,6 +232,8 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
         title: "Upload successful",
         description: isApplePodcast 
           ? `"${data.episodeTitle || 'Episode'}" is being transcribed`
+          : isYouTube
+          ? `"${data.title || 'YouTube video'}" is being transcribed`
           : "Your sermon is being transcribed",
       });
 
@@ -320,7 +317,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
                 onChange={(e) => setUrl(e.target.value)}
               />
               <p className="text-sm text-muted-foreground">
-                Paste a direct audio link (MP3, WAV, M4A) or Apple Podcasts link. For YouTube, please download the audio first using a converter tool, then upload the file.
+                Paste a direct audio link (MP3, WAV, M4A), YouTube link, or Apple Podcasts link
               </p>
             </TabsContent>
           </Tabs>
