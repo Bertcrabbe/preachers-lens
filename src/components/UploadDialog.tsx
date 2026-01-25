@@ -27,7 +27,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"file" | "url">("file");
+  const [activeTab, setActiveTab] = useState<"file" | "url">("url");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
