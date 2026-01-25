@@ -289,30 +289,11 @@ All colors MUST be HSL.
     transform: scaleX(1);
   }
 
-  /* Play/Pause button base */
-  .play-button,
-  .pause-button {
-    @apply relative overflow-hidden rounded-full;
-    transition: transform 0.2s ease, box-shadow 0.3s ease;
-  }
-  
-  .play-button::before,
-  .pause-button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    transition: opacity 0.4s ease;
-  }
-
-  /* Play button with purple gradient */
+  /* Play button with gradient */
   .play-button {
-    box-shadow: 0 4px 16px -2px hsla(250, 85%, 60%, 0.4);
-  }
-  
-  .play-button::before {
+    @apply relative overflow-hidden rounded-full transition-all duration-200;
     background: var(--gradient-primary);
-    opacity: 1;
+    box-shadow: 0 4px 16px -2px hsla(250, 85%, 60%, 0.4);
   }
   
   .play-button:hover {
@@ -326,12 +307,9 @@ All colors MUST be HSL.
 
   /* Pause button with red gradient */
   .pause-button {
-    box-shadow: 0 4px 16px -2px hsla(340, 75%, 55%, 0.4);
-  }
-  
-  .pause-button::before {
+    @apply relative overflow-hidden rounded-full transition-all duration-200;
     background: var(--gradient-warm);
-    opacity: 1;
+    box-shadow: 0 4px 16px -2px hsla(340, 75%, 55%, 0.4);
   }
   
   .pause-button:hover {
@@ -341,13 +319,6 @@ All colors MUST be HSL.
   
   .pause-button:active {
     transform: scale(0.98);
-  }
-
-  /* Ensure button content stays above the gradient */
-  .play-button > *,
-  .pause-button > * {
-    position: relative;
-    z-index: 1;
   }
 
   /* Progress indicator */
