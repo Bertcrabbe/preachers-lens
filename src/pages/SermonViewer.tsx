@@ -2282,18 +2282,19 @@ const SermonViewer = () => {
                 </div>
               </div>
 
-              {timeSinceLastCommentInAudio !== null && (
-                <div className="flex items-center gap-2 border-l pl-4">
-                  <span className="text-sm text-muted-foreground">Since last comment:</span>
-                  <span className="text-sm font-medium font-mono">
-                    {Math.floor(timeSinceLastCommentInAudio / 60)}:{String(timeSinceLastCommentInAudio % 60).padStart(2, '0')}
-                  </span>
+              <div className="flex flex-col gap-1 border-l pl-4">
+                {timeSinceLastCommentInAudio !== null && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Since last comment:</span>
+                    <span className="text-sm font-medium font-mono">
+                      {Math.floor(timeSinceLastCommentInAudio / 60)}:{String(timeSinceLastCommentInAudio % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Comments:</span>
+                  <span className="text-sm font-medium">{comments.length}</span>
                 </div>
-              )}
-
-              <div className="flex items-center gap-2 border-l pl-4">
-                <span className="text-sm text-muted-foreground">Comments:</span>
-                <span className="text-sm font-medium">{comments.length}</span>
               </div>
               
               <div className="flex items-center gap-2 border-l pl-4">
