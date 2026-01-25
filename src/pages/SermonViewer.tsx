@@ -27,6 +27,7 @@ import {
   Pencil,
   Check,
   Scissors,
+  Volume2,
 } from "lucide-react";
 import { AudioEditor } from "@/components/AudioEditor";
 import { Input } from "@/components/ui/input";
@@ -161,6 +162,8 @@ const SermonViewer = () => {
 
   const [transcribing, setTranscribing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [sermonVolume, setSermonVolume] = useState(1);
+  const [commentVolume, setCommentVolume] = useState(1);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
   const [floatingRecording, setFloatingRecording] = useState<{
@@ -202,6 +205,20 @@ const SermonViewer = () => {
       audioRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
+
+  // Apply sermon volume to audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = sermonVolume;
+    }
+  }, [sermonVolume]);
+
+  // Apply comment volume to comment audio element
+  useEffect(() => {
+    if (commentAudioRef.current) {
+      commentAudioRef.current.volume = commentVolume;
+    }
+  }, [commentVolume, playingCommentId]);
 
   // Keyboard shortcuts for audio player (works for both sermon and comment audio)
   useEffect(() => {
@@ -1315,6 +1332,7 @@ const SermonViewer = () => {
               }
               
               const audio = new Audio(url);
+              audio.volume = commentVolume;
               commentAudioRef.current = audio;
               
               // Use a flag to prevent double-handling
@@ -2234,6 +2252,34 @@ const SermonViewer = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+
+              <div className="flex items-center gap-2 border-l pl-4">
+                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-col gap-1 min-w-[120px]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-16">Sermon:</span>
+                    <Slider
+                      value={[sermonVolume * 100]}
+                      onValueChange={([v]) => setSermonVolume(v / 100)}
+                      max={100}
+                      step={5}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-muted-foreground w-8">{Math.round(sermonVolume * 100)}%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-16">Comments:</span>
+                    <Slider
+                      value={[commentVolume * 100]}
+                      onValueChange={([v]) => setCommentVolume(v / 100)}
+                      max={100}
+                      step={5}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-muted-foreground w-8">{Math.round(commentVolume * 100)}%</span>
+                  </div>
+                </div>
               </div>
 
               {timeSinceLastCommentInAudio !== null && (
