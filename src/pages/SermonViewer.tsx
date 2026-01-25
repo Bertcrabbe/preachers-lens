@@ -26,7 +26,9 @@ import {
   Trash2,
   Pencil,
   Check,
+  Scissors,
 } from "lucide-react";
+import { AudioEditor } from "@/components/AudioEditor";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -166,8 +168,8 @@ const SermonViewer = () => {
     time: number;
     stopFn: (() => void) | null;
   }>({ isRecording: false, time: 0, stopFn: null });
+  const [showAudioEditor, setShowAudioEditor] = useState(false);
   
-
   useEffect(() => {
     checkAuth();
     if (id) {
@@ -2043,11 +2045,37 @@ const SermonViewer = () => {
           </Card>
         )}
 
+        {/* Audio Editor */}
+        {showAudioEditor && sermon && audioUrl && (
+          <AudioEditor
+            audioUrl={audioUrl}
+            fileUrl={sermon.file_url}
+            sermonId={sermon.id}
+            durationMs={(sermon.duration_seconds || 0) * 1000}
+            onClose={() => setShowAudioEditor(false)}
+            onSave={() => {
+              setShowAudioEditor(false);
+              // Refresh sermon data
+              fetchSermon();
+            }}
+          />
+        )}
+
         <Card className="mb-6 p-6">
           <div className="space-y-4">
             <div className="flex items-center gap-4 flex-wrap">
-              <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null}>
+              <Button size="icon" onClick={togglePlayPause} disabled={previewingParagraph !== null || showAudioEditor}>
                 {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAudioEditor(!showAudioEditor)}
+                disabled={previewingParagraph !== null}
+              >
+                <Scissors className="h-4 w-4 mr-2" />
+                {showAudioEditor ? "Close Editor" : "Edit Audio"}
               </Button>
               
               <Button 
