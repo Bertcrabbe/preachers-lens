@@ -5,6 +5,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Extract YouTube video ID from various URL formats
+function extractVideoId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&?\s]+)/,
+    /youtube\.com\/watch\?.*v=([^&?\s]+)/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -20,16 +36,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate YouTube URL
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)/;
-    if (!youtubeRegex.test(url)) {
+    // Validate YouTube URL and extract video ID
+    const videoId = extractVideoId(url);
+    if (!videoId) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid YouTube URL' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Processing YouTube URL:', url);
+    console.log('Processing YouTube URL:', url, 'Video ID:', videoId);
 
     // Get auth header and create Supabase client
     const authHeader = req.headers.get('Authorization');
@@ -57,9 +73,9 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    // Use Cobalt API v10 to get audio download URL
-    console.log('Requesting audio from Cobalt API...');
-    const cobaltResponse = await fetch('https://api.cobalt.tools/', {
+    // Use community Cobalt instance (co.wuk.sh) which doesn't require auth
+    console.log('Requesting audio from Cobalt community instance...');
+    const cobaltResponse = await fetch('https://co.wuk.sh/api/json', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -67,37 +83,59 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: url,
-        downloadMode: 'audio',
-        audioFormat: 'mp3',
+        vCodec: 'h264',
+        vQuality: '720',
+        aFormat: 'mp3',
+        isAudioOnly: true,
+        filenamePattern: 'basic',
       }),
     });
 
-    if (!cobaltResponse.ok) {
-      const errorText = await cobaltResponse.text();
-      console.error('Cobalt API error:', errorText);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Failed to process YouTube video. The service may be temporarily unavailable.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    let audioUrl: string | null = null;
+    let videoTitle = title || 'YouTube Audio';
+
+    if (cobaltResponse.ok) {
+      const cobaltData = await cobaltResponse.json();
+      console.log('Cobalt response:', cobaltData.status);
+
+      if (cobaltData.status === 'stream' || cobaltData.status === 'redirect') {
+        audioUrl = cobaltData.url;
+        if (cobaltData.filename) {
+          videoTitle = title || cobaltData.filename.replace(/\.[^/.]+$/, '');
+        }
+      }
     }
 
-    const cobaltData = await cobaltResponse.json();
-    console.log('Cobalt response status:', cobaltData.status);
-
-    if (cobaltData.status === 'error') {
-      return new Response(
-        JSON.stringify({ success: false, error: cobaltData.error?.code || 'Failed to extract audio from YouTube' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Handle tunnel/redirect responses
-    const audioUrl = cobaltData.url;
+    // Fallback: Try ytdl-core style API endpoint
     if (!audioUrl) {
-      console.error('No audio URL in response:', cobaltData);
+      console.log('Cobalt failed, trying alternative API...');
+      
+      // Try a different community instance
+      const altResponse = await fetch('https://api.vevioz.com/api/button/mp3/' + videoId, {
+        headers: {
+          'Accept': 'text/html',
+        },
+      });
+
+      if (altResponse.ok) {
+        const html = await altResponse.text();
+        // Parse the HTML to find the download link
+        const linkMatch = html.match(/href="(https:\/\/[^"]+\.mp3[^"]*)"/);
+        if (linkMatch && linkMatch[1]) {
+          audioUrl = linkMatch[1];
+          console.log('Found audio URL from Vevioz');
+        }
+      }
+    }
+
+    if (!audioUrl) {
+      console.error('All audio extraction methods failed');
       return new Response(
-        JSON.stringify({ success: false, error: 'No audio URL returned from service' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'YouTube audio extraction is currently unavailable. Please try uploading the audio file directly or use an Apple Podcasts link.' 
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -142,9 +180,6 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Extract video title from URL if no custom title provided
-    const videoTitle = title || cobaltData.filename?.replace(/\.[^/.]+$/, '') || 'YouTube Audio';
 
     // Create sermon record
     const { data: sermon, error: dbError } = await supabase
