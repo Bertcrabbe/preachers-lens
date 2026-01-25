@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, Link } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface UploadDialogProps {
   open: boolean;
@@ -28,37 +29,80 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
   const [url, setUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<"file" | "url">("url");
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const validTypes = ["audio/mpeg", "audio/wav", "audio/x-m4a", "audio/mp4"];
-      const maxSize = 300 * 1024 * 1024; // 300MB
+  const validateFile = useCallback((selectedFile: File): boolean => {
+    const validTypes = ["audio/mpeg", "audio/wav", "audio/x-m4a", "audio/mp4"];
+    const maxSize = 300 * 1024 * 1024; // 300MB
 
-      if (!validTypes.includes(selectedFile.type) && !selectedFile.name.match(/\.(mp3|wav|m4a)$/i)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload an MP3, WAV, or M4A file",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!validTypes.includes(selectedFile.type) && !selectedFile.name.match(/\.(mp3|wav|m4a)$/i)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an MP3, WAV, or M4A file",
+        variant: "destructive",
+      });
+      return false;
+    }
 
-      if (selectedFile.size > maxSize) {
-        toast({
-          title: "File too large",
-          description: "Maximum file size is 300MB",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (selectedFile.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 300MB",
+        variant: "destructive",
+      });
+      return false;
+    }
 
+    return true;
+  }, [toast]);
+
+  const handleFileSelect = useCallback((selectedFile: File) => {
+    if (validateFile(selectedFile)) {
       setFile(selectedFile);
       if (!title) {
         setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
       }
+      // Auto-switch to file tab when a file is dropped
+      setActiveTab("file");
+    }
+  }, [title, validateFile]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      handleFileSelect(selectedFile);
     }
   };
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging to false if we're leaving the drop zone entirely
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      handleFileSelect(droppedFile);
+    }
+  }, [handleFileSelect]);
 
   const handleFileUpload = async () => {
     if (!file) return;
@@ -295,17 +339,51 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
             </TabsList>
             <TabsContent value="file" className="space-y-2">
               <Label htmlFor="file">Audio File</Label>
-              <Input
-                id="file"
-                type="file"
-                accept=".mp3,.wav,.m4a,audio/*"
-                onChange={handleFileChange}
-              />
-              {file && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)}MB)
-                </p>
-              )}
+              <div
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                className={cn(
+                  "relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer",
+                  isDragging 
+                    ? "border-primary bg-primary/5" 
+                    : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                  file && "border-primary/50 bg-primary/5"
+                )}
+                onClick={() => document.getElementById('file')?.click()}
+              >
+                <Input
+                  id="file"
+                  type="file"
+                  accept=".mp3,.wav,.m4a,audio/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <div className="flex flex-col items-center justify-center text-center">
+                  <Upload className={cn(
+                    "h-8 w-8 mb-2",
+                    isDragging ? "text-primary" : "text-muted-foreground"
+                  )} />
+                  {file ? (
+                    <div>
+                      <p className="font-medium text-sm">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.size / 1024 / 1024).toFixed(2)}MB
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-medium">
+                        {isDragging ? "Drop your file here" : "Drag & drop or click to upload"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        MP3, WAV, or M4A (max 300MB)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </TabsContent>
             <TabsContent value="url" className="space-y-2">
               <Label htmlFor="url">Audio URL</Label>
