@@ -136,15 +136,13 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
 
       if (dbError) throw dbError;
 
-      // Trigger transcription via edge function
+      // Trigger transcription via edge function (fire and forget - don't await)
       if (sermon) {
-        const { error: transcribeError } = await supabase.functions.invoke('transcribe-sermon', {
+        supabase.functions.invoke('transcribe-sermon', {
           body: { sermonId: sermon.id }
+        }).catch((err) => {
+          console.error('Transcription trigger failed:', err);
         });
-
-        if (transcribeError) {
-          console.error('Transcription trigger failed:', transcribeError);
-        }
       }
 
       toast({
