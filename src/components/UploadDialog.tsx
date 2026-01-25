@@ -133,9 +133,17 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
   };
 
-  // Check if URL is a YouTube link - now disabled
-  const isYouTubeUrl = (_urlString: string): boolean => {
-    return false; // YouTube extraction not available from server
+  // Check if URL is a YouTube link
+  const isYouTubeUrl = (urlString: string): boolean => {
+    try {
+      const parsed = new URL(urlString);
+      return parsed.hostname === 'youtube.com' || 
+             parsed.hostname === 'www.youtube.com' || 
+             parsed.hostname === 'youtu.be' ||
+             parsed.hostname === 'm.youtube.com';
+    } catch {
+      return false;
+    }
   };
 
   const handleUrlUpload = async () => {
@@ -178,11 +186,18 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     // Check if it's an Apple Podcasts URL (supported)
     const isApplePodcast = isApplePodcastsUrl(url);
     
-    // Check if it's a YouTube URL (supported)
-    const isYouTube = isYouTubeUrl(url);
+    // Check if it's a YouTube URL - not supported
+    if (isYouTubeUrl(url)) {
+      toast({
+        title: "YouTube not supported",
+        description: "Please download the audio using a YouTube to MP3 converter, then upload the file directly.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Check for streaming service URLs that won't work (excluding Apple Podcasts and YouTube)
-    if (!isApplePodcast && !isYouTube) {
+    // Check for streaming service URLs that won't work (excluding Apple Podcasts)
+    if (!isApplePodcast) {
       const streamingServices = [
         { pattern: /spotify\.com/i, name: "Spotify" },
         { pattern: /music\.apple\.com/i, name: "Apple Music" },
@@ -209,8 +224,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       let functionName = 'download-audio-url';
       if (isApplePodcast) {
         functionName = 'download-podcast-url';
-      } else if (isYouTube) {
-        functionName = 'download-youtube-audio';
       }
       
       const { data, error } = await supabase.functions.invoke(functionName, {
@@ -224,8 +237,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
         title: "Upload successful",
         description: isApplePodcast 
           ? `"${data.episodeTitle || 'Episode'}" is being transcribed`
-          : isYouTube
-          ? `"${data.title || 'YouTube video'}" is being transcribed`
           : "Your sermon is being transcribed",
       });
 
