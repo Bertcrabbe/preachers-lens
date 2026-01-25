@@ -2090,7 +2090,7 @@ const SermonViewer = () => {
                 size="icon" 
                 onClick={togglePlayPause} 
                 disabled={previewingParagraph !== null || showAudioEditor}
-                className="h-12 w-12 bg-foreground hover:bg-foreground/90 text-background"
+                className="play-button h-12 w-12 text-primary-foreground"
               >
                 {playing ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-0.5" />}
               </Button>
