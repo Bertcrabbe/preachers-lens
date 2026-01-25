@@ -57,9 +57,9 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    // Use Cobalt API to get audio download URL
+    // Use Cobalt API v10 to get audio download URL
     console.log('Requesting audio from Cobalt API...');
-    const cobaltResponse = await fetch('https://api.cobalt.tools/api/json', {
+    const cobaltResponse = await fetch('https://api.cobalt.tools/', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -67,11 +67,8 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: url,
-        vCodec: 'h264',
-        vQuality: '720',
-        aFormat: 'mp3',
-        isAudioOnly: true,
-        filenamePattern: 'basic',
+        downloadMode: 'audio',
+        audioFormat: 'mp3',
       }),
     });
 
@@ -89,22 +86,17 @@ Deno.serve(async (req) => {
 
     if (cobaltData.status === 'error') {
       return new Response(
-        JSON.stringify({ success: false, error: cobaltData.text || 'Failed to extract audio from YouTube' }),
+        JSON.stringify({ success: false, error: cobaltData.error?.code || 'Failed to extract audio from YouTube' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (cobaltData.status !== 'stream' && cobaltData.status !== 'redirect') {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Unexpected response from audio extraction service' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
+    // Handle tunnel/redirect responses
     const audioUrl = cobaltData.url;
     if (!audioUrl) {
+      console.error('No audio URL in response:', cobaltData);
       return new Response(
-        JSON.stringify({ success: false, error: 'No audio URL returned' }),
+        JSON.stringify({ success: false, error: 'No audio URL returned from service' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
