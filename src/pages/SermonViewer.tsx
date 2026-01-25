@@ -2008,7 +2008,7 @@ const SermonViewer = () => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 group">
-                  <h1 className="text-3xl font-bold text-gradient-primary">{sermon.title || "Untitled Sermon"}</h1>
+                  <h1 className="text-3xl font-bold text-foreground">{sermon.title || "Untitled Sermon"}</h1>
                   <Button 
                     size="icon" 
                     variant="ghost" 
@@ -2022,7 +2022,7 @@ const SermonViewer = () => {
                   </Button>
                 </div>
               )}
-              <Badge className="mt-2 badge-gradient">
+              <Badge variant="secondary" className="mt-2">
                 {sermon.transcription_status}
               </Badge>
             </div>
@@ -2083,14 +2083,14 @@ const SermonViewer = () => {
           />
         )}
 
-        <Card className="mb-6 p-6 card-glow shadow-lg">
+        <Card className="mb-6 p-6 shadow-md border-border/50">
           <div className="space-y-4">
             <div className="flex items-center gap-4 flex-wrap">
               <Button 
                 size="icon" 
                 onClick={togglePlayPause} 
                 disabled={previewingParagraph !== null || showAudioEditor}
-                className="play-button h-12 w-12 text-primary-foreground"
+                className="h-12 w-12 bg-foreground hover:bg-foreground/90 text-background"
               >
                 {playing ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-0.5" />}
               </Button>
