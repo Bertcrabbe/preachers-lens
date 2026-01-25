@@ -305,6 +305,22 @@ All colors MUST be HSL.
     transform: scale(0.98);
   }
 
+  /* Pause button with red gradient */
+  .pause-button {
+    @apply relative overflow-hidden rounded-full transition-all duration-200;
+    background: var(--gradient-warm);
+    box-shadow: 0 4px 16px -2px hsla(340, 75%, 55%, 0.4);
+  }
+  
+  .pause-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px -2px hsla(340, 75%, 55%, 0.5);
+  }
+  
+  .pause-button:active {
+    transform: scale(0.98);
+  }
+
   /* Progress indicator */
   .progress-glow {
     box-shadow: 0 0 12px 2px hsla(250, 85%, 60%, 0.4);
