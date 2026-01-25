@@ -1664,6 +1664,11 @@ const SermonViewer = () => {
       let currentTime = paragraphStart;
 
       for (const comment of paragraphComments) {
+        // Skip comments without audio
+        if (!comment.audio_url) {
+          continue;
+        }
+        
         const commentStart = comment.start_time_ms / 1000;
         
         // Play sermon segment up to this comment
@@ -1679,12 +1684,11 @@ const SermonViewer = () => {
         }
 
         // Play the comment audio (inserted at this point)
-        await playCommentAudio(comment.audio_url!);
+        await playCommentAudio(comment.audio_url);
         await new Promise(resolve => setTimeout(resolve, 300)); // Gap after commentary
 
-        // Resume sermon from where we paused (not skipping ahead)
-        // This way the comment is "inserted" rather than replacing the sermon audio
-        currentTime = commentStart;
+        // Advance currentTime past this comment to prevent getting stuck
+        currentTime = Math.max(currentTime, commentStart + 0.001);
       }
 
       // Play remaining sermon segment after last comment
