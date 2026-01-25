@@ -2290,6 +2290,11 @@ const SermonViewer = () => {
                   </span>
                 </div>
               )}
+
+              <div className="flex items-center gap-2 border-l pl-4">
+                <span className="text-sm text-muted-foreground">Comments:</span>
+                <span className="text-sm font-medium">{comments.length}</span>
+              </div>
               
               <div className="flex items-center gap-2 border-l pl-4">
                 <DropdownMenu>
