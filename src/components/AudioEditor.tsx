@@ -601,13 +601,19 @@ export const AudioEditor = ({
             <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-foreground rounded-full" />
           </div>
 
-          {/* Hover indicator */}
-          {hoverTime !== null && splitMode && (
+          {/* Hover indicator - always show timestamp on hover */}
+          {hoverTime !== null && (
             <div
-              className="absolute top-0 bottom-0 w-0.5 bg-primary/50 z-10 pointer-events-none"
+              className={cn(
+                "absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none",
+                splitMode ? "bg-primary/50" : "bg-foreground/30"
+              )}
               style={{ left: `${(hoverTime / durationMs) * 100}%` }}
             >
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded whitespace-nowrap">
+              <div className={cn(
+                "absolute -top-6 left-1/2 -translate-x-1/2 text-xs px-2 py-1 rounded whitespace-nowrap",
+                splitMode ? "bg-primary text-primary-foreground" : "bg-foreground text-background"
+              )}>
                 {formatTime(hoverTime)}
               </div>
             </div>
