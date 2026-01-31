@@ -67,6 +67,8 @@ export const AudioEditor = ({
   ]);
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
   const [waveformData, setWaveformData] = useState<number[]>([]);
+  const [waveformLoading, setWaveformLoading] = useState(true);
+  const [waveformError, setWaveformError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [splitMode, setSplitMode] = useState(false);
@@ -74,18 +76,29 @@ export const AudioEditor = ({
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
-
   // Generate waveform on mount
   useEffect(() => {
     generateWaveform();
   }, [audioUrl]);
 
   const generateWaveform = async () => {
+    setWaveformLoading(true);
+    setWaveformError(null);
+    
     try {
+      console.log("Generating waveform from:", audioUrl);
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const response = await fetch(audioUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${response.status} ${response.statusText}`);
+      }
+      
       const arrayBuffer = await response.arrayBuffer();
+      console.log("Audio buffer size:", arrayBuffer.byteLength);
+      
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      console.log("Audio decoded, duration:", audioBuffer.duration);
 
       const rawData = audioBuffer.getChannelData(0);
       const samples = 800;
@@ -104,8 +117,12 @@ export const AudioEditor = ({
       const max = Math.max(...filteredData);
       setWaveformData(filteredData.map((n) => n / max));
       await audioContext.close();
-    } catch (error) {
+      console.log("Waveform generated successfully");
+    } catch (error: any) {
       console.error("Error generating waveform:", error);
+      setWaveformError(error.message || "Failed to generate waveform");
+    } finally {
+      setWaveformLoading(false);
     }
   };
 
@@ -512,8 +529,28 @@ export const AudioEditor = ({
           className="relative h-full"
           style={{ width: `${100 * zoom}%`, minWidth: "100%" }}
         >
+          {/* Loading state */}
+          {waveformLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Generating waveform...</span>
+              </div>
+            </div>
+          )}
+
+          {/* Error state */}
+          {waveformError && !waveformLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <span>{waveformError}</span>
+              </div>
+            </div>
+          )}
+
           {/* Waveform bars */}
-          {waveformData.map((amplitude, index) => {
+          {!waveformLoading && !waveformError && waveformData.map((amplitude, index) => {
             const barPercent = (index / waveformData.length) * 100;
             const barTimeMs = (index / waveformData.length) * durationMs;
             const segment = segments.find(
