@@ -60,24 +60,49 @@ const Dashboard = () => {
   const [communicatorToDelete, setCommunicatorToDelete] = useState<Communicator | null>(null);
 
   useEffect(() => {
-    checkAuth();
-    fetchData();
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/auth");
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!isMounted) return;
+        
+        if (!session) {
+          navigate("/auth");
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Re-fetch data when user signs in or token refreshes
+          fetchData();
+        }
       }
-    });
+    );
 
-    return () => subscription.unsubscribe();
+    // THEN check for existing session and fetch data
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        if (!session) {
+          navigate("/auth");
+        } else {
+          // Session exists, fetch data
+          await fetchData();
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
 
   const fetchData = async () => {
     try {
