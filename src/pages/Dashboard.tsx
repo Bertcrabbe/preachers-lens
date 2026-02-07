@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw } from "lucide-react";
+import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown } from "lucide-react";
 import { UploadDialog } from "@/components/UploadDialog";
 import {
   Dialog,
@@ -26,6 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Sermon {
   id: string;
@@ -270,71 +277,147 @@ const Dashboard = () => {
     }
   };
 
+  const handleAssignCommunicator = async (sermonId: string, communicatorId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from("sermons")
+        .update({ communicator_id: communicatorId })
+        .eq("id", sermonId);
+
+      if (error) throw error;
+
+      setSermons(sermons.map(s => 
+        s.id === sermonId ? { ...s, communicator_id: communicatorId } : s
+      ));
+      
+      const folderName = communicatorId 
+        ? communicators.find(c => c.id === communicatorId)?.name 
+        : "Unassigned";
+      toast({
+        title: "Sermon moved",
+        description: `Moved to ${folderName}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to move sermon",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getSermonsForCommunicator = (communicatorId: string | null) => {
     return sermons.filter(s => s.communicator_id === communicatorId);
   };
 
   const unassignedSermons = sermons.filter(s => !s.communicator_id);
 
-  const renderSermonCard = (sermon: Sermon) => (
-    <Card
-      key={sermon.id}
-      className="cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={() => sermon.transcription_status === "completed" && navigate(`/sermon/${sermon.id}`)}
-    >
-      <CardHeader>
-        <div className="flex justify-between items-start mb-2">
-          {editingId === sermon.id ? (
-            <div className="flex items-center gap-1 flex-1 mr-2" onClick={e => e.stopPropagation()}>
-              <Input
-                value={editingTitle}
-                onChange={(e) => setEditingTitle(e.target.value)}
-                className="h-8 text-sm"
-                placeholder="Sermon title"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleEditSave(e as any, sermon.id);
-                  if (e.key === "Escape") handleEditCancel(e as any);
-                }}
-              />
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => handleEditSave(e, sermon.id)}>
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleEditCancel}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 group">
-              <CardTitle className="text-lg">
-                {sermon.title || "Untitled Sermon"}
-              </CardTitle>
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => handleEditStart(e, sermon)}
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-          {getStatusBadge(sermon.transcription_status)}
-        </div>
-        <CardDescription>
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-3 w-3" />
-            {formatDuration(sermon.duration_seconds)}
+  const renderSermonCard = (sermon: Sermon) => {
+    const currentCommunicator = communicators.find(c => c.id === sermon.communicator_id);
+    
+    return (
+      <Card
+        key={sermon.id}
+        className="cursor-pointer hover:shadow-lg transition-shadow"
+        onClick={() => sermon.transcription_status === "completed" && navigate(`/sermon/${sermon.id}`)}
+      >
+        <CardHeader>
+          <div className="flex justify-between items-start mb-2">
+            {editingId === sermon.id ? (
+              <div className="flex items-center gap-1 flex-1 mr-2" onClick={e => e.stopPropagation()}>
+                <Input
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  className="h-8 text-sm"
+                  placeholder="Sermon title"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleEditSave(e as any, sermon.id);
+                    if (e.key === "Escape") handleEditCancel(e as any);
+                  }}
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => handleEditSave(e, sermon.id)}>
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleEditCancel}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group">
+                <CardTitle className="text-lg">
+                  {sermon.title || "Untitled Sermon"}
+                </CardTitle>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleEditStart(e, sermon)}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            {getStatusBadge(sermon.transcription_status)}
           </div>
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-xs text-muted-foreground">
-          Uploaded {new Date(sermon.created_at).toLocaleDateString()}
-        </p>
-      </CardContent>
-    </Card>
-  );
+          <CardDescription>
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-3 w-3" />
+              {formatDuration(sermon.duration_seconds)}
+            </div>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Uploaded {new Date(sermon.created_at).toLocaleDateString()}
+            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                  <FolderOpen className="h-3 w-3" />
+                  {currentCommunicator?.name || "Unassigned"}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50 bg-popover">
+                {communicators.map((communicator) => (
+                  <DropdownMenuItem
+                    key={communicator.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAssignCommunicator(sermon.id, communicator.id);
+                    }}
+                    className={sermon.communicator_id === communicator.id ? "bg-accent" : ""}
+                  >
+                    {communicator.name}
+                  </DropdownMenuItem>
+                ))}
+                {communicators.length > 0 && sermon.communicator_id && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAssignCommunicator(sermon.id, null);
+                      }}
+                    >
+                      Remove from folder
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {communicators.length === 0 && (
+                  <DropdownMenuItem disabled>
+                    No folders created yet
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderFolderView = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
