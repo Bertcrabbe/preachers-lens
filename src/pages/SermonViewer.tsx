@@ -729,7 +729,7 @@ const SermonViewer = () => {
                 'global partners', 'pastoral care', 'shepherding team', 'church polity',
                 'praise and worship', 'praise & worship', 'worship experience', 'spirit moving',
                 'worship night', 'vacation bible school', 'vbs', 'testimony', 'purity culture',
-                'accountability group', 'contemporary christian music', 'ccm']
+                'accountability group', 'contemporary christian music', 'ccm', 'we as christians']
     };
     
     let termCount = 0;
@@ -785,7 +785,7 @@ const SermonViewer = () => {
                 'global partners', 'pastoral care', 'shepherding team', 'church polity',
                 'praise and worship', 'praise & worship', 'worship experience', 'spirit moving',
                 'worship night', 'vacation bible school', 'vbs', 'testimony', 'purity culture',
-                'accountability group', 'contemporary christian music', 'ccm']
+                'accountability group', 'contemporary christian music', 'ccm', 'we as christians']
     };
     
     const colors = ['#6366f1', '#818cf8', '#a5b4fc']; // indigo variations
@@ -849,7 +849,7 @@ const SermonViewer = () => {
                 'global partners', 'pastoral care', 'shepherding team', 'church polity',
                 'praise and worship', 'praise & worship', 'worship experience', 'spirit moving',
                 'worship night', 'vacation bible school', 'vbs', 'testimony', 'purity culture',
-                'accountability group', 'contemporary christian music', 'ccm']
+                'accountability group', 'contemporary christian music', 'ccm', 'we as christians']
     };
     
     const termCounts: { [key: string]: number } = {};
