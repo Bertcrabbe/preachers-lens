@@ -84,21 +84,29 @@ export const useMicrophoneSelector = () => {
       });
       
       const devices = await navigator.mediaDevices.enumerateDevices();
+      console.log('All audio input devices:', devices.filter(d => d.kind === 'audioinput').map(d => d.label));
+      
       const audioInputs = devices
         .filter(device => device.kind === 'audioinput')
         .filter(device => {
-          // Exclude phone/mobile devices
+          // Exclude phone/mobile devices, but keep everything else including built-in
           const label = device.label.toLowerCase();
-          return !(
+          const isPhone = (
             label.includes('iphone') ||
             label.includes('android') ||
             label.includes('phone')
           );
+          if (isPhone) {
+            console.log('Filtering out phone device:', device.label);
+          }
+          return !isPhone;
         })
         .map(device => ({
           deviceId: device.deviceId,
           label: device.label || `Microphone ${device.deviceId.slice(0, 8)}`
         }));
+      
+      console.log('Filtered audio devices for dropdown:', audioInputs.map(d => d.label));
       
       setAudioDevices(audioInputs);
       
