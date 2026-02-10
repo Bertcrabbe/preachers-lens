@@ -146,8 +146,9 @@ const SermonViewer = () => {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
   const [scriptureRefs, setScriptureRefs] = useState<{
-    references: Array<{ reference: string; context: string }>;
+    references: Array<{ reference: string; context: string; verse_count?: number }>;
     total_count: number;
+    total_verses?: number;
   } | null>(null);
   const [loadingScriptures, setLoadingScriptures] = useState(false);
   const [showScriptureRefs, setShowScriptureRefs] = useState(false);
@@ -3141,6 +3142,11 @@ const SermonViewer = () => {
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Biblical Citations
+                  {!loadingScriptures && scriptureRefs?.total_verses != null && (
+                    <span className="block text-xs text-emerald-600 font-medium mt-0.5">
+                      ({scriptureRefs.total_verses} total verses)
+                    </span>
+                  )}
                 </div>
               </div>
               {scriptureRefs && scriptureRefs.references.length > 0 && (
@@ -3150,7 +3156,12 @@ const SermonViewer = () => {
                   </div>
                   {scriptureRefs.references.map((ref, idx) => (
                     <div key={idx} className="text-sm border-l-2 border-emerald-500 pl-2 py-1">
-                      <div className="font-medium text-emerald-700">{ref.reference}</div>
+                      <div className="font-medium text-emerald-700">
+                        {ref.reference}
+                        {ref.verse_count != null && (
+                          <span className="text-xs font-normal text-muted-foreground ml-1">({ref.verse_count} {ref.verse_count === 1 ? 'verse' : 'verses'})</span>
+                        )}
+                      </div>
                       <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                         {ref.context.substring(0, 100)}...
                       </div>
