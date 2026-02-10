@@ -51,16 +51,17 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a biblical scholar assistant. Identify all scripture references in the given text. IMPORTANT: Consecutive verses from the same book/chapter that are read back-to-back should be consolidated into a single reference range (e.g., 'Romans 1:29, Romans 1:30, Romans 1:31' should become 'Romans 1:29-31'). Do not count individual verses separately if they form a continuous passage."
+            content: "You are a biblical scholar assistant. Identify all scripture references in the given text. IMPORTANT: Only count verses that are actually read, quoted, or directly referenced with specific verse numbers. If a speaker mentions a book and chapter (e.g., 'Luke 12') but only reads or quotes specific verses from it, only count those specific verses — do NOT count the entire chapter. Consecutive verses from the same book/chapter that are read back-to-back should be consolidated into a single reference range."
           },
           {
             role: "user",
             content: `Please analyze this sermon transcript and identify ALL scripture references (books, chapters, verses). IMPORTANT RULES:
-1. Consolidate consecutive verses into ranges - if verses 29, 30, and 31 from the same chapter are mentioned together, count it as ONE reference (e.g., "Romans 1:29-31")
-2. Only count distinct, separate scripture passages as individual references
-3. Include references mentioned by name (like "Romans 6") as well as quoted verses
-4. For each reference, count the number of individual verses it spans (e.g., "Romans 6:1-4" = 4 verses, "John 3:16" = 1 verse, "Psalm 23" = 6 verses for the whole chapter)
-5. Provide a total_verses count summing all individual verses across all references
+1. ONLY count verses that are actually READ, QUOTED, or PARAPHRASED in the sermon. If a speaker says "turn to Luke 12" but only reads verses 15-21, the reference should be "Luke 12:15-21" (7 verses), NOT "Luke 12" (entire chapter).
+2. If a chapter is mentioned by name but no specific verses are read from it, list it as a general reference with verse_count of 0.
+3. Consolidate consecutive verses into ranges - if verses 29, 30, and 31 from the same chapter are mentioned together, count it as ONE reference (e.g., "Romans 1:29-31").
+4. Only count distinct, separate scripture passages as individual references.
+5. For each reference, count ONLY the number of verses actually read/quoted (e.g., "Romans 6:1-4" = 4 verses, "John 3:16" = 1 verse).
+6. Provide a total_verses count summing all individual verses across all references.
 
 Format each reference as a citation (e.g., "Romans 6:1-4") with brief context showing how it was referenced.
 
