@@ -59,6 +59,8 @@ serve(async (req) => {
 1. Consolidate consecutive verses into ranges - if verses 29, 30, and 31 from the same chapter are mentioned together, count it as ONE reference (e.g., "Romans 1:29-31")
 2. Only count distinct, separate scripture passages as individual references
 3. Include references mentioned by name (like "Romans 6") as well as quoted verses
+4. For each reference, count the number of individual verses it spans (e.g., "Romans 6:1-4" = 4 verses, "John 3:16" = 1 verse, "Psalm 23" = 6 verses for the whole chapter)
+5. Provide a total_verses count summing all individual verses across all references
 
 Format each reference as a citation (e.g., "Romans 6:1-4") with brief context showing how it was referenced.
 
@@ -80,14 +82,16 @@ Here's the transcript:\n\n${fullTranscript}`
                       type: "object",
                       properties: {
                         reference: { type: "string", description: "The scripture citation (e.g., 'Romans 6:1-4')" },
-                        context: { type: "string", description: "Brief quote showing how it was referenced" }
+                        context: { type: "string", description: "Brief quote showing how it was referenced" },
+                        verse_count: { type: "number", description: "Number of individual verses covered by this reference (e.g., Romans 6:1-4 = 4 verses, John 3:16 = 1 verse)" }
                       },
-                      required: ["reference", "context"]
+                      required: ["reference", "context", "verse_count"]
                     }
                   },
-                  total_count: { type: "number", description: "Total number of unique scripture references" }
+                  total_count: { type: "number", description: "Total number of unique scripture references" },
+                  total_verses: { type: "number", description: "Total number of individual verses across all references" }
                 },
-                required: ["references", "total_count"]
+                required: ["references", "total_count", "total_verses"]
               }
             }
           }
