@@ -3254,18 +3254,18 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-teal-600">
-                  {getRepeatedWords(10).length}
+                  {getRepeatedWords(12).length}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Words Used 10+ Times
+                  Words Used 12+ Times
                 </div>
               </div>
-              {getRepeatedWords(10).length > 0 && (
+              {getRepeatedWords(12).length > 0 && (
                 <div className="space-y-1 max-h-40 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                   <div className="text-xs text-muted-foreground mb-2">
                     <p className="font-medium">Most Repeated Words:</p>
                   </div>
-                  {getRepeatedWords(10).slice(0, 10).map((item) => (
+                  {getRepeatedWords(12).slice(0, 10).map((item) => (
                     <div key={item.word} className="flex items-center justify-between text-sm">
                       <span className="capitalize">{item.word}</span>
                       <span className="font-medium text-teal-600">{item.count}×</span>
