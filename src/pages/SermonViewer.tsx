@@ -907,6 +907,53 @@ const SermonViewer = () => {
     setVisibleInsiderTerms(newSet);
   };
 
+  const getRepeatedWords = (minCount: number = 10): { word: string; count: number }[] => {
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+      'by', 'from', 'is', 'it', 'its', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+      'may', 'might', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'i', 'me', 'my',
+      'we', 'us', 'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'they', 'them',
+      'their', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am',
+      'not', 'no', 'nor', 'as', 'if', 'then', 'than', 'too', 'very', 'just', 'about',
+      'above', 'after', 'again', 'all', 'also', 'any', 'because', 'before', 'between',
+      'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'into', 'over',
+      'own', 'same', 'so', 'here', 'there', 'when', 'where', 'why', 'how', 'out', 'up',
+      'down', 'off', 'only', 'get', 'got', 'go', 'going', 'gone', 'come', 'came',
+      'make', 'made', 'take', 'took', 'give', 'gave', 'say', 'said', 'tell', 'told',
+      'know', 'knew', 'think', 'thought', 'see', 'saw', 'want', 'let', 'like',
+      'even', 'well', 'back', 'still', 'way', 'thing', 'things', 'much', 'many',
+      'right', 'put', 'through', 'don', 'doesn', 'didn', 'won', 'wouldn', 'couldn',
+      'shouldn', 'aren', 'isn', 'wasn', 'weren', 'haven', 'hasn', 'hadn', 'll', 've',
+      're', 'okay', 'oh', 'yeah', 'yes', 'hey', 'gonna', 'gotta', 'wanna',
+      'really', 'actually', 'basically', 'literally', 'already',
+      'around', 'every', 'never', 'now', 'always', 'away', 'something', 'someone',
+      'everyone', 'everything', 'anything', 'nothing', 'one', 'two', 'first',
+      'new', 'old', 'big', 'long', 'great', 'little', 'good', 'bad',
+      'different', 'next', 'last', 'while', 'since', 'along', 'until', 'during',
+      'without', 'though', 'another', 'look', 'looked',
+      'part', 'else', 'yet', 'ever', 'keep', 'kept', 'done', 'set',
+      't', 's', 'd', 'm',
+    ]);
+
+    const wordCounts: Record<string, number> = {};
+
+    sentences.forEach(sentence => {
+      const words = sentence.sentence_text.toLowerCase().replace(/[^a-z'\s-]/g, '').split(/\s+/);
+      words.forEach(word => {
+        const cleaned = word.replace(/^'+|'+$/g, '');
+        if (cleaned.length > 2 && !stopWords.has(cleaned)) {
+          wordCounts[cleaned] = (wordCounts[cleaned] || 0) + 1;
+        }
+      });
+    });
+
+    return Object.entries(wordCounts)
+      .filter(([, count]) => count >= minCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([word, count]) => ({ word, count }));
+  };
+
   const countSlowSpeechParagraphs = (threshold: number = 0.75): number => {
     if (sentences.length === 0) return 0;
     
@@ -2332,7 +2379,59 @@ const SermonViewer = () => {
                 </DropdownMenu>
               </div>
 
-              
+            <Card className="p-4 bg-teal-500/5">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-base font-bold text-teal-700">Repeated Words</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2">
+                      View All
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto bg-background border shadow-lg z-50">
+                    {getRepeatedWords(5).length === 0 ? (
+                      <DropdownMenuItem disabled className="text-muted-foreground">
+                        No repeated words found
+                      </DropdownMenuItem>
+                    ) : (
+                      getRepeatedWords(5).map((item) => (
+                        <DropdownMenuItem 
+                          key={item.word}
+                          className="flex justify-between cursor-pointer"
+                        >
+                          <span className="capitalize truncate mr-2">{item.word}</span>
+                          <span className="font-semibold text-teal-600">{item.count}</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="text-3xl font-bold text-teal-600">
+                  {getRepeatedWords(10).length}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Words Used 10+ Times
+                </div>
+              </div>
+              {getRepeatedWords(10).length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <p className="font-medium">Most Repeated Words:</p>
+                  </div>
+                  {getRepeatedWords(10).slice(0, 10).map((item) => (
+                    <div key={item.word} className="flex items-center justify-between text-sm">
+                      <span className="capitalize">{item.word}</span>
+                      <span className="font-medium text-teal-600">{item.count}×</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+
+
               {comments.filter(c => c.audio_url).length > 0 && (
                 <div className="flex items-center gap-2 border-l pl-4">
                   <Switch
