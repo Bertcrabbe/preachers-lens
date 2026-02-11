@@ -2379,57 +2379,6 @@ const SermonViewer = () => {
                 </DropdownMenu>
               </div>
 
-            <Card className="p-4 bg-teal-500/5">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-base font-bold text-teal-700">Repeated Words</h3>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="outline" size="sm" className="h-6 text-xs px-2">
-                      View All
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto bg-background border shadow-lg z-50">
-                    {getRepeatedWords(5).length === 0 ? (
-                      <DropdownMenuItem disabled className="text-muted-foreground">
-                        No repeated words found
-                      </DropdownMenuItem>
-                    ) : (
-                      getRepeatedWords(5).map((item) => (
-                        <DropdownMenuItem 
-                          key={item.word}
-                          className="flex justify-between cursor-pointer"
-                        >
-                          <span className="capitalize truncate mr-2">{item.word}</span>
-                          <span className="font-semibold text-teal-600">{item.count}</span>
-                        </DropdownMenuItem>
-                      ))
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="flex flex-col items-center text-center mb-4">
-                <div className="text-3xl font-bold text-teal-600">
-                  {getRepeatedWords(10).length}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  Words Used 10+ Times
-                </div>
-              </div>
-              {getRepeatedWords(10).length > 0 && (
-                <div className="space-y-1 max-h-40 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    <p className="font-medium">Most Repeated Words:</p>
-                  </div>
-                  {getRepeatedWords(10).slice(0, 10).map((item) => (
-                    <div key={item.word} className="flex items-center justify-between text-sm">
-                      <span className="capitalize">{item.word}</span>
-                      <span className="font-medium text-teal-600">{item.count}×</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-
 
 
               {comments.filter(c => c.audio_url).length > 0 && (
@@ -3271,6 +3220,57 @@ const SermonViewer = () => {
               {!scriptureRefs && !loadingScriptures && (
                 <div className="text-xs text-center text-muted-foreground">
                   Click to load scripture references
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-4 bg-teal-500/5">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-base font-bold text-teal-700">Repeated Words</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2">
+                      View All
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto bg-background border shadow-lg z-50">
+                    {getRepeatedWords(5).length === 0 ? (
+                      <DropdownMenuItem disabled className="text-muted-foreground">
+                        No repeated words found
+                      </DropdownMenuItem>
+                    ) : (
+                      getRepeatedWords(5).map((item) => (
+                        <DropdownMenuItem 
+                          key={item.word}
+                          className="flex justify-between cursor-pointer"
+                        >
+                          <span className="capitalize truncate mr-2">{item.word}</span>
+                          <span className="font-semibold text-teal-600">{item.count}</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex flex-col items-center text-center mb-4">
+                <div className="text-3xl font-bold text-teal-600">
+                  {getRepeatedWords(10).length}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Words Used 10+ Times
+                </div>
+              </div>
+              {getRepeatedWords(10).length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <p className="font-medium">Most Repeated Words:</p>
+                  </div>
+                  {getRepeatedWords(10).slice(0, 10).map((item) => (
+                    <div key={item.word} className="flex items-center justify-between text-sm">
+                      <span className="capitalize">{item.word}</span>
+                      <span className="font-medium text-teal-600">{item.count}×</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>
