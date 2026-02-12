@@ -159,6 +159,8 @@ const SermonViewer = () => {
   const [playedCommentIds, setPlayedCommentIds] = useState<Set<string>>(new Set());
   const lastTimeRef = useRef<number>(0);
   const [wpmChartClockActive, setWpmChartClockActive] = useState(false);
+  const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
+  const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
   const [volumeChartClockActive, setVolumeChartClockActive] = useState(false);
 
   const [transcribing, setTranscribing] = useState(false);
@@ -2416,50 +2418,53 @@ const SermonViewer = () => {
                 
                 {/* Timeline with sermon and comment segments */}
                 <div 
-                  className="timeline-track relative h-16 overflow-x-auto cursor-pointer custom-scrollbar"
-                  onClick={(e) => {
-                    if (!sermon.duration_seconds) return;
+                  className={`timeline-track relative h-16 overflow-x-auto custom-scrollbar ${isDraggingTimeline ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  onMouseDown={(e) => {
+                    if (e.button !== 0) return;
                     const container = e.currentTarget;
-                    const rect = container.getBoundingClientRect();
-                    
-                    // Get click position including scroll offset
-                    const clickX = e.clientX - rect.left + container.scrollLeft;
-                    
-                    // Calculate total width of the zoomed timeline
-                    const totalWidth = rect.width * zoomLevel;
-                    
-                    // Calculate percentage of total duration
-                    const percentage = clickX / totalWidth;
-                    
-                    // Convert to time in milliseconds
-                    const newTime = percentage * sermon.duration_seconds * 1000;
-                    
-                    seekTo(newTime);
+                    dragStartRef.current = { x: e.clientX, scrollLeft: container.scrollLeft };
+                    setIsDraggingTimeline(false);
                   }}
                   onMouseMove={(e) => {
-                    if (!sermon.duration_seconds) return;
                     const container = e.currentTarget;
+                    
+                    // Handle dragging
+                    if (dragStartRef.current && e.buttons === 1) {
+                      const dx = e.clientX - dragStartRef.current.x;
+                      if (Math.abs(dx) > 3) {
+                        setIsDraggingTimeline(true);
+                        container.scrollLeft = dragStartRef.current.scrollLeft - dx;
+                      }
+                    }
+                    
+                    // Hover tooltip
+                    if (!sermon.duration_seconds) return;
                     const rect = container.getBoundingClientRect();
-                    
-                    // Get hover position including scroll offset
                     const hoverX = e.clientX - rect.left + container.scrollLeft;
-                    
-                    // Calculate total width of the zoomed timeline
                     const totalWidth = rect.width * zoomLevel;
-                    
-                    // Calculate percentage of total duration
                     const percentage = hoverX / totalWidth;
-                    
-                    // Convert to time in milliseconds
                     const timeMs = percentage * sermon.duration_seconds * 1000;
-                    
-                    // Store position relative to container for tooltip placement
                     const positionPercent = (hoverX / totalWidth) * 100;
-                    
                     setHoverTime(timeMs);
                     setHoverPosition(positionPercent);
                   }}
+                  onMouseUp={(e) => {
+                    // Only seek if it was a click (not a drag)
+                    if (!isDraggingTimeline && sermon.duration_seconds) {
+                      const container = e.currentTarget;
+                      const rect = container.getBoundingClientRect();
+                      const clickX = e.clientX - rect.left + container.scrollLeft;
+                      const totalWidth = rect.width * zoomLevel;
+                      const percentage = clickX / totalWidth;
+                      const newTime = percentage * sermon.duration_seconds * 1000;
+                      seekTo(newTime);
+                    }
+                    dragStartRef.current = null;
+                    setIsDraggingTimeline(false);
+                  }}
                   onMouseLeave={() => {
+                    dragStartRef.current = null;
+                    setIsDraggingTimeline(false);
                     setHoverTime(null);
                     setHoverPosition(null);
                   }}
