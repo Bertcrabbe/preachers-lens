@@ -2730,14 +2730,17 @@ const SermonViewer = () => {
                           });
                         })}
                         
-                        {/* Scripture reference overlays */}
-                        {showScriptureRefs && groupIntoParagraphs(sentences).map((paragraph, idx) => {
-                          if (!paragraphContainsScripture(paragraph)) return null;
+                        {/* Scripture reference overlays - sentence-level precision */}
+                        {showScriptureRefs && scriptureRefs && sentences.map((sentence, idx) => {
+                          // Check if this specific sentence contains scripture text
+                          const hasScripture = scriptureRefs.references.some(ref => {
+                            const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
+                            return sentence.sentence_text.includes(contextWords) || sentence.sentence_text.includes(ref.reference);
+                          });
+                          if (!hasScripture) return null;
                           
-                          const start = paragraph[0].start_time_ms;
-                          const end = paragraph[paragraph.length - 1].end_time_ms;
-                          const left = (start / totalDuration) * 100;
-                          const width = ((end - start) / totalDuration) * 100;
+                          const left = (sentence.start_time_ms / totalDuration) * 100;
+                          const width = ((sentence.end_time_ms - sentence.start_time_ms) / totalDuration) * 100;
                           
                           return (
                             <div
@@ -2747,7 +2750,7 @@ const SermonViewer = () => {
                                 left: `${left}%`,
                                 width: `${width}%`,
                               }}
-                              title={`Scripture reference at ${Math.floor(start / 1000 / 60)}:${String(Math.floor((start / 1000) % 60)).padStart(2, "0")}`}
+                              title={`Scripture at ${Math.floor(sentence.start_time_ms / 1000 / 60)}:${String(Math.floor((sentence.start_time_ms / 1000) % 60)).padStart(2, "0")}`}
                             />
                           );
                         })}
