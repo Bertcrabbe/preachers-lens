@@ -3589,7 +3589,7 @@ const SermonViewer = () => {
                   <Badge variant="outline" className="text-xs bg-accent/20">
                     Intro
                   </Badge>
-                  <p className="flex-1 text-sm">{comment.comment_text}</p>
+                  <p className="flex-1 text-sm font-bold">{comment.comment_text}</p>
                   {comment.audio_url && (
                     <Button
                       size="icon"
@@ -3745,7 +3745,7 @@ const SermonViewer = () => {
                               {comment.evaluation_rules.name}
                             </Badge>
                           )}
-                          <p className="text-sm">{comment.comment_text}</p>
+                          <p className="text-sm font-bold">{comment.comment_text}</p>
                           {comment.audio_url && comment.comment_text === "Audio comment" && (
                             <Button
                               size="sm"
@@ -4059,7 +4059,7 @@ const SermonViewer = () => {
                                     {comment.evaluation_rules.name}
                                   </Badge>
                                 )}
-                                <p className="text-sm">{comment.comment_text}</p>
+                                <p className="text-sm font-bold">{comment.comment_text}</p>
                                 {comment.audio_url && comment.comment_text === "Audio comment" && (
                                   <Button
                                     size="sm"
