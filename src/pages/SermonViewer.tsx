@@ -3960,7 +3960,13 @@ const SermonViewer = () => {
                     key={idx}
                     className={`transcript-paragraph p-4 rounded-xl transition-all duration-200 cursor-pointer relative group shadow-sm hover:shadow-md ${highlightStyle}`}
                     style={customStyle}
-                    onClick={() => handlePreviewParagraph(idx)}
+                    onClick={() => {
+                      const firstSentence = paragraph[0];
+                      seekTo(firstSentence.start_time_ms);
+                      if (audioRef.current && !playing) {
+                        audioRef.current.play().catch(() => {});
+                      }
+                    }}
                   >
                     {hasAudioComment && (
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs">
