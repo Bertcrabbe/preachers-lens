@@ -154,6 +154,13 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingScriptures, setLoadingScriptures] = useState(false);
   const [showScriptureRefs, setShowScriptureRefs] = useState(false);
+  const [confusingPhrases, setConfusingPhrases] = useState<{
+    phrases: Array<{ sentence_index: number; phrase: string; reason: string; suggestion: string; severity: string; start_time_ms: number; end_time_ms: number; sentence_text: string }>;
+    total_count: number;
+    accessibility_score: number;
+  } | null>(null);
+  const [loadingConfusing, setLoadingConfusing] = useState(false);
+  const [showConfusingPhrases, setShowConfusingPhrases] = useState(false);
   const [previewWithComments, setPreviewWithComments] = useState(true);
   const [playingCommentId, setPlayingCommentId] = useState<string | null>(null);
   const commentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -1278,6 +1285,28 @@ const SermonViewer = () => {
       });
     } finally {
       setLoadingScriptures(false);
+    }
+  };
+
+  const fetchConfusingPhrases = async () => {
+    setLoadingConfusing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("flag-confusing-phrases", {
+        body: { sermonId: id },
+      });
+
+      if (error) throw error;
+
+      setConfusingPhrases(data);
+    } catch (error: any) {
+      console.error("Failed to load confusing phrases:", error);
+      toast({
+        title: "Failed to analyze visitor confusion",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingConfusing(false);
     }
   };
 
@@ -2754,6 +2783,27 @@ const SermonViewer = () => {
                             />
                           );
                         })}
+
+                        {/* Confusing phrases overlays */}
+                        {showConfusingPhrases && confusingPhrases && confusingPhrases.phrases.map((phrase, idx) => {
+                          const left = (phrase.start_time_ms / totalDuration) * 100;
+                          const width = ((phrase.end_time_ms - phrase.start_time_ms) / totalDuration) * 100;
+                          const severityColor = phrase.severity === 'severe' ? '#ef4444' : phrase.severity === 'moderate' ? '#f97316' : '#eab308';
+                          
+                          return (
+                            <div
+                              key={`confusing-${idx}`}
+                              className="absolute h-full border-t-2 border-b-2"
+                              style={{
+                                left: `${left}%`,
+                                width: `${width}%`,
+                                backgroundColor: `${severityColor}40`,
+                                borderColor: severityColor,
+                              }}
+                              title={`⚠️ "${phrase.phrase}" - ${phrase.reason}`}
+                            />
+                          );
+                        })}
                       </>
                     );
                   })()}
@@ -2839,6 +2889,12 @@ const SermonViewer = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-2 bg-emerald-500/50 border-t border-b border-emerald-600 rounded" />
                   <span>Scripture References</span>
+                </div>
+              )}
+              {showConfusingPhrases && (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-2 bg-red-500/40 border-t border-b border-red-500 rounded" />
+                  <span>Visitor Confusion</span>
                 </div>
               )}
             </div>
@@ -3269,6 +3325,72 @@ const SermonViewer = () => {
               {!scriptureRefs && !loadingScriptures && (
                 <div className="text-xs text-center text-muted-foreground">
                   Click to load scripture references
+                </div>
+              )}
+            </Card>
+
+            <Card 
+              className="p-4 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors"
+              onClick={() => {
+                if (!confusingPhrases && !loadingConfusing) {
+                  fetchConfusingPhrases();
+                }
+                setShowConfusingPhrases(!showConfusingPhrases);
+              }}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-base font-bold text-red-700">Visitor Confusion</h3>
+                <Checkbox
+                  checked={showConfusingPhrases}
+                  onCheckedChange={(checked) => setShowConfusingPhrases(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex flex-col items-center text-center mb-3">
+                <div className="text-3xl font-bold text-red-600">
+                  {loadingConfusing ? (
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  ) : (
+                    confusingPhrases?.total_count || 0
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Confusing Phrases
+                  {!loadingConfusing && confusingPhrases?.accessibility_score != null && (
+                    <span className="block text-xs text-red-600 font-medium mt-0.5">
+                      Accessibility: {confusingPhrases.accessibility_score}/10
+                    </span>
+                  )}
+                </div>
+              </div>
+              {confusingPhrases && confusingPhrases.phrases.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <p className="font-medium">Flagged for first-time visitors:</p>
+                  </div>
+                  {confusingPhrases.phrases.map((phrase, idx) => (
+                    <div key={idx} className="text-sm border-l-2 pl-2 py-1" style={{
+                      borderColor: phrase.severity === 'severe' ? '#ef4444' : phrase.severity === 'moderate' ? '#f97316' : '#eab308'
+                    }}>
+                      <div className="font-medium text-red-700">
+                        "{phrase.phrase}"
+                        <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0" style={{
+                          borderColor: phrase.severity === 'severe' ? '#ef4444' : phrase.severity === 'moderate' ? '#f97316' : '#eab308',
+                          color: phrase.severity === 'severe' ? '#ef4444' : phrase.severity === 'moderate' ? '#f97316' : '#eab308',
+                        }}>
+                          {phrase.severity}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{phrase.reason}</div>
+                      <div className="text-xs text-emerald-700 mt-0.5">💡 {phrase.suggestion}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!confusingPhrases && !loadingConfusing && (
+                <div className="text-xs text-center text-muted-foreground">
+                  Click to analyze visitor accessibility
                 </div>
               )}
             </Card>
@@ -3910,6 +4032,11 @@ const SermonViewer = () => {
                 const isActiveFastSpeech = showFastSpeech && isFastSpeech;
                 const hasScripture = paragraphContainsScripture(paragraph);
                 
+                // Check if paragraph contains confusing phrases
+                const hasConfusing = showConfusingPhrases && confusingPhrases && confusingPhrases.phrases.some(p => {
+                  return paragraph.some(s => s.start_time_ms === p.start_time_ms);
+                });
+                
                 // Determine highlight color and style based on active analytics
                 let highlightStyle = "hover:bg-muted";
                 let customStyle: React.CSSProperties = {};
@@ -3953,6 +4080,12 @@ const SermonViewer = () => {
                   customStyle = {
                     backgroundColor: '#10b98180',
                     borderColor: '#10b981'
+                  };
+                } else if (hasConfusing) {
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#ef444440',
+                    borderColor: '#ef4444'
                   };
                 } else if (hasPeak) {
                   highlightStyle = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
@@ -4024,7 +4157,12 @@ const SermonViewer = () => {
                         📖 Insider Language
                       </Badge>
                     )}
-                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && !hasInsiderTerm && hasPeak && (
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && !hasInsiderTerm && hasConfusing && (
+                      <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-red-500/40 border-red-500">
+                        ⚠️ Visitor Confusion
+                      </Badge>
+                    )}
+                    {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && !hasInsiderTerm && !hasConfusing && hasPeak && (
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-orange-500/20 border-orange-500">
                         🔉 Low Volume
                       </Badge>

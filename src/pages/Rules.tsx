@@ -37,10 +37,41 @@ const Rules = () => {
     fetchRules();
   }, []);
 
+  const ensureVisitorConfusionRule = async (userId: string) => {
+    // Check if visitor confusion rule already exists
+    const { data: existing } = await supabase
+      .from("evaluation_rules")
+      .select("id")
+      .eq("user_id", userId)
+      .ilike("name", "%visitor confusion%")
+      .limit(1);
+
+    if (existing && existing.length > 0) return;
+
+    await supabase.from("evaluation_rules").insert([{
+      user_id: userId,
+      name: "First-time Visitor Confusion",
+      description: "Flags phrases, jargon, and assumptions that would confuse someone attending church for the first time",
+      prompt: `Identify sentences that would confuse a first-time church visitor. Look for:
+- Theological jargon used without explanation (e.g., "justification", "sanctification", "the blood")
+- Assumed knowledge of Bible stories, characters, or church traditions
+- Inside references to church programs, events, or culture
+- Phrases that sound strange or alienating to outsiders (e.g., "washed in the blood", "on fire for God")
+- Assumptions about shared beliefs ("we all know that...", "as Christians we...")
+- Cultural shorthand only regular churchgoers understand
+
+Do NOT flag simple references to God, Jesus, prayer, or the Bible that are self-explanatory, or phrases where the speaker already explains what they mean.`,
+      color: "#ef4444",
+    }]);
+  };
+
   const fetchRules = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Ensure default rules exist
+      await ensureVisitorConfusionRule(user.id);
 
       const { data, error } = await supabase
         .from("evaluation_rules")
