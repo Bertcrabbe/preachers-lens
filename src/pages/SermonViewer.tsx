@@ -3961,10 +3961,12 @@ const SermonViewer = () => {
                     className={`transcript-paragraph p-4 rounded-xl transition-all duration-200 cursor-pointer relative group shadow-sm hover:shadow-md ${highlightStyle}`}
                     style={customStyle}
                     onClick={() => {
-                      const firstSentence = paragraph[0];
-                      seekTo(firstSentence.start_time_ms);
-                      if (audioRef.current && !playing) {
-                        audioRef.current.play().catch(() => {});
+                      if (playing) {
+                        audioRef.current?.pause();
+                      } else {
+                        const firstSentence = paragraph[0];
+                        seekTo(firstSentence.start_time_ms);
+                        audioRef.current?.play().catch(() => {});
                       }
                     }}
                   >
