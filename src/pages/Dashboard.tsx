@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CommunicatorLinks } from "@/components/CommunicatorLinks";
 
 interface Sermon {
   id: string;
@@ -456,6 +457,9 @@ const Dashboard = () => {
                 </Button>
               </div>
             </CardHeader>
+            <CardContent className="pt-0">
+              <CommunicatorLinks communicatorId={communicator.id} compact />
+            </CardContent>
           </Card>
         );
       })}
@@ -521,6 +525,17 @@ const Dashboard = () => {
             </p>
           </div>
         </div>
+
+        {selectedCommunicator?.id !== "unassigned" && (
+          <Card className="mb-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Links</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CommunicatorLinks communicatorId={selectedCommunicator!.id} />
+            </CardContent>
+          </Card>
+        )}
 
         {sermonsToShow.length === 0 ? (
           <Card>

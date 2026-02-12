@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      communicator_links: {
+        Row: {
+          communicator_id: string
+          created_at: string
+          id: string
+          label: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          communicator_id: string
+          created_at?: string
+          id?: string
+          label: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          communicator_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communicator_links_communicator_id_fkey"
+            columns: ["communicator_id"]
+            isOneToOne: false
+            referencedRelation: "communicators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communicators: {
         Row: {
           created_at: string
