@@ -3961,8 +3961,12 @@ const SermonViewer = () => {
                     className={`transcript-paragraph p-4 rounded-xl transition-all duration-200 cursor-pointer relative group shadow-sm hover:shadow-md ${highlightStyle}`}
                     style={customStyle}
                     onClick={() => {
-                      if (isCurrentParagraph(paragraph) && playing) {
-                        audioRef.current?.pause();
+                      if (isCurrentParagraph(paragraph)) {
+                        if (playing) {
+                          audioRef.current?.pause();
+                        } else {
+                          audioRef.current?.play().catch(() => {});
+                        }
                       } else {
                         const firstSentence = paragraph[0];
                         seekTo(firstSentence.start_time_ms);
