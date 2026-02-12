@@ -2447,7 +2447,7 @@ const SermonViewer = () => {
                 
                 {/* Timeline with sermon and comment segments */}
                 <div 
-                  className={`timeline-track relative h-16 overflow-x-auto custom-scrollbar ${isDraggingTimeline ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  className={`timeline-track relative h-32 overflow-x-auto custom-scrollbar ${isDraggingTimeline ? 'cursor-grabbing' : 'cursor-grab'}`}
                   onWheel={(e) => {
                     if (e.ctrlKey || e.metaKey) {
                       e.preventDefault();
