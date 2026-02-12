@@ -204,16 +204,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       return;
     }
 
-    // Validate hostname - cannot start or end with hyphen
     const hostname = parsedUrl.hostname;
-    if (hostname.startsWith('-') || hostname.includes('.-') || hostname.includes('-.')) {
-      toast({
-        title: "Invalid URL",
-        description: "The URL contains an invalid domain name",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Validate it's http or https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
