@@ -2474,7 +2474,7 @@ const SermonViewer = () => {
                       const dx = e.clientX - dragStartRef.current.x;
                       if (Math.abs(dx) > 3) {
                         setIsDraggingTimeline(true);
-                        container.scrollLeft = dragStartRef.current.scrollLeft - dx;
+                        container.scrollLeft = dragStartRef.current.scrollLeft + dx;
                       }
                     }
                     
