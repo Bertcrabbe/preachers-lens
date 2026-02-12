@@ -204,7 +204,18 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       return;
     }
 
+    // Validate hostname segments - each label cannot start or end with a hyphen (RFC 952/1123)
     const hostname = parsedUrl.hostname;
+    const labels = hostname.split('.');
+    const hasInvalidLabel = labels.some(label => label.startsWith('-') || label.endsWith('-'));
+    if (hasInvalidLabel) {
+      toast({
+        title: "Invalid URL",
+        description: "This link contains an invalid domain name. Please check the URL or try copying a different share link.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Validate it's http or https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
