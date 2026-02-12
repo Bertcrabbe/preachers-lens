@@ -106,9 +106,30 @@ const Dashboard = () => {
 
     initializeAuth();
 
+    // Subscribe to realtime updates on sermons table
+    const realtimeChannel = supabase
+      .channel('sermons-status')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'sermons',
+        },
+        (payload) => {
+          setSermons((prev) =>
+            prev.map((s) =>
+              s.id === payload.new.id ? { ...s, ...payload.new } : s
+            )
+          );
+        }
+      )
+      .subscribe();
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      supabase.removeChannel(realtimeChannel);
     };
   }, [navigate]);
 
