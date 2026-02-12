@@ -188,6 +188,17 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
   };
 
+  // Check if URL is a Subsplash link
+  const isSubsplashUrl = (urlString: string): boolean => {
+    try {
+      const parsed = new URL(urlString);
+      return parsed.hostname.endsWith('subspla.sh') || 
+             parsed.hostname.endsWith('subsplash.com');
+    } catch {
+      return false;
+    }
+  };
+
   const handleUrlUpload = async () => {
     if (!url) return;
 
@@ -241,7 +252,15 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       return;
     }
 
-    // Check for streaming service URLs that won't work (excluding Apple Podcasts)
+    // Check if it's a Subsplash URL - share links use invalid DNS hostnames
+    if (isSubsplashUrl(url)) {
+      toast({
+        title: "Subsplash links not supported",
+        description: "Subsplash share links can't be downloaded directly. Please find the sermon's podcast RSS feed or Apple Podcasts link, or download the audio file and upload it here.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!isApplePodcast) {
       const streamingServices = [
         { pattern: /spotify\.com/i, name: "Spotify" },
