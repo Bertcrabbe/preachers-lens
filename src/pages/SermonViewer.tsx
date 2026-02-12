@@ -28,6 +28,8 @@ import {
   Check,
   Scissors,
   Volume2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { AudioEditor } from "@/components/AudioEditor";
 import { Input } from "@/components/ui/input";
@@ -2226,8 +2228,21 @@ const SermonViewer = () => {
                 Play from start
               </Button>
               
-              <div className="flex items-center gap-2 border-l pl-4">
+              <div className="flex items-center gap-1 border-l pl-4">
                 <span className="text-sm text-muted-foreground">Zoom:</span>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  onClick={() => {
+                    const levels = [0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8];
+                    const idx = levels.indexOf(zoomLevel);
+                    if (idx > 0) { setZoomLevel(levels[idx - 1]); setViewStart(0); }
+                  }}
+                  disabled={zoomLevel <= 0.75}
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="min-w-[5rem]">
@@ -2264,10 +2279,24 @@ const SermonViewer = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  onClick={() => {
+                    const levels = [0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8];
+                    const idx = levels.indexOf(zoomLevel);
+                    if (idx < levels.length - 1) { setZoomLevel(levels[idx + 1]); setViewStart(0); }
+                  }}
+                  disabled={zoomLevel >= 8}
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
                 {zoomLevel !== 1 && (
                   <Button 
                     size="icon" 
                     variant="outline"
+                    className="h-8 w-8"
                     onClick={() => {
                       setZoomLevel(1);
                       setViewStart(0);
@@ -2419,6 +2448,18 @@ const SermonViewer = () => {
                 {/* Timeline with sermon and comment segments */}
                 <div 
                   className={`timeline-track relative h-16 overflow-x-auto custom-scrollbar ${isDraggingTimeline ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  onWheel={(e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                      e.preventDefault();
+                      const levels = [0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8];
+                      const idx = levels.indexOf(zoomLevel);
+                      if (e.deltaY < 0 && idx < levels.length - 1) {
+                        setZoomLevel(levels[idx + 1]);
+                      } else if (e.deltaY > 0 && idx > 0) {
+                        setZoomLevel(levels[idx - 1]);
+                      }
+                    }
+                  }}
                   onMouseDown={(e) => {
                     if (e.button !== 0) return;
                     const container = e.currentTarget;
