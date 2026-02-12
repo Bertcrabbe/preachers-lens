@@ -124,7 +124,7 @@ const SermonViewer = () => {
   const previewAudioRef = useRef<HTMLAudioElement>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewingParagraph, setPreviewingParagraph] = useState<number | null>(null);
-  const [showFastSpeech, setShowFastSpeech] = useState(true);
+  const [showFastSpeech, setShowFastSpeech] = useState(false);
   const [showVerbalPauses, setShowVerbalPauses] = useState(false);
   const [showSlowSpeech, setShowSlowSpeech] = useState(false);
   const [showVolumeChanges, setShowVolumeChanges] = useState(false);
