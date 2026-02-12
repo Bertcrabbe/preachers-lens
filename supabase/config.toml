@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.download-youtube-audio]
 verify_jwt = false
+
+[functions.flag-confusing-phrases]
+verify_jwt = false
