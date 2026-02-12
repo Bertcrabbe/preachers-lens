@@ -513,17 +513,23 @@ const Dashboard = () => {
 
     return (
       <>
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => setSelectedCommunicator(null)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold">{selectedCommunicator?.name}</h2>
-            <p className="text-muted-foreground">
-              {sermonsToShow.length} {sermonsToShow.length === 1 ? "sermon" : "sermons"}
-            </p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedCommunicator(null)}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold">{selectedCommunicator?.name}</h2>
+              <p className="text-muted-foreground">
+                {sermonsToShow.length} {sermonsToShow.length === 1 ? "sermon" : "sermons"}
+              </p>
+            </div>
           </div>
+          <Button onClick={() => setUploadOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Sermon
+          </Button>
         </div>
 
         {selectedCommunicator?.id !== "unassigned" && (
