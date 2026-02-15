@@ -69,42 +69,33 @@ const Dashboard = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let hasFetchedData = false;
 
-    // Set up auth state listener FIRST
+    const doFetch = () => {
+      if (!isMounted || hasFetchedData) return;
+      hasFetchedData = true;
+      fetchData().then(() => {
+        // Reset so future token refreshes can re-fetch
+        hasFetchedData = false;
+      });
+    };
+
+    // Set up auth state listener — handles ALL events including INITIAL_SESSION
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!isMounted) return;
         
-        if (!session) {
+        if (event === 'SIGNED_OUT' || (!session && event === 'INITIAL_SESSION')) {
           navigate("/auth");
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Re-fetch data when user signs in or token refreshes
-          fetchData();
+          return;
+        }
+
+        if (session) {
+          // Fetch data on any auth event that provides a session
+          doFetch();
         }
       }
     );
-
-    // THEN check for existing session and fetch data
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!isMounted) return;
-
-        if (!session) {
-          navigate("/auth");
-        } else {
-          // Session exists, fetch data
-          await fetchData();
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
 
     // Subscribe to realtime updates on sermons table
     const realtimeChannel = supabase
