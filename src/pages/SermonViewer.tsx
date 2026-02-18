@@ -1963,8 +1963,8 @@ const SermonViewer = () => {
     return comments.filter((c) => {
       // Exclude intro comments (start=0, end=0)
       if (c.start_time_ms === 0 && c.end_time_ms === 0) return false;
-      // Check if comment overlaps with the range
-      return c.start_time_ms >= start && c.start_time_ms <= end;
+      // Check if comment falls within or just after the range (covers gaps between sentences)
+      return c.start_time_ms >= start && c.start_time_ms < end;
     });
   };
 
@@ -3979,11 +3979,14 @@ const SermonViewer = () => {
                 </div>
               ))
             ) : (
-              groupIntoParagraphs(sentences).map((paragraph, idx) => {
+              groupIntoParagraphs(sentences).map((paragraph, idx, allParagraphs) => {
                 const firstSentence = paragraph[0];
                 const lastSentence = paragraph[paragraph.length - 1];
+                // Use next paragraph's first sentence start as the upper boundary to cover inter-sentence gaps
+                const nextParagraph = allParagraphs[idx + 1];
+                const rangeEnd = nextParagraph ? nextParagraph[0].start_time_ms : lastSentence.end_time_ms + 60000;
                 const hasAudioComment = comments.some(
-                  c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.end_time_ms <= lastSentence.end_time_ms
+                  c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.start_time_ms < rangeEnd
                 );
                 const hasPeak = paragraphHasPeak(paragraph);
                 const isFastSpeech = hasFastSpeechRate(paragraph, fastSpeechThreshold);
@@ -4174,9 +4177,9 @@ const SermonViewer = () => {
                       </Badge>
                       <p className="flex-1 leading-relaxed font-serif text-foreground/90">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
                     </div>
-                    {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).length > 0 && (
+                    {getCommentsForRange(firstSentence.start_time_ms, rangeEnd).length > 0 && (
                       <div className="mt-2 space-y-2">
-                        {getCommentsForRange(firstSentence.start_time_ms, lastSentence.end_time_ms).map((comment) => (
+                        {getCommentsForRange(firstSentence.start_time_ms, rangeEnd).map((comment) => (
                           <div
                             key={comment.id}
                             className="p-3 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
