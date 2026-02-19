@@ -300,6 +300,40 @@ const SermonViewer = () => {
     return () => container.removeEventListener("scroll", handleScroll);
   }, [sentences, currentTime]);
 
+  // Parallax depth effect for transcript paragraphs
+  useEffect(() => {
+    const container = transcriptContainerRef.current;
+    if (!container) return;
+
+    const updateDepth = () => {
+      const containerRect = container.getBoundingClientRect();
+      const containerHeight = containerRect.height;
+      
+      paragraphRefs.current.forEach(el => {
+        if (!el) return;
+        const elRect = el.getBoundingClientRect();
+        const elCenter = elRect.top + elRect.height / 2 - containerRect.top;
+        const ratio = elCenter / containerHeight; // 0 = top, 1 = bottom
+        
+        let depth: string;
+        if (ratio < 0.1 || ratio > 0.9) {
+          depth = "far";
+        } else if (ratio < 0.25 || ratio > 0.75) {
+          depth = "mid";
+        } else if (ratio < 0.4 || ratio > 0.6) {
+          depth = "near";
+        } else {
+          depth = "focus";
+        }
+        el.setAttribute("data-depth", depth);
+      });
+    };
+
+    updateDepth();
+    container.addEventListener("scroll", updateDepth, { passive: true });
+    return () => container.removeEventListener("scroll", updateDepth);
+  }, [sentences]);
+
   const scrollToActiveParagraph = () => {
     const paragraphs = groupIntoParagraphs(sentences);
     const activeIdx = paragraphs.findIndex(p => isCurrentParagraph(p));
@@ -4099,7 +4133,7 @@ const SermonViewer = () => {
               </Button>
             </div>
           </div>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto scroll-smooth" ref={transcriptContainerRef}>
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto scroll-smooth transcript-parallax" ref={transcriptContainerRef}>
             {viewMode === "sentence" ? (
               sentences.map((sentence) => (
                 <div

@@ -249,18 +249,58 @@ All colors MUST be HSL.
     50% { opacity: 0.3; transform: scale(1.5); }
   }
 
-  /* Transcript paragraph hover */
-  .transcript-paragraph {
-    @apply relative transition-all duration-200 rounded-lg px-4 py-3 -mx-4;
+  /* Parallax transcript container */
+  .transcript-parallax {
+    perspective: 800px;
+    perspective-origin: center top;
   }
-  
+
+  /* Transcript paragraph hover + parallax depth */
+  .transcript-paragraph {
+    @apply relative rounded-lg px-4 py-3 -mx-4;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity 0.4s ease,
+                background-color 0.2s ease,
+                box-shadow 0.3s ease;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+  }
+
   .transcript-paragraph:hover {
     @apply bg-primary/5;
+    transform: translateZ(12px) scale(1.005);
   }
   
   .transcript-paragraph.active {
     @apply bg-primary/10;
     box-shadow: inset 3px 0 0 hsl(var(--primary));
+    transform: translateZ(20px) scale(1.01);
+  }
+
+  /* Parallax depth tiers based on position in viewport */
+  .transcript-paragraph[data-depth="far"] {
+    transform: translateZ(-15px) scale(0.985);
+    opacity: 0.5;
+  }
+
+  .transcript-paragraph[data-depth="mid"] {
+    transform: translateZ(-5px) scale(0.995);
+    opacity: 0.75;
+  }
+
+  .transcript-paragraph[data-depth="near"] {
+    transform: translateZ(0px) scale(1);
+    opacity: 1;
+  }
+
+  .transcript-paragraph[data-depth="focus"] {
+    transform: translateZ(10px) scale(1.005);
+    opacity: 1;
+  }
+
+  .transcript-paragraph.active[data-depth] {
+    transform: translateZ(20px) scale(1.01);
+    opacity: 1;
   }
 
   /* Stats card with glassmorphism */
