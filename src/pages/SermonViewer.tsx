@@ -171,7 +171,11 @@ const SermonViewer = () => {
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
   const [volumeChartClockActive, setVolumeChartClockActive] = useState(false);
-
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  const [userScrolledAway, setUserScrolledAway] = useState(false);
+  const transcriptContainerRef = useRef<HTMLDivElement>(null);
+  const paragraphRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const isAutoScrollingRef = useRef(false);
   const [transcribing, setTranscribing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [sermonVolume, setSermonVolume] = useState(0.75);
@@ -231,6 +235,87 @@ const SermonViewer = () => {
       commentAudioRef.current.volume = commentVolume;
     }
   }, [commentVolume, playingCommentId]);
+
+  // Auto-scroll transcript to keep active paragraph as second from top
+  useEffect(() => {
+    if (!autoScrollEnabled || !playing || viewMode !== "paragraph") return;
+    
+    const paragraphs = groupIntoParagraphs(sentences);
+    const activeIdx = paragraphs.findIndex(p => isCurrentParagraph(p));
+    if (activeIdx === -1) return;
+    
+    const el = paragraphRefs.current[activeIdx];
+    if (!el || !transcriptContainerRef.current) return;
+    
+    // Calculate position so active paragraph is second from top
+    const container = transcriptContainerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    
+    // Get the height of the first paragraph to use as offset
+    const firstEl = paragraphRefs.current[activeIdx > 0 ? activeIdx - 1 : 0];
+    const offset = firstEl ? firstEl.offsetHeight + 16 : 80; // 16 = gap
+    
+    const targetScrollTop = el.offsetTop - container.offsetTop - offset;
+    const currentScroll = container.scrollTop;
+    
+    // Only scroll if we're not already close
+    if (Math.abs(targetScrollTop - currentScroll) > 50) {
+      isAutoScrollingRef.current = true;
+      container.scrollTo({ top: targetScrollTop, behavior: "smooth" });
+      setTimeout(() => { isAutoScrollingRef.current = false; }, 500);
+      setUserScrolledAway(false);
+    }
+  }, [currentTime, autoScrollEnabled, playing, viewMode, sentences]);
+
+  // Detect user scroll to show "return" button
+  useEffect(() => {
+    const container = transcriptContainerRef.current;
+    if (!container) return;
+    
+    const handleScroll = () => {
+      if (isAutoScrollingRef.current) return;
+      
+      // User is manually scrolling - check if active paragraph is visible
+      const paragraphs = groupIntoParagraphs(sentences);
+      const activeIdx = paragraphs.findIndex(p => isCurrentParagraph(p));
+      if (activeIdx === -1) return;
+      
+      const el = paragraphRefs.current[activeIdx];
+      if (!el) return;
+      
+      const containerRect = container.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      
+      const isVisible = elRect.top >= containerRect.top && elRect.bottom <= containerRect.bottom;
+      setUserScrolledAway(!isVisible);
+      if (!isVisible) {
+        setAutoScrollEnabled(false);
+      }
+    };
+    
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [sentences, currentTime]);
+
+  const scrollToActiveParagraph = () => {
+    const paragraphs = groupIntoParagraphs(sentences);
+    const activeIdx = paragraphs.findIndex(p => isCurrentParagraph(p));
+    if (activeIdx === -1) return;
+    
+    const el = paragraphRefs.current[activeIdx];
+    if (!el || !transcriptContainerRef.current) return;
+    
+    const container = transcriptContainerRef.current;
+    const firstEl = paragraphRefs.current[activeIdx > 0 ? activeIdx - 1 : 0];
+    const offset = firstEl ? firstEl.offsetHeight + 16 : 80;
+    
+    isAutoScrollingRef.current = true;
+    container.scrollTo({ top: el.offsetTop - container.offsetTop - offset, behavior: "smooth" });
+    setTimeout(() => { isAutoScrollingRef.current = false; }, 500);
+    setAutoScrollEnabled(true);
+    setUserScrolledAway(false);
+  };
 
   // Keyboard shortcuts for audio player (works for both sermon and comment audio)
   useEffect(() => {
@@ -3905,7 +3990,7 @@ const SermonViewer = () => {
               </Button>
             </div>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto scroll-smooth" ref={transcriptContainerRef}>
             {viewMode === "sentence" ? (
               sentences.map((sentence) => (
                 <div
@@ -4185,6 +4270,7 @@ const SermonViewer = () => {
                 return (
                   <div
                     key={idx}
+                    ref={el => { paragraphRefs.current[idx] = el; }}
                     className={`transcript-paragraph p-4 rounded-xl transition-all duration-200 cursor-pointer relative group shadow-sm hover:shadow-md ${highlightStyle}`}
                     style={customStyle}
                     onClick={() => {
@@ -4488,6 +4574,19 @@ const SermonViewer = () => {
               <span className="text-xs">Add outro comment</span>
             </Button>
           </div>
+          {userScrolledAway && playing && (
+            <div className="sticky bottom-2 flex justify-center pt-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="rounded-full shadow-lg gap-2"
+                onClick={scrollToActiveParagraph}
+              >
+                <ArrowLeft className="h-3 w-3 rotate-[-90deg]" />
+                Return to current paragraph
+              </Button>
+            </div>
+          )}
         </Card>
         </div>{/* end flex wrapper */}
       </div>
