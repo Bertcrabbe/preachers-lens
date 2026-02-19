@@ -4492,51 +4492,39 @@ const SermonViewer = () => {
         </div>{/* end flex wrapper */}
       </div>
 
-      <Dialog open={commentDialogOpen} onOpenChange={(open) => {
-        if (!open && !transcribing) {
-          setCommentDialogOpen(false);
-          setAudioBlob(null);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Recording Comment</DialogTitle>
-            <DialogDescription>
-              Recording audio comment for this section
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <AudioRecorder
-              autoStart={commentDialogOpen}
-              onRecordingComplete={(blob) => {
-                setAudioBlob(blob);
-                handleAutoSaveAudioComment(blob);
-              }}
-              onClear={() => setAudioBlob(null)}
-              selectedDeviceId={selectedDeviceId}
-              onRecordingStateChange={(isRecording, time, stopFn) => {
-                setFloatingRecording({ isRecording, time, stopFn });
-              }}
-            />
-            {transcribing && (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving and transcribing...
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => {
-              setCommentDialogOpen(false);
-              setAudioBlob(null);
-            }} disabled={transcribing}>
-              Close
+      {commentDialogOpen && (
+        <div className="fixed bottom-4 right-4 z-50 w-72 rounded-lg border bg-card p-4 shadow-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold">Recording Comment</h4>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+              if (!transcribing) {
+                setCommentDialogOpen(false);
+                setAudioBlob(null);
+              }
+            }}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+          <AudioRecorder
+            autoStart={commentDialogOpen}
+            onRecordingComplete={(blob) => {
+              setAudioBlob(blob);
+              handleAutoSaveAudioComment(blob);
+            }}
+            onClear={() => setAudioBlob(null)}
+            selectedDeviceId={selectedDeviceId}
+            onRecordingStateChange={(isRecording, time, stopFn) => {
+              setFloatingRecording({ isRecording, time, stopFn });
+            }}
+          />
+          {transcribing && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving and transcribing...
+            </div>
+          )}
+        </div>
+      )}
 
       <Dialog open={evaluationDialogOpen} onOpenChange={setEvaluationDialogOpen}>
         <DialogContent>
