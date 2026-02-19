@@ -163,28 +163,13 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
           </Button>
         </div>
       ) : (
-        <div className="space-y-3">
-          <audio
-            ref={audioRef}
-            src={audioUrl}
-            onEnded={() => setIsPlaying(false)}
-            className="hidden"
-          />
-          <div className="flex items-center gap-2">
-            <Button onClick={togglePlayback} variant="outline" size="sm">
-              {isPlaying ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-            </Button>
-            <div className="flex-1 text-sm text-muted-foreground">
-              Recording: {formatTime(recordingTime)}
-            </div>
-            <Button onClick={clearRecording} variant="ghost" size="sm">
-              <Trash2 className="h-4 w-4" />
-            </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 text-sm text-muted-foreground">
+            ✓ Recorded: {formatTime(recordingTime)}
           </div>
+          <Button onClick={clearRecording} variant="ghost" size="sm">
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </div>
