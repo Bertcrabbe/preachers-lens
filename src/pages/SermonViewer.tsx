@@ -54,6 +54,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
+import Sparkline from "@/components/Sparkline";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -3116,7 +3117,17 @@ const SermonViewer = () => {
                   Average WPM
                 </div>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
+              {/* WPM Sparkline */}
+              <div className="flex justify-center mt-2 mb-1">
+                <Sparkline 
+                  data={getWpmTimelineData().map(d => d.wpm)} 
+                  color="hsl(var(--primary))" 
+                  showAvgLine 
+                  width={140} 
+                  height={28} 
+                />
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
                 <div>
                   <div className="font-semibold text-primary">{Math.round(getSpeedVariance().min)}</div>
                   <div className="text-muted-foreground">Min</div>
@@ -3144,7 +3155,19 @@ const SermonViewer = () => {
                   Pace Changes (20+ WPM)
                 </div>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
+              {/* Speed Transitions Sparkline - show WPM deltas */}
+              <div className="flex justify-center mt-2 mb-1">
+                <Sparkline 
+                  data={(() => {
+                    const wpm = getWpmTimelineData().map(d => d.wpm);
+                    return wpm.slice(1).map((v, i) => Math.abs(v - wpm[i]));
+                  })()}
+                  color="#e11d48"
+                  width={140} 
+                  height={28} 
+                />
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
                 <div>
                   <div className="font-semibold text-rose-600">{countSpeedTransitions(10)}</div>
                   <div className="text-muted-foreground">10+ WPM</div>
@@ -3206,6 +3229,16 @@ const SermonViewer = () => {
                 <div className="text-sm text-muted-foreground mt-1">
                   Fast Speech Sections ({fastSpeechThreshold.toFixed(2)}x+)
                 </div>
+              </div>
+              {/* Fast Speech Sparkline - WPM with fast sections highlighted */}
+              <div className="flex justify-center mb-2">
+                <Sparkline 
+                  data={getWpmTimelineData().map(d => d.wpm)} 
+                  color="#d946ef" 
+                  width={140} 
+                  height={28} 
+                  showAvgLine
+                />
               </div>
               <div className="px-2" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
@@ -3269,6 +3302,16 @@ const SermonViewer = () => {
                 <div className="text-sm text-muted-foreground mt-1">
                   Slow Speech Sections ({slowSpeechThreshold.toFixed(2)}x)
                 </div>
+              </div>
+              {/* Slow Speech Sparkline */}
+              <div className="flex justify-center mb-2">
+                <Sparkline 
+                  data={getWpmTimelineData().map(d => d.wpm)} 
+                  color="#06b6d4" 
+                  width={140} 
+                  height={28} 
+                  showAvgLine
+                />
               </div>
               <div className="px-2" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
@@ -3381,6 +3424,16 @@ const SermonViewer = () => {
                 <div className="text-sm text-muted-foreground mt-2">
                   Volume Shifts by Level
                 </div>
+              </div>
+              {/* Volume Changes Sparkline */}
+              <div className="flex justify-center mb-2">
+                <Sparkline 
+                  data={getVolumeTimelineData().map(d => d.volume)} 
+                  color="#f59e0b" 
+                  width={140} 
+                  height={28} 
+                  showAvgLine
+                />
               </div>
               <div className="px-2" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
