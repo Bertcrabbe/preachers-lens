@@ -55,6 +55,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [sermons, setSermons] = useState<Sermon[]>([]);
+  const [communicatorWpm, setCommunicatorWpm] = useState<Record<string, number>>({});
   const [communicators, setCommunicators] = useState<Communicator[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -137,8 +138,14 @@ const Dashboard = () => {
       if (sermonsRes.error) throw sermonsRes.error;
       if (communicatorsRes.error) throw communicatorsRes.error;
 
-      setSermons(sermonsRes.data || []);
-      setCommunicators(communicatorsRes.data || []);
+      const sermonsData = sermonsRes.data || [];
+      const communicatorsData = communicatorsRes.data || [];
+
+      setSermons(sermonsData);
+      setCommunicators(communicatorsData);
+
+      // Fetch average WPM per communicator
+      fetchCommunicatorWpm(sermonsData, communicatorsData);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -148,6 +155,43 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCommunicatorWpm = async (sermonsData: Sermon[], communicatorsData: Communicator[]) => {
+    const wpmMap: Record<string, number> = {};
+
+    // For each communicator, get completed sermons and their sentences
+    for (const comm of communicatorsData) {
+      const commSermons = sermonsData.filter(
+        s => s.communicator_id === comm.id && s.transcription_status === "completed"
+      );
+      if (commSermons.length === 0) continue;
+
+      const sermonIds = commSermons.map(s => s.id);
+      const { data: sentences } = await supabase
+        .from("sermon_sentences")
+        .select("sentence_text, start_time_ms, end_time_ms, sermon_id")
+        .in("sermon_id", sermonIds);
+
+      if (!sentences || sentences.length === 0) continue;
+
+      let totalWords = 0;
+      let totalDurationMs = 0;
+
+      for (const s of sentences) {
+        const dur = s.end_time_ms - s.start_time_ms;
+        if (dur > 0) {
+          totalWords += s.sentence_text.split(/\s+/).length;
+          totalDurationMs += dur;
+        }
+      }
+
+      if (totalDurationMs > 0) {
+        wpmMap[comm.id] = Math.round((totalWords / (totalDurationMs / 1000)) * 60);
+      }
+    }
+
+    setCommunicatorWpm(wpmMap);
   };
 
   const handleLogout = async () => {
@@ -502,6 +546,11 @@ const Dashboard = () => {
                     <CardTitle className="text-lg">{communicator.name}</CardTitle>
                     <CardDescription>
                       {sermonCount} {sermonCount === 1 ? "sermon" : "sermons"}
+                      {communicatorWpm[communicator.id] && (
+                        <span className="ml-2 text-primary font-medium">
+                          · {communicatorWpm[communicator.id]} WPM avg
+                        </span>
+                      )}
                     </CardDescription>
                   </div>
                 </div>
