@@ -131,6 +131,7 @@ const SermonViewer = () => {
   const [showSlowSpeech, setShowSlowSpeech] = useState(false);
   const [showVolumeChanges, setShowVolumeChanges] = useState(false);
   const [showInsiderLanguage, setShowInsiderLanguage] = useState(false);
+  const [showSilentPauses, setShowSilentPauses] = useState(false);
   const [visibleFillerWords, setVisibleFillerWords] = useState<Set<string>>(new Set());
   const [visibleInsiderTerms, setVisibleInsiderTerms] = useState<Set<string>>(new Set());
   const [fastSpeechThreshold, setFastSpeechThreshold] = useState(1.2);
@@ -2868,6 +2869,24 @@ const SermonViewer = () => {
                           );
                         })}
                         
+                        {/* Silent pause overlays */}
+                        {showSilentPauses && getSilentPauseTimestamps().map((pause, idx) => {
+                          const left = (pause.start / totalDuration) * 100;
+                          const width = ((pause.end - pause.start) / totalDuration) * 100;
+                          
+                          return (
+                            <div
+                              key={`silent-${idx}`}
+                              className="absolute h-full bg-slate-500/50 border-t-2 border-b-2 border-slate-600"
+                              style={{
+                                left: `${left}%`,
+                                width: `${Math.max(width, 0.3)}%`,
+                              }}
+                              title={`${(pause.durationMs / 1000).toFixed(1)}s pause at ${Math.floor(pause.start / 1000 / 60)}:${String(Math.floor((pause.start / 1000) % 60)).padStart(2, "0")}`}
+                            />
+                          );
+                        })}
+                        
                         {/* Insider language overlays */}
                         {getTopInsiderTerms().map((term) => {
                           if (!visibleInsiderTerms.has(term.word)) return null;
@@ -3405,9 +3424,13 @@ const SermonViewer = () => {
               </div>
             </Card>
 
-            <Card className="p-4 bg-slate-500/5">
+            <Card 
+              className="p-4 bg-slate-500/5 cursor-pointer hover:bg-slate-500/10 transition-colors"
+              onClick={() => setShowSilentPauses(!showSilentPauses)}
+            >
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-base font-bold text-slate-700">Silent Pauses</h3>
+                <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2">
@@ -3438,6 +3461,13 @@ const SermonViewer = () => {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                  <Checkbox
+                    checked={showSilentPauses}
+                    onCheckedChange={(checked) => setShowSilentPauses(checked === true)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1"
+                  />
+                </div>
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-slate-600">
