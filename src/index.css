@@ -263,13 +263,39 @@ All colors MUST be HSL.
     box-shadow: inset 3px 0 0 hsl(var(--primary));
   }
 
-  /* Stats card with accent border */
+  /* Stats card with glassmorphism */
   .stats-card {
-    @apply relative overflow-hidden rounded-xl bg-card border transition-all duration-200;
+    @apply relative overflow-hidden rounded-xl border transition-all duration-200;
+    background: hsla(0, 0%, 100%, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-color: hsla(220, 15%, 85%, 0.5);
+    box-shadow: 
+      0 4px 24px -4px hsla(220, 25%, 10%, 0.08),
+      inset 0 1px 0 hsla(0, 0%, 100%, 0.6);
   }
   
   .stats-card:hover {
-    @apply shadow-md -translate-y-0.5;
+    @apply shadow-lg -translate-y-1;
+    background: hsla(0, 0%, 100%, 0.75);
+    box-shadow: 
+      0 8px 32px -4px hsla(220, 25%, 10%, 0.12),
+      inset 0 1px 0 hsla(0, 0%, 100%, 0.8);
+  }
+
+  .dark .stats-card {
+    background: hsla(220, 25%, 12%, 0.6);
+    border-color: hsla(220, 20%, 30%, 0.5);
+    box-shadow: 
+      0 4px 24px -4px hsla(0, 0%, 0%, 0.3),
+      inset 0 1px 0 hsla(220, 20%, 30%, 0.3);
+  }
+
+  .dark .stats-card:hover {
+    background: hsla(220, 25%, 15%, 0.75);
+    box-shadow: 
+      0 8px 32px -4px hsla(0, 0%, 0%, 0.4),
+      inset 0 1px 0 hsla(220, 20%, 30%, 0.5);
   }
   
   .stats-card::before {

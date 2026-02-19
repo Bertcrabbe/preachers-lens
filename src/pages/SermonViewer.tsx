@@ -53,6 +53,7 @@ import { combineAudioFiles } from "@/utils/audioCombiner";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -3070,7 +3071,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-4xl font-bold text-gradient-primary">
-                  {Math.round(getAverageSpeechRate())}
+                  <AnimatedCounter value={Math.round(getAverageSpeechRate())} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Average WPM
@@ -3092,13 +3093,13 @@ const SermonViewer = () => {
               </div>
             </Card>
 
-            <Card className="p-4 bg-rose-500/5">
+            <Card className="stats-card p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-base font-bold text-rose-700">Speed Transitions</h3>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-rose-600">
-                  {countSpeedTransitions(20)}
+                  <AnimatedCounter value={countSpeedTransitions(20)} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Pace Changes (20+ WPM)
@@ -3121,7 +3122,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-fuchsia-500/5 cursor-pointer hover:bg-fuchsia-500/10 transition-colors"
+              className="stats-card p-4 cursor-pointer"
               onClick={() => setShowFastSpeech(!showFastSpeech)}
             >
               <div className="flex items-start justify-between mb-2">
@@ -3161,7 +3162,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-fuchsia-600">
-                  {countFastSpeechParagraphs(fastSpeechThreshold)}
+                  <AnimatedCounter value={countFastSpeechParagraphs(fastSpeechThreshold)} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Fast Speech Sections ({fastSpeechThreshold.toFixed(2)}x+)
@@ -3184,7 +3185,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-cyan-500/5 cursor-pointer hover:bg-cyan-500/10 transition-colors"
+              className="stats-card p-4 cursor-pointer"
               onClick={() => setShowSlowSpeech(!showSlowSpeech)}
             >
               <div className="flex items-start justify-between mb-2">
@@ -3224,7 +3225,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-cyan-600">
-                  {countSlowSpeechParagraphs(slowSpeechThreshold)}
+                  <AnimatedCounter value={countSlowSpeechParagraphs(slowSpeechThreshold)} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Slow Speech Sections ({slowSpeechThreshold.toFixed(2)}x)
@@ -3247,7 +3248,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-indigo-500/5"
+              className="stats-card p-4"
             >
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-base font-bold text-indigo-700">Insider Language</h3>
@@ -3282,7 +3283,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-indigo-600">
-                  {countInsiderLanguage()}
+                  <AnimatedCounter value={countInsiderLanguage()} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Instances
@@ -3313,7 +3314,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-amber-500/5 cursor-pointer hover:bg-amber-500/10 transition-colors"
+              className="stats-card p-4 cursor-pointer"
               onClick={() => setShowVolumeChanges(!showVolumeChanges)}
             >
               <div className="flex items-start justify-between mb-2">
@@ -3359,7 +3360,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-orange-500/5"
+              className="stats-card p-4"
             >
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-base font-bold text-orange-700">Filler Words</h3>
@@ -3394,7 +3395,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-orange-600">
-                  {countVerbalPauses()}
+                  <AnimatedCounter value={countVerbalPauses()} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Filler Words Used
@@ -3425,7 +3426,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-blue-500/5 cursor-pointer hover:bg-blue-500/10 transition-colors"
+              className="stats-card p-4 cursor-pointer"
               onClick={() => setShowSilentPauses(!showSilentPauses)}
             >
               <div className="flex items-start justify-between mb-3">
@@ -3471,7 +3472,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-blue-600">
-                  {countSilentPauses()}
+                  <AnimatedCounter value={countSilentPauses()} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Pauses ≥ 3 seconds
@@ -3485,7 +3486,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-emerald-500/5 cursor-pointer hover:bg-emerald-500/10 transition-colors"
+              className="stats-card p-4 cursor-pointer"
               onClick={() => setShowScriptureRefs(!showScriptureRefs)}
             >
               <div className="flex items-start justify-between mb-2">
@@ -3502,7 +3503,7 @@ const SermonViewer = () => {
                   {loadingScriptures ? (
                     <Loader2 className="h-8 w-8 animate-spin" />
                   ) : (
-                    scriptureRefs?.total_count || 0
+                    <AnimatedCounter value={scriptureRefs?.total_count || 0} />
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
