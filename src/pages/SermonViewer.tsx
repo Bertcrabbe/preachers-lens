@@ -2877,7 +2877,7 @@ const SermonViewer = () => {
                           return (
                             <div
                               key={`silent-${idx}`}
-                              className="absolute h-full bg-slate-500/50 border-t-2 border-b-2 border-slate-600"
+                              className="absolute h-full bg-blue-500/50 border-t-2 border-b-2 border-blue-600"
                               style={{
                                 left: `${left}%`,
                                 width: `${Math.max(width, 0.3)}%`,
@@ -3425,11 +3425,11 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-slate-500/5 cursor-pointer hover:bg-slate-500/10 transition-colors"
+              className="p-4 bg-blue-500/5 cursor-pointer hover:bg-blue-500/10 transition-colors"
               onClick={() => setShowSilentPauses(!showSilentPauses)}
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-base font-bold text-slate-700">Silent Pauses</h3>
+                <h3 className="text-base font-bold text-blue-700">Silent Pauses</h3>
                 <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -3455,7 +3455,7 @@ const SermonViewer = () => {
                           }}
                         >
                           <span>{`${Math.floor(p.start / 60000)}:${String(Math.floor((p.start % 60000) / 1000)).padStart(2, '0')}`}</span>
-                          <span className="font-semibold text-slate-600">{(p.durationMs / 1000).toFixed(1)}s</span>
+                          <span className="font-semibold text-blue-600">{(p.durationMs / 1000).toFixed(1)}s</span>
                         </DropdownMenuItem>
                       ))
                     )}
@@ -3470,7 +3470,7 @@ const SermonViewer = () => {
                 </div>
               </div>
               <div className="flex flex-col items-center text-center mb-3">
-                <div className="text-3xl font-bold text-slate-600">
+                <div className="text-3xl font-bold text-blue-600">
                   {countSilentPauses()}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
