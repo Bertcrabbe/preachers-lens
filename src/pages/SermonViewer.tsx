@@ -4574,8 +4574,8 @@ const SermonViewer = () => {
               <span className="text-xs">Add outro comment</span>
             </Button>
           </div>
-          {userScrolledAway && playing && (
-            <div className="sticky bottom-2 flex justify-center pt-2">
+          {userScrolledAway && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
               <Button
                 size="sm"
                 variant="secondary"
