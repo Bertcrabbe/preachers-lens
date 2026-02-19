@@ -3543,7 +3543,7 @@ const SermonViewer = () => {
             </Card>
 
             <Card 
-              className="p-4 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors"
+              className="stats-card p-4 cursor-pointer"
               onClick={() => {
                 if (!confusingPhrases && !loadingConfusing) {
                   fetchConfusingPhrases();
@@ -3565,7 +3565,7 @@ const SermonViewer = () => {
                   {loadingConfusing ? (
                     <Loader2 className="h-8 w-8 animate-spin" />
                   ) : (
-                    confusingPhrases?.total_count || 0
+                    <AnimatedCounter value={confusingPhrases?.total_count || 0} />
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
@@ -3608,7 +3608,7 @@ const SermonViewer = () => {
               )}
             </Card>
 
-            <Card className="p-4 bg-teal-500/5">
+            <Card className="stats-card p-4">
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-base font-bold text-teal-700">Repeated Words</h3>
                 <DropdownMenu>
@@ -3638,7 +3638,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-teal-600">
-                  {getRepeatedWords(12).length}
+                  <AnimatedCounter value={getRepeatedWords(12).length} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Words Used 12+ Times
@@ -3659,13 +3659,13 @@ const SermonViewer = () => {
               )}
             </Card>
 
-            <Card className="p-4 bg-violet-500/5">
+            <Card className="stats-card p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-base font-bold text-violet-700">My Comments</h3>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-violet-600">
-                  {comments.length}
+                  <AnimatedCounter value={comments.length} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Comments Added
