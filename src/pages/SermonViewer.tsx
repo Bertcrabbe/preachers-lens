@@ -1562,6 +1562,14 @@ const SermonViewer = () => {
       toast({ title: "Audio comment saved" });
       setCommentDialogOpen(false);
       setAudioBlob(null);
+      
+      // Seek to the next sentence so spacebar resumes past the comment
+      const nextSentence = sentences.find(s => s.start_time_ms > selectedTimeRange.start);
+      if (nextSentence && audioRef.current) {
+        audioRef.current.currentTime = nextSentence.start_time_ms / 1000;
+        lastTimeRef.current = nextSentence.start_time_ms;
+      }
+      
       fetchComments();
     } catch (error: any) {
       toast({
@@ -1640,6 +1648,16 @@ const SermonViewer = () => {
       setCommentDialogOpen(false);
       setNewComment("");
       setAudioBlob(null);
+      
+      // Seek to the next sentence so spacebar resumes past the comment
+      if (audioUrl) {
+        const nextSentence = sentences.find(s => s.start_time_ms > selectedTimeRange.start);
+        if (nextSentence && audioRef.current) {
+          audioRef.current.currentTime = nextSentence.start_time_ms / 1000;
+          lastTimeRef.current = nextSentence.start_time_ms;
+        }
+      }
+      
       fetchComments();
     } catch (error: any) {
       setTranscribing(false);
