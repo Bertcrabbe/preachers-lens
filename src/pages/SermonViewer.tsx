@@ -3719,7 +3719,76 @@ const SermonViewer = () => {
           </Collapsible>
         </Card>
 
-        <Card className="p-6">
+        <div className="flex gap-4">
+        {/* Stationary sidebar panel */}
+        <div className="sticky top-4 self-start shrink-0 w-44">
+          <Card className="p-4 space-y-4">
+            {/* Comment count */}
+            <div className="text-center">
+              <div className="text-3xl font-bold text-primary">{comments.length}</div>
+              <div className="text-xs text-muted-foreground">Comments</div>
+            </div>
+            
+            <div className="border-t border-border" />
+            
+            {/* Time since last comment */}
+            <div className="text-center">
+              {timeSinceLastCommentInAudio !== null ? (
+                <>
+                  <div className="text-2xl font-mono font-bold text-foreground">
+                    {Math.floor(timeSinceLastCommentInAudio / 60)}:{String(timeSinceLastCommentInAudio % 60).padStart(2, '0')}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Since last comment</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-mono font-bold text-muted-foreground/50">--:--</div>
+                  <div className="text-xs text-muted-foreground">Since last comment</div>
+                </>
+              )}
+            </div>
+            
+            <div className="border-t border-border" />
+            
+            {/* Playback speed controls */}
+            <div className="text-center space-y-2">
+              <div className="text-xs text-muted-foreground">Playback Speed</div>
+              <div className="flex items-center justify-center gap-1">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+                    const currentIdx = speeds.indexOf(playbackRate);
+                    if (currentIdx > 0) setPlaybackRate(speeds[currentIdx - 1]);
+                  }}
+                  disabled={playbackRate <= 0.5}
+                >
+                  <span className="text-xs font-bold">−</span>
+                </Button>
+                <span className="text-lg font-mono font-bold text-foreground min-w-[3rem]">
+                  {playbackRate}x
+                </span>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+                    const currentIdx = speeds.indexOf(playbackRate);
+                    if (currentIdx < speeds.length - 1) setPlaybackRate(speeds[currentIdx + 1]);
+                  }}
+                  disabled={playbackRate >= 2}
+                >
+                  <span className="text-xs font-bold">+</span>
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+        
+        <Card className="p-6 flex-1 min-w-0">
           {/* Intro comment section at top */}
           <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-dashed border-border">
             {/* Show existing intro comment if there is one */}
@@ -4419,6 +4488,7 @@ const SermonViewer = () => {
             </Button>
           </div>
         </Card>
+        </div>{/* end flex wrapper */}
       </div>
 
       <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
