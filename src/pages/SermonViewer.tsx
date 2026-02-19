@@ -4170,147 +4170,201 @@ const SermonViewer = () => {
                         🔉 Low Volume
                       </Badge>
                     )}
-                    <div className="flex items-start gap-3">
-                      <Badge className="badge-gradient text-xs font-mono shrink-0">
-                        {Math.floor(firstSentence.start_time_ms / 1000 / 60)}:
-                        {String(Math.floor((firstSentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
-                      </Badge>
-                      <p className="flex-1 leading-relaxed font-serif text-foreground/90">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
-                    </div>
-                    {getCommentsForRange(firstSentence.start_time_ms, rangeEnd).length > 0 && (
-                      <div className="mt-2 space-y-2">
-                        {getCommentsForRange(firstSentence.start_time_ms, rangeEnd).map((comment) => (
-                          <div
-                            key={comment.id}
-                            className="p-3 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
-                            style={{
-                              backgroundColor: comment.evaluation_rules?.color
-                                ? `${comment.evaluation_rules.color}15`
-                                : "hsl(var(--card))",
-                              borderLeft: comment.evaluation_rules?.color
-                                ? `4px solid ${comment.evaluation_rules.color}`
-                                : "4px solid hsl(var(--primary))",
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                {comment.evaluation_rules && (
-                                  <Badge
-                                    variant="outline"
-                                    className="mb-1"
-                                    style={{ borderColor: comment.evaluation_rules.color }}
-                                  >
-                                    {comment.evaluation_rules.name}
-                                  </Badge>
-                                )}
-                                <p className="text-sm font-bold">{comment.comment_text}</p>
-                                {comment.audio_url && comment.comment_text === "Audio comment" && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="mt-1"
-                                    onClick={() => handleTranscribeComment(comment)}
-                                    disabled={transcribingCommentId === comment.id}
-                                  >
-                                    {transcribingCommentId === comment.id ? (
-                                      <>
-                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                        Transcribing...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FileText className="mr-1 h-3 w-3" />
-                                        Transcribe
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {comment.audio_url && (
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      
-                                      // If this comment is already playing, toggle pause/play
-                                      if (playingCommentId === comment.id && commentAudioRef.current) {
-                                        if (commentAudioRef.current.paused) {
-                                          commentAudioRef.current.play().catch(() => {});
-                                        } else {
-                                          commentAudioRef.current.pause();
-                                        }
-                                        return;
-                                      }
-                                      
-                                      // Stop any current audio
-                                      stopCommentAudio();
-                                      if (audioRef.current) {
-                                        audioRef.current.pause();
-                                      }
-                                      
-                                      setPlayingCommentId(comment.id);
-                                      
-                                      let url = commentSignedUrls[comment.id];
-                                      if (!url) {
-                                        const { data } = await supabase.storage
-                                          .from("sermon-comments-audio")
-                                          .createSignedUrl(comment.audio_url!, 3600);
-                                        if (data?.signedUrl) {
-                                          url = data.signedUrl;
-                                          setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
-                                        }
-                                      }
-                                      
-                                      if (url) {
-                                        const audio = new Audio(url);
-                                        commentAudioRef.current = audio;
-                                        let handled = false;
-                                        const cleanup = () => {
-                                          if (handled) return;
-                                          handled = true;
-                                          setPlayingCommentId(null);
-                                          commentAudioRef.current = null;
-                                        };
-                                        audio.onended = cleanup;
-                                        audio.onerror = () => {
-                                          const mediaError = audio.error;
-                                          if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
-                                            cleanup();
-                                          }
-                                        };
-                                        try {
-                                          await audio.play();
-                                        } catch (err: any) {
-                                          if (err.name !== 'AbortError') {
-                                            cleanup();
-                                          }
-                                        }
-                                      }
-                                    }}
-                                  >
-                                    {playingCommentId === comment.id ? (
-                                      <Pause className="h-4 w-4" />
-                                    ) : (
-                                      <Play className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                )}
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleDeleteComment(comment.id)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
+                    {(() => {
+                      const paragraphComments = getCommentsForRange(firstSentence.start_time_ms, rangeEnd)
+                        .sort((a, b) => a.start_time_ms - b.start_time_ms);
+                      
+                      if (paragraphComments.length === 0) {
+                        // No comments — render paragraph as before
+                        return (
+                          <div className="flex items-start gap-3">
+                            <Badge className="badge-gradient text-xs font-mono shrink-0">
+                              {Math.floor(firstSentence.start_time_ms / 1000 / 60)}:
+                              {String(Math.floor((firstSentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
+                            </Badge>
+                            <p className="flex-1 leading-relaxed font-serif text-foreground/90">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        );
+                      }
+                      
+                      // Split paragraph sentences around each comment's insertion point
+                      const segments: { type: 'text'; sentences: Sentence[] }[] | { type: 'comment'; comment: Comment }[] = [];
+                      const result: Array<{ type: 'text'; sentences: typeof paragraph } | { type: 'comment'; comment: Comment }> = [];
+                      let remainingSentences = [...paragraph];
+                      
+                      for (const comment of paragraphComments) {
+                        // Find the split point: sentences before the comment's start_time_ms
+                        const beforeIdx = remainingSentences.findIndex(s => s.start_time_ms >= comment.start_time_ms);
+                        let before: typeof paragraph;
+                        if (beforeIdx === -1) {
+                          before = remainingSentences;
+                          remainingSentences = [];
+                        } else if (beforeIdx === 0) {
+                          before = [];
+                        } else {
+                          before = remainingSentences.slice(0, beforeIdx);
+                          remainingSentences = remainingSentences.slice(beforeIdx);
+                        }
+                        if (before.length > 0) {
+                          result.push({ type: 'text', sentences: before });
+                        }
+                        result.push({ type: 'comment', comment });
+                      }
+                      if (remainingSentences.length > 0) {
+                        result.push({ type: 'text', sentences: remainingSentences });
+                      }
+                      
+                      return (
+                        <div className="space-y-2">
+                          {result.map((segment, segIdx) => {
+                            if (segment.type === 'text') {
+                              return (
+                                <div key={`text-${segIdx}`} className="flex items-start gap-3">
+                                  {segIdx === 0 && (
+                                    <Badge className="badge-gradient text-xs font-mono shrink-0">
+                                      {Math.floor(firstSentence.start_time_ms / 1000 / 60)}:
+                                      {String(Math.floor((firstSentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
+                                    </Badge>
+                                  )}
+                                  {segIdx !== 0 && <div className="w-[52px] shrink-0" />}
+                                  <p className="flex-1 leading-relaxed font-serif text-foreground/90">{segment.sentences.map((s) => s.sentence_text).join(" ")}</p>
+                                </div>
+                              );
+                            } else {
+                              const comment = segment.comment;
+                              return (
+                                <div
+                                  key={comment.id}
+                                  className="p-3 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md ml-[52px]"
+                                  style={{
+                                    backgroundColor: comment.evaluation_rules?.color
+                                      ? `${comment.evaluation_rules.color}15`
+                                      : "hsl(var(--card))",
+                                    borderLeft: comment.evaluation_rules?.color
+                                      ? `4px solid ${comment.evaluation_rules.color}`
+                                      : "4px solid hsl(var(--primary))",
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1">
+                                      {comment.evaluation_rules && (
+                                        <Badge
+                                          variant="outline"
+                                          className="mb-1"
+                                          style={{ borderColor: comment.evaluation_rules.color }}
+                                        >
+                                          {comment.evaluation_rules.name}
+                                        </Badge>
+                                      )}
+                                      <p className="text-sm font-bold">{comment.comment_text}</p>
+                                      {comment.audio_url && comment.comment_text === "Audio comment" && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="mt-1"
+                                          onClick={() => handleTranscribeComment(comment)}
+                                          disabled={transcribingCommentId === comment.id}
+                                        >
+                                          {transcribingCommentId === comment.id ? (
+                                            <>
+                                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                              Transcribing...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <FileText className="mr-1 h-3 w-3" />
+                                              Transcribe
+                                            </>
+                                          )}
+                                        </Button>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {comment.audio_url && (
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-8 w-8"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            
+                                            if (playingCommentId === comment.id && commentAudioRef.current) {
+                                              if (commentAudioRef.current.paused) {
+                                                commentAudioRef.current.play().catch(() => {});
+                                              } else {
+                                                commentAudioRef.current.pause();
+                                              }
+                                              return;
+                                            }
+                                            
+                                            stopCommentAudio();
+                                            if (audioRef.current) {
+                                              audioRef.current.pause();
+                                            }
+                                            
+                                            setPlayingCommentId(comment.id);
+                                            
+                                            let url = commentSignedUrls[comment.id];
+                                            if (!url) {
+                                              const { data } = await supabase.storage
+                                                .from("sermon-comments-audio")
+                                                .createSignedUrl(comment.audio_url!, 3600);
+                                              if (data?.signedUrl) {
+                                                url = data.signedUrl;
+                                                setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
+                                              }
+                                            }
+                                            
+                                            if (url) {
+                                              const audio = new Audio(url);
+                                              commentAudioRef.current = audio;
+                                              let handled = false;
+                                              const cleanup = () => {
+                                                if (handled) return;
+                                                handled = true;
+                                                setPlayingCommentId(null);
+                                                commentAudioRef.current = null;
+                                              };
+                                              audio.onended = cleanup;
+                                              audio.onerror = () => {
+                                                const mediaError = audio.error;
+                                                if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                                  cleanup();
+                                                }
+                                              };
+                                              try {
+                                                await audio.play();
+                                              } catch (err: any) {
+                                                if (err.name !== 'AbortError') {
+                                                  cleanup();
+                                                }
+                                              }
+                                            }
+                                          }}
+                                        >
+                                          {playingCommentId === comment.id ? (
+                                            <Pause className="h-4 w-4" />
+                                          ) : (
+                                            <Play className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      )}
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleDeleteComment(comment.id)}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })}
+                        </div>
+                      );
+                    })()}
                     {/* Insert comment button between paragraphs */}
                     <div className="flex justify-center -mb-6 mt-2 relative z-10">
                       <Button
