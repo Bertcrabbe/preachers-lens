@@ -12,7 +12,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 207 50% 90%;
+    --background: 0 0% 100%;
     --foreground: 220 25% 10%;
 
     --card: 0 0% 100%;
@@ -84,7 +84,7 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(207, 85%, 40%) 0%, hsl(207, 75%, 55%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(163, 97%, 52%) 0%, hsl(160, 84%, 44%) 100%);
     --gradient-warm: linear-gradient(135deg, hsl(340, 75%, 55%) 0%, hsl(25, 95%, 53%) 100%);
-    --gradient-surface: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(220, 20%, 97%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(207, 50%, 88%) 0%, hsl(207, 45%, 82%) 100%);
   }
 
   .dark {
@@ -154,7 +154,7 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(207, 85%, 50%) 0%, hsl(207, 75%, 60%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(163, 97%, 55%) 0%, hsl(160, 84%, 49%) 100%);
     --gradient-warm: linear-gradient(135deg, hsl(340, 75%, 55%) 0%, hsl(25, 95%, 53%) 100%);
-    --gradient-surface: linear-gradient(180deg, hsl(220, 25%, 12%) 0%, hsl(220, 25%, 8%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(207, 40%, 16%) 0%, hsl(207, 35%, 10%) 100%);
   }
 }
 

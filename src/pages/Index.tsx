@@ -19,7 +19,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10">
+    <div className="min-h-screen bg-gradient-surface">
       <header className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-2">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
