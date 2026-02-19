@@ -808,6 +808,27 @@ const SermonViewer = () => {
     setVisibleFillerWords(newSet);
   };
 
+  const countSilentPauses = (minGapMs: number = 3000): number => {
+    if (sentences.length < 2) return 0;
+    let count = 0;
+    for (let i = 1; i < sentences.length; i++) {
+      const gap = sentences[i].start_time_ms - sentences[i - 1].end_time_ms;
+      if (gap >= minGapMs) count++;
+    }
+    return count;
+  };
+
+  const getSilentPauseTimestamps = (minGapMs: number = 3000): { start: number; end: number; durationMs: number }[] => {
+    const pauses: { start: number; end: number; durationMs: number }[] = [];
+    for (let i = 1; i < sentences.length; i++) {
+      const gap = sentences[i].start_time_ms - sentences[i - 1].end_time_ms;
+      if (gap >= minGapMs) {
+        pauses.push({ start: sentences[i - 1].end_time_ms, end: sentences[i].start_time_ms, durationMs: gap });
+      }
+    }
+    return pauses;
+  };
+
   const countInsiderLanguage = (): number => {
     const insiderTerms = {
       single: ['sanctification', 'justification', 'redemption', 'atonement', 'repentance', 
@@ -3382,6 +3403,55 @@ const SermonViewer = () => {
                   </div>
                 ))}
               </div>
+            </Card>
+
+            <Card className="p-4 bg-slate-500/5">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-base font-bold text-slate-700">Silent Pauses</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2">
+                      View All
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto bg-background border shadow-lg z-50">
+                    {getSilentPauseTimestamps().length === 0 ? (
+                      <DropdownMenuItem disabled className="text-muted-foreground">
+                        No silent pauses found
+                      </DropdownMenuItem>
+                    ) : (
+                      getSilentPauseTimestamps().map((p, idx) => (
+                        <DropdownMenuItem
+                          key={idx}
+                          className="flex justify-between cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (audioRef.current) {
+                              audioRef.current.currentTime = p.start / 1000;
+                            }
+                          }}
+                        >
+                          <span>{`${Math.floor(p.start / 60000)}:${String(Math.floor((p.start % 60000) / 1000)).padStart(2, '0')}`}</span>
+                          <span className="font-semibold text-slate-600">{(p.durationMs / 1000).toFixed(1)}s</span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex flex-col items-center text-center mb-3">
+                <div className="text-3xl font-bold text-slate-600">
+                  {countSilentPauses()}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Pauses ≥ 3 seconds
+                </div>
+              </div>
+              {getSilentPauseTimestamps().length > 0 && (
+                <div className="text-xs text-muted-foreground text-center">
+                  Longest: {(Math.max(...getSilentPauseTimestamps().map(p => p.durationMs)) / 1000).toFixed(1)}s
+                </div>
+              )}
             </Card>
 
             <Card 
