@@ -249,16 +249,17 @@ const SermonViewer = () => {
     const el = paragraphRefs.current[activeIdx];
     if (!el || !transcriptContainerRef.current) return;
     
-    // Calculate position so active paragraph is second from top
+    // Use getBoundingClientRect to account for parallax 3D transforms
     const container = transcriptContainerRef.current;
     const containerRect = container.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
+    const scrollOffset = elRect.top - containerRect.top + container.scrollTop;
     
     // Get the height of the first paragraph to use as offset
     const firstEl = paragraphRefs.current[activeIdx > 0 ? activeIdx - 1 : 0];
-    const offset = firstEl ? firstEl.offsetHeight + 16 : 80; // 16 = gap
+    const offset = firstEl ? firstEl.getBoundingClientRect().height + 16 : 80;
     
-    const targetScrollTop = el.offsetTop - container.offsetTop - offset;
+    const targetScrollTop = scrollOffset - offset;
     const currentScroll = container.scrollTop;
     
     // Only scroll if we're not already close
@@ -347,14 +348,18 @@ const SermonViewer = () => {
     // First, scroll the page so the transcript container is visible
     container.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // Then scroll within the transcript container to the active paragraph
+    // Use getBoundingClientRect to account for parallax 3D transforms
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const scrollOffset = elRect.top - containerRect.top + container.scrollTop;
+    
     const firstEl = paragraphRefs.current[activeIdx > 0 ? activeIdx - 1 : 0];
-    const offset = firstEl ? firstEl.offsetHeight + 16 : 80;
+    const offset = firstEl ? firstEl.getBoundingClientRect().height + 16 : 80;
     
     isAutoScrollingRef.current = true;
     // Use a short delay so the page scroll completes first
     setTimeout(() => {
-      container.scrollTo({ top: el.offsetTop - container.offsetTop - offset, behavior: "smooth" });
+      container.scrollTo({ top: scrollOffset - offset, behavior: "smooth" });
       setTimeout(() => { isAutoScrollingRef.current = false; }, 500);
     }, 300);
     setAutoScrollEnabled(true);
