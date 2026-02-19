@@ -16,18 +16,45 @@ export const AnimatedCounter = ({
   suffix = "" 
 }: AnimatedCounterProps) => {
   const [displayValue, setDisplayValue] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
   const prevValue = useRef(0);
   const rafRef = useRef<number>();
+  const elementRef = useRef<HTMLSpanElement>(null);
 
+  // Trigger animation when element becomes visible
   useEffect(() => {
+    const el = elementRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasAnimated]);
+
+  // Run animation when visible or value changes after first animation
+  useEffect(() => {
+    if (!hasAnimated) return;
+
     const start = prevValue.current;
     const end = value;
+    if (start === end) {
+      setDisplayValue(end);
+      return;
+    }
+
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(start + (end - start) * eased);
       setDisplayValue(current);
@@ -43,10 +70,10 @@ export const AnimatedCounter = ({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [value, duration]);
+  }, [value, duration, hasAnimated]);
 
   return (
-    <span className={className}>
+    <span ref={elementRef} className={className}>
       {prefix}{displayValue}{suffix}
     </span>
   );
