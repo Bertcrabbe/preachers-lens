@@ -4491,69 +4491,47 @@ const SermonViewer = () => {
         </div>{/* end flex wrapper */}
       </div>
 
-      <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+      <Dialog open={commentDialogOpen} onOpenChange={(open) => {
+        if (!open && !transcribing) {
+          setCommentDialogOpen(false);
+          setAudioBlob(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Comment</DialogTitle>
+            <DialogTitle>Recording Comment</DialogTitle>
             <DialogDescription>
-              Add a text or audio comment for this section
+              Recording audio comment for this section
             </DialogDescription>
           </DialogHeader>
           
-          <Tabs value={commentType} onValueChange={(v) => setCommentType(v as "text" | "audio")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="text">Text</TabsTrigger>
-              <TabsTrigger value="audio">Audio</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="text" className="space-y-4">
-              <Textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Type your comment here..."
-                className="min-h-[100px]"
-              />
-            </TabsContent>
-            
-            <TabsContent value="audio" className="space-y-4">
-              <AudioRecorder
-                onRecordingComplete={(blob) => {
-                  setAudioBlob(blob);
-                  // Auto-save audio comment immediately after recording
-                  handleAutoSaveAudioComment(blob);
-                }}
-                onClear={() => setAudioBlob(null)}
-                selectedDeviceId={selectedDeviceId}
-                onRecordingStateChange={(isRecording, time, stopFn) => {
-                  setFloatingRecording({ isRecording, time, stopFn });
-                }}
-              />
-              {transcribing && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving and transcribing...
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <div className="space-y-4">
+            <AudioRecorder
+              autoStart={commentDialogOpen}
+              onRecordingComplete={(blob) => {
+                setAudioBlob(blob);
+                handleAutoSaveAudioComment(blob);
+              }}
+              onClear={() => setAudioBlob(null)}
+              selectedDeviceId={selectedDeviceId}
+              onRecordingStateChange={(isRecording, time, stopFn) => {
+                setFloatingRecording({ isRecording, time, stopFn });
+              }}
+            />
+            {transcribing && (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving and transcribing...
+              </div>
+            )}
+          </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end">
             <Button variant="outline" onClick={() => {
               setCommentDialogOpen(false);
-              setNewComment("");
               setAudioBlob(null);
             }} disabled={transcribing}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddComment} disabled={(!newComment.trim() && !audioBlob) || transcribing}>
-              {transcribing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Transcribing...
-                </>
-              ) : (
-                "Add Comment"
-              )}
+              Close
             </Button>
           </div>
         </DialogContent>

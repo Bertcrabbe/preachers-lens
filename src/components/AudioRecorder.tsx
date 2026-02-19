@@ -8,9 +8,10 @@ interface AudioRecorderProps {
   onClear: () => void;
   selectedDeviceId?: string | null;
   onRecordingStateChange?: (isRecording: boolean, time: number, stopFn: () => void) => void;
+  autoStart?: boolean;
 }
 
-export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, onRecordingStateChange }: AudioRecorderProps) => {
+export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, onRecordingStateChange, autoStart }: AudioRecorderProps) => {
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -40,6 +41,15 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
       }
     }
   };
+
+  // Auto-start recording if requested
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStart && !autoStartedRef.current && !isRecording && !audioBlob) {
+      autoStartedRef.current = true;
+      startRecording();
+    }
+  }, [autoStart]);
 
   useEffect(() => {
     return () => {
