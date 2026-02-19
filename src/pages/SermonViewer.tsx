@@ -307,12 +307,20 @@ const SermonViewer = () => {
     if (!el || !transcriptContainerRef.current) return;
     
     const container = transcriptContainerRef.current;
+
+    // First, scroll the page so the transcript container is visible
+    container.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Then scroll within the transcript container to the active paragraph
     const firstEl = paragraphRefs.current[activeIdx > 0 ? activeIdx - 1 : 0];
     const offset = firstEl ? firstEl.offsetHeight + 16 : 80;
     
     isAutoScrollingRef.current = true;
-    container.scrollTo({ top: el.offsetTop - container.offsetTop - offset, behavior: "smooth" });
-    setTimeout(() => { isAutoScrollingRef.current = false; }, 500);
+    // Use a short delay so the page scroll completes first
+    setTimeout(() => {
+      container.scrollTo({ top: el.offsetTop - container.offsetTop - offset, behavior: "smooth" });
+      setTimeout(() => { isAutoScrollingRef.current = false; }, 500);
+    }, 300);
     setAutoScrollEnabled(true);
     setUserScrolledAway(false);
   };
