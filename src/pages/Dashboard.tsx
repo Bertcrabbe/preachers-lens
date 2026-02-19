@@ -66,6 +66,9 @@ const Dashboard = () => {
   const [newCommunicatorName, setNewCommunicatorName] = useState("");
   const [deleteCommunicatorOpen, setDeleteCommunicatorOpen] = useState(false);
   const [communicatorToDelete, setCommunicatorToDelete] = useState<Communicator | null>(null);
+  const [deleteSermonOpen, setDeleteSermonOpen] = useState(false);
+  const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
+  const [deletingSermon, setDeletingSermon] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -319,6 +322,39 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteSermon = async () => {
+    if (!sermonToDelete) return;
+    setDeletingSermon(true);
+    try {
+      // Delete related data first (sentences, comments)
+      await Promise.all([
+        supabase.from("sermon_sentences").delete().eq("sermon_id", sermonToDelete.id),
+        supabase.from("sermon_comments").delete().eq("sermon_id", sermonToDelete.id),
+      ]);
+
+      // Delete the audio file from storage
+      if (sermonToDelete.file_url) {
+        const path = sermonToDelete.file_url.split("/sermons/")[1];
+        if (path) {
+          await supabase.storage.from("sermons").remove([decodeURIComponent(path)]);
+        }
+      }
+
+      // Delete the sermon record
+      const { error } = await supabase.from("sermons").delete().eq("id", sermonToDelete.id);
+      if (error) throw error;
+
+      setSermons(sermons.filter(s => s.id !== sermonToDelete.id));
+      toast({ title: "Sermon deleted", description: `"${sermonToDelete.title || "Untitled Sermon"}" has been deleted` });
+    } catch (error: any) {
+      toast({ title: "Error", description: "Failed to delete sermon", variant: "destructive" });
+    } finally {
+      setDeletingSermon(false);
+      setSermonToDelete(null);
+      setDeleteSermonOpen(false);
+    }
+  };
+
   const getSermonsForCommunicator = (communicatorId: string | null) => {
     return sermons.filter(s => s.communicator_id === communicatorId);
   };
@@ -382,9 +418,23 @@ const Dashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Uploaded {new Date(sermon.created_at).toLocaleDateString()}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">
+                Uploaded {new Date(sermon.created_at).toLocaleDateString()}
+              </p>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSermonToDelete(sermon);
+                  setDeleteSermonOpen(true);
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
@@ -701,6 +751,25 @@ const Dashboard = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteCommunicator}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Sermon Confirmation */}
+      <AlertDialog open={deleteSermonOpen} onOpenChange={setDeleteSermonOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete sermon?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{sermonToDelete?.title || "Untitled Sermon"}" along with its transcript, comments, and audio file. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingSermon}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSermon} disabled={deletingSermon}>
+              {deletingSermon ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
