@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Mic, FileText, Download, Clock } from "lucide-react";
+import { FileText, Download, Clock } from "lucide-react";
+import logo from "@/assets/preacherslens-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -22,9 +23,7 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-surface">
       <header className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-2">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Mic className="h-5 w-5 text-primary" />
-          </div>
+          <img src={logo} alt="The Preacher's Lens" className="h-10 w-10" />
           <span className="text-xl font-bold">Preacher's Lens</span>
         </div>
       </header>
