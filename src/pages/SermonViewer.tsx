@@ -1148,16 +1148,28 @@ const SermonViewer = () => {
 
   // ===== ENGAGEMENT SCORING FUNCTIONS =====
   
+  // Helper: maps a value from [low, high] to [1, 10] with clamping
+  const scaleScore = (value: number, low: number, mid: number, high: number): number => {
+    // low = score 1, mid = score 5, high = score 10
+    let score: number;
+    if (value <= low) return 1;
+    if (value >= high) return 10;
+    if (value <= mid) {
+      score = 1 + ((value - low) / (mid - low)) * 4; // 1-5
+    } else {
+      score = 5 + ((value - mid) / (high - mid)) * 5; // 5-10
+    }
+    return Math.round(Math.min(10, Math.max(1, score)));
+  };
+
   const getPaceVarietyScore = (): number => {
     if (sentences.length === 0) return 5;
     const { stdDev } = getSpeedVariance();
     const avgWpm = getAverageSpeechRate();
     if (avgWpm === 0) return 5;
-    // Coefficient of variation — higher = more variety = better
     const cv = stdDev / avgWpm;
-    // cv of 0.15+ is great variety, 0.05 or less is monotone
-    const score = Math.min(10, Math.max(1, Math.round((cv / 0.15) * 10)));
-    return score;
+    // cv: 0.03 = monotone (1), 0.10 = average (5), 0.25 = excellent (10)
+    return scaleScore(cv, 0.03, 0.10, 0.25);
   };
 
   const getSpeedDynamicsScore = (): number => {
@@ -1165,9 +1177,10 @@ const SermonViewer = () => {
     const paragraphs = groupIntoParagraphs(sentences);
     if (paragraphs.length <= 1) return 5;
     const transitions20 = countSpeedTransitions(20);
-    // Normalize: ~1 transition per 3 paragraphs is great
-    const ratio = transitions20 / (paragraphs.length / 3);
-    return Math.min(10, Math.max(1, Math.round(ratio * 10)));
+    // Ratio of transitions to paragraphs
+    const ratio = transitions20 / paragraphs.length;
+    // 0.05 = barely any (1), 0.20 = moderate (5), 0.50 = very dynamic (10)
+    return scaleScore(ratio, 0.05, 0.20, 0.50);
   };
 
   const getVolumeDynamicsScore = (): number => {
@@ -1194,9 +1207,8 @@ const SermonViewer = () => {
     const variance = paragraphVolumes.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / paragraphVolumes.length;
     const cv = Math.sqrt(variance) / mean;
     
-    // CV of 0.05 = minimal variation (score ~2), CV of 0.25+ = very dynamic (score 10)
-    const score = Math.round(1 + (cv / 0.25) * 9);
-    return Math.min(10, Math.max(1, score));
+    // cv: 0.02 = flat (1), 0.10 = moderate (5), 0.30 = very dynamic (10)
+    return scaleScore(cv, 0.02, 0.10, 0.30);
   };
 
   const getVocabularyDiversityScore = (): number => {
@@ -1210,13 +1222,9 @@ const SermonViewer = () => {
     });
     if (allWords.length === 0) return 5;
     const uniqueWords = new Set(allWords).size;
-    // Type-token ratio: typically 0.3-0.7 for spoken language
-    const ttr = uniqueWords / allWords.length;
-    // For sermons (long form), TTR tends to be lower. 0.25+ is diverse, 0.10 is repetitive.
-    // Adjusted for long transcripts using root TTR (Guiraud's index)
     const guiraud = uniqueWords / Math.sqrt(allWords.length);
-    // Guiraud of 10+ is very diverse, 4 is repetitive
-    return Math.min(10, Math.max(1, Math.round((guiraud / 10) * 10)));
+    // guiraud: 4 = very repetitive (1), 7 = average (5), 12 = exceptional (10)
+    return scaleScore(guiraud, 4, 7, 12);
   };
 
   const getSentenceVarietyScore = (): number => {
@@ -1224,10 +1232,9 @@ const SermonViewer = () => {
     const lengths = sentences.map(s => s.sentence_text.split(/\s+/).length);
     const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
     const stdDev = Math.sqrt(lengths.reduce((sum, l) => sum + Math.pow(l - avg, 2), 0) / lengths.length);
-    // Coefficient of variation for sentence lengths
     const cv = stdDev / avg;
-    // cv of 0.6+ means great mix of short punchy and long sentences
-    return Math.min(10, Math.max(1, Math.round((cv / 0.6) * 10)));
+    // cv: 0.2 = very uniform (1), 0.5 = moderate mix (5), 0.9 = great variety (10)
+    return scaleScore(cv, 0.2, 0.5, 0.9);
   };
 
   const getIllustrationScore = (): number => {
