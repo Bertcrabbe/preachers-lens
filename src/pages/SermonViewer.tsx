@@ -1242,14 +1242,12 @@ const SermonViewer = () => {
     const paceDynamics = getPaceDynamicsScore();
     const volumeDynamics = getVolumeDynamicsScore();
     const vocabDiversity = getVocabularyDiversityScore();
-    const sentenceVariety = getSentenceVarietyScore();
     const illustrationScore = getIllustrationScore();
 
     const subscores = [
       { label: "Pace Dynamics", score: paceDynamics, icon: "🎯" },
       { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊" },
       { label: "Vocabulary Diversity", score: vocabDiversity, icon: "📚" },
-      { label: "Sentence Variety", score: sentenceVariety, icon: "✏️" },
       { label: "Illustrations & Stories", score: illustrationScore, icon: "🎭" },
     ];
 
