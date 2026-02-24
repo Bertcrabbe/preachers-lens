@@ -32,7 +32,7 @@ const Index = () => {
       <main className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Transcribe and Review Sermons with Precision
+            Sermon Evaluation Tool
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Upload sermon audio, get instant AI-powered transcriptions with timestamps,
