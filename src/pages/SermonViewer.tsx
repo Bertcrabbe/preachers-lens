@@ -191,6 +191,14 @@ const SermonViewer = () => {
     stopFn: (() => void) | null;
   }>({ isRecording: false, time: 0, stopFn: null });
   const [showAudioEditor, setShowAudioEditor] = useState(false);
+  const [illustrationData, setIllustrationData] = useState<{
+    elements: Array<{ type: string; summary: string; excerpt: string }>;
+    total_count: number;
+    illustration_score: number;
+    breakdown: { stories: number; analogies: number; humor: number; anecdotes: number; illustrations: number; audience_interactions: number };
+  } | null>(null);
+  const [loadingIllustrations, setLoadingIllustrations] = useState(false);
+  const [engagementExpanded, setEngagementExpanded] = useState(false);
   
   useEffect(() => {
     checkAuth();
@@ -1129,6 +1137,127 @@ const SermonViewer = () => {
     }
 
     return filtered.map(([word, count]) => ({ word, count }));
+  };
+
+  // ===== ENGAGEMENT SCORING FUNCTIONS =====
+  
+  const getPaceVarietyScore = (): number => {
+    if (sentences.length === 0) return 5;
+    const { stdDev } = getSpeedVariance();
+    const avgWpm = getAverageSpeechRate();
+    if (avgWpm === 0) return 5;
+    // Coefficient of variation — higher = more variety = better
+    const cv = stdDev / avgWpm;
+    // cv of 0.15+ is great variety, 0.05 or less is monotone
+    const score = Math.min(10, Math.max(1, Math.round((cv / 0.15) * 10)));
+    return score;
+  };
+
+  const getSpeedDynamicsScore = (): number => {
+    if (sentences.length === 0) return 5;
+    const paragraphs = groupIntoParagraphs(sentences);
+    if (paragraphs.length <= 1) return 5;
+    const transitions20 = countSpeedTransitions(20);
+    // Normalize: ~1 transition per 3 paragraphs is great
+    const ratio = transitions20 / (paragraphs.length / 3);
+    return Math.min(10, Math.max(1, Math.round(ratio * 10)));
+  };
+
+  const getVolumeDynamicsScore = (): number => {
+    if (sentences.length === 0 || waveformData.length === 0) return 5;
+    const counts = countVolumeChangeParagraphs();
+    const totalNonBaseline = (counts[-2] || 0) + (counts[-1] || 0) + (counts[1] || 0) + (counts[2] || 0);
+    const paragraphs = groupIntoParagraphs(sentences);
+    if (paragraphs.length === 0) return 5;
+    // ~30% paragraphs with volume changes = good dynamics
+    const ratio = totalNonBaseline / paragraphs.length;
+    return Math.min(10, Math.max(1, Math.round((ratio / 0.3) * 10)));
+  };
+
+  const getVocabularyDiversityScore = (): number => {
+    if (sentences.length === 0) return 5;
+    const allWords: string[] = [];
+    sentences.forEach(s => {
+      s.sentence_text.toLowerCase().replace(/[^a-z'\s-]/g, '').split(/\s+/).forEach(w => {
+        const cleaned = w.replace(/^'+|'+$/g, '');
+        if (cleaned.length > 1) allWords.push(cleaned);
+      });
+    });
+    if (allWords.length === 0) return 5;
+    const uniqueWords = new Set(allWords).size;
+    // Type-token ratio: typically 0.3-0.7 for spoken language
+    const ttr = uniqueWords / allWords.length;
+    // For sermons (long form), TTR tends to be lower. 0.25+ is diverse, 0.10 is repetitive.
+    // Adjusted for long transcripts using root TTR (Guiraud's index)
+    const guiraud = uniqueWords / Math.sqrt(allWords.length);
+    // Guiraud of 10+ is very diverse, 4 is repetitive
+    return Math.min(10, Math.max(1, Math.round((guiraud / 10) * 10)));
+  };
+
+  const getSentenceVarietyScore = (): number => {
+    if (sentences.length < 3) return 5;
+    const lengths = sentences.map(s => s.sentence_text.split(/\s+/).length);
+    const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+    const stdDev = Math.sqrt(lengths.reduce((sum, l) => sum + Math.pow(l - avg, 2), 0) / lengths.length);
+    // Coefficient of variation for sentence lengths
+    const cv = stdDev / avg;
+    // cv of 0.6+ means great mix of short punchy and long sentences
+    return Math.min(10, Math.max(1, Math.round((cv / 0.6) * 10)));
+  };
+
+  const getIllustrationScore = (): number => {
+    if (!illustrationData) return 0; // 0 means not yet loaded
+    return illustrationData.illustration_score;
+  };
+
+  const getEngagementScore = (): { total: number; subscores: { label: string; score: number; icon: string }[] } => {
+    const paceVariety = getPaceVarietyScore();
+    const speedDynamics = getSpeedDynamicsScore();
+    const volumeDynamics = getVolumeDynamicsScore();
+    const vocabDiversity = getVocabularyDiversityScore();
+    const sentenceVariety = getSentenceVarietyScore();
+    const illustrationScore = getIllustrationScore();
+
+    const subscores = [
+      { label: "Pace Variety", score: paceVariety, icon: "🎯" },
+      { label: "Speed Changes", score: speedDynamics, icon: "⚡" },
+      { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊" },
+      { label: "Vocabulary Diversity", score: vocabDiversity, icon: "📚" },
+      { label: "Sentence Variety", score: sentenceVariety, icon: "✏️" },
+      { label: "Illustrations & Stories", score: illustrationScore, icon: "🎭" },
+    ];
+
+    // Only include illustration score if loaded
+    const scoresToAvg = illustrationScore > 0 
+      ? subscores 
+      : subscores.filter(s => s.label !== "Illustrations & Stories");
+    
+    const total = scoresToAvg.length > 0 
+      ? Math.round(scoresToAvg.reduce((sum, s) => sum + s.score, 0) / scoresToAvg.length)
+      : 5;
+
+    return { total, subscores };
+  };
+
+  const fetchIllustrations = async () => {
+    if (!id || loadingIllustrations) return;
+    setLoadingIllustrations(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-illustrations', {
+        body: { sermonId: id }
+      });
+      if (error) throw error;
+      setIllustrationData(data);
+    } catch (error: any) {
+      console.error("Failed to analyze illustrations:", error);
+      toast({
+        title: "Analysis failed",
+        description: error.message || "Could not analyze illustrations",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingIllustrations(false);
+    }
   };
 
   const countSlowSpeechParagraphs = (threshold: number = 0.75): number => {
@@ -3114,6 +3243,96 @@ const SermonViewer = () => {
         {/* Sermon Dashboard */}
         <Card className="mb-6 p-6 shadow-lg animate-slide-up">
           <h2 className="text-xl font-semibold mb-4 text-gradient-primary">Sermon Analytics</h2>
+          {/* Engagement Score Card - Full Width */}
+          <Card className="stats-card p-4 mb-4">
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="text-base font-bold text-amber-700">Engagement Score</h3>
+              <div className="flex gap-2">
+                {!illustrationData && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs px-2"
+                    onClick={fetchIllustrations}
+                    disabled={loadingIllustrations}
+                  >
+                    {loadingIllustrations ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                    {loadingIllustrations ? "Analyzing..." : "Detect Stories"}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  onClick={() => setEngagementExpanded(!engagementExpanded)}
+                >
+                  {engagementExpanded ? "Collapse" : "Details"}
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col items-center text-center mb-3">
+              <div className="text-4xl font-bold text-amber-600">
+                <AnimatedCounter value={getEngagementScore().total} /><span className="text-lg text-muted-foreground">/10</span>
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Overall Engagement{!illustrationData && " (without story analysis)"}
+              </div>
+            </div>
+            {engagementExpanded && (
+              <div className="space-y-2 border-t pt-3">
+                {getEngagementScore().subscores.map((sub) => (
+                  <div key={sub.label} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <span>{sub.icon}</span>
+                      <span>{sub.label}</span>
+                      {sub.label === "Illustrations & Stories" && sub.score === 0 && (
+                        <span className="text-xs text-muted-foreground italic">(not loaded)</span>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${
+                            sub.score >= 7 ? 'bg-emerald-500' : sub.score >= 4 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${(sub.score / 10) * 100}%` }}
+                        />
+                      </div>
+                      <span className={`font-semibold w-6 text-right ${
+                        sub.score >= 7 ? 'text-emerald-600' : sub.score >= 4 ? 'text-amber-600' : 'text-red-600'
+                      }`}>{sub.score}</span>
+                    </div>
+                  </div>
+                ))}
+                {illustrationData && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Story Breakdown:</p>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-center">
+                      {illustrationData.breakdown.stories > 0 && (
+                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.stories}</div><div className="text-muted-foreground">Stories</div></div>
+                      )}
+                      {illustrationData.breakdown.analogies > 0 && (
+                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.analogies}</div><div className="text-muted-foreground">Analogies</div></div>
+                      )}
+                      {illustrationData.breakdown.humor > 0 && (
+                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.humor}</div><div className="text-muted-foreground">Humor</div></div>
+                      )}
+                      {illustrationData.breakdown.anecdotes > 0 && (
+                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.anecdotes}</div><div className="text-muted-foreground">Anecdotes</div></div>
+                      )}
+                      {illustrationData.breakdown.illustrations > 0 && (
+                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.illustrations}</div><div className="text-muted-foreground">Illustrations</div></div>
+                      )}
+                      {illustrationData.breakdown.audience_interactions > 0 && (
+                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.audience_interactions}</div><div className="text-muted-foreground">Interactions</div></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="stats-card p-4">
               <div className="flex items-start justify-between mb-2">
