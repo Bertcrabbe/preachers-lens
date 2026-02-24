@@ -1168,8 +1168,8 @@ const SermonViewer = () => {
     const avgWpm = getAverageSpeechRate();
     if (avgWpm === 0) return 5;
     const cv = stdDev / avgWpm;
-    // cv: 0.03 = monotone (1), 0.10 = average (5), 0.25 = excellent (10)
-    return scaleScore(cv, 0.03, 0.10, 0.25);
+    // Most sermons land around 0.12-0.18 CV. Spread: 0.08=1, 0.15=5, 0.30=10
+    return scaleScore(cv, 0.08, 0.15, 0.30);
   };
 
   const getSpeedDynamicsScore = (): number => {
@@ -1177,10 +1177,9 @@ const SermonViewer = () => {
     const paragraphs = groupIntoParagraphs(sentences);
     if (paragraphs.length <= 1) return 5;
     const transitions20 = countSpeedTransitions(20);
-    // Ratio of transitions to paragraphs
     const ratio = transitions20 / paragraphs.length;
-    // 0.05 = barely any (1), 0.20 = moderate (5), 0.50 = very dynamic (10)
-    return scaleScore(ratio, 0.05, 0.20, 0.50);
+    // Most sermons: 0.3-0.5 ratio. Spread: 0.10=1, 0.40=5, 0.75=10
+    return scaleScore(ratio, 0.10, 0.40, 0.75);
   };
 
   const getVolumeDynamicsScore = (): number => {
@@ -1206,9 +1205,8 @@ const SermonViewer = () => {
     if (mean === 0) return 1;
     const variance = paragraphVolumes.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / paragraphVolumes.length;
     const cv = Math.sqrt(variance) / mean;
-    
-    // cv: 0.02 = flat (1), 0.10 = moderate (5), 0.30 = very dynamic (10)
-    return scaleScore(cv, 0.02, 0.10, 0.30);
+    // Spread: 0.03=1, 0.12=5, 0.35=10
+    return scaleScore(cv, 0.03, 0.12, 0.35);
   };
 
   const getVocabularyDiversityScore = (): number => {
@@ -1223,8 +1221,8 @@ const SermonViewer = () => {
     if (allWords.length === 0) return 5;
     const uniqueWords = new Set(allWords).size;
     const guiraud = uniqueWords / Math.sqrt(allWords.length);
-    // guiraud: 4 = very repetitive (1), 7 = average (5), 12 = exceptional (10)
-    return scaleScore(guiraud, 4, 7, 12);
+    // Most sermons: Guiraud 8-12. Spread: 6=1, 10=5, 16=10
+    return scaleScore(guiraud, 6, 10, 16);
   };
 
   const getSentenceVarietyScore = (): number => {
@@ -1233,12 +1231,12 @@ const SermonViewer = () => {
     const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
     const stdDev = Math.sqrt(lengths.reduce((sum, l) => sum + Math.pow(l - avg, 2), 0) / lengths.length);
     const cv = stdDev / avg;
-    // cv: 0.2 = very uniform (1), 0.5 = moderate mix (5), 0.9 = great variety (10)
-    return scaleScore(cv, 0.2, 0.5, 0.9);
+    // Most sermons: CV 0.65-0.80. Spread: 0.45=1, 0.75=5, 1.1=10
+    return scaleScore(cv, 0.45, 0.75, 1.1);
   };
 
   const getIllustrationScore = (): number => {
-    if (!illustrationData) return 0; // 0 means not yet loaded
+    if (!illustrationData) return 0;
     return illustrationData.illustration_score;
   };
 
