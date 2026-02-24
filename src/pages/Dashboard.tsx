@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown } from "lucide-react";
+import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown } from "lucide-react";
+import logo from "@/assets/preacherslens-logo.png";
 import { UploadDialog } from "@/components/UploadDialog";
 import {
   Dialog,
@@ -684,9 +685,7 @@ const Dashboard = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Mic className="h-5 w-5 text-primary" />
-            </div>
+            <img src={logo} alt="The Preacher's Lens" className="h-10 w-10" />
             <div>
               <h1 className="text-xl font-bold">Preacher's Lens</h1>
               <p className="text-xs text-muted-foreground">Sermon Evaluation Agent</p>
