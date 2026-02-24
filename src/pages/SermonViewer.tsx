@@ -1208,14 +1208,10 @@ const SermonViewer = () => {
   };
 
   const getUseOfSilenceScore = (): number => {
-    if (sentences.length < 2 || !sermon?.duration_seconds) return 5;
-    const durationMinutes = sermon.duration_seconds / 60;
-    if (durationMinutes === 0) return 5;
+    if (sentences.length < 2) return 5;
     const pauseCount = countSilentPauses(3000);
-    // Pauses per minute — engaging speakers use ~0.5-2 strategic pauses/min
-    const pausesPerMin = pauseCount / durationMinutes;
-    // 0 pauses/min = 1 (no silence at all), 1/min = 5 (moderate), 2.5/min = 10 (excellent)
-    return scaleScore(pausesPerMin, 0, 1, 2.5);
+    // 0 pauses = 1 (no silence), 15 = 5 (moderate), 40 = 10 (excellent)
+    return scaleScore(pauseCount, 0, 15, 40);
   };
 
   const getSentenceVarietyScore = (): number => {
