@@ -1172,13 +1172,31 @@ const SermonViewer = () => {
 
   const getVolumeDynamicsScore = (): number => {
     if (sentences.length === 0 || waveformData.length === 0) return 5;
-    const counts = countVolumeChangeParagraphs();
-    const totalNonBaseline = (counts[-2] || 0) + (counts[-1] || 0) + (counts[1] || 0) + (counts[2] || 0);
+    
     const paragraphs = groupIntoParagraphs(sentences);
-    if (paragraphs.length === 0) return 5;
-    // ~30% paragraphs with volume changes = good dynamics
-    const ratio = totalNonBaseline / paragraphs.length;
-    return Math.min(10, Math.max(1, Math.round((ratio / 0.3) * 10)));
+    if (paragraphs.length < 2) return 5;
+    
+    const baselineAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
+    if (baselineAverage === 0) return 1;
+    
+    const paragraphVolumes = paragraphs.map(paragraph => {
+      const first = paragraph[0];
+      const last = paragraph[paragraph.length - 1];
+      if (!first || !last || !sermon?.duration_seconds) return baselineAverage;
+      const startIdx = Math.floor((first.start_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+      const endIdx = Math.ceil((last.end_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+      const slice = waveformData.slice(Math.max(0, startIdx), Math.min(waveformData.length, endIdx));
+      return slice.length > 0 ? slice.reduce((a, b) => a + b, 0) / slice.length : baselineAverage;
+    });
+    
+    const mean = paragraphVolumes.reduce((a, b) => a + b, 0) / paragraphVolumes.length;
+    if (mean === 0) return 1;
+    const variance = paragraphVolumes.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / paragraphVolumes.length;
+    const cv = Math.sqrt(variance) / mean;
+    
+    // CV of 0.05 = minimal variation (score ~2), CV of 0.25+ = very dynamic (score 10)
+    const score = Math.round(1 + (cv / 0.25) * 9);
+    return Math.min(10, Math.max(1, score));
   };
 
   const getVocabularyDiversityScore = (): number => {
@@ -1321,18 +1339,18 @@ const SermonViewer = () => {
       const volumeRatio = paragraphAverage / baselineAverage;
       
       // Categorize based on how much louder/quieter relative to baseline
-      // +2: 2x or more louder
-      // +1: 1.5x to 2x louder  
-      // 0: 0.67x to 1.5x (baseline range)
-      // -1: 0.5x to 0.67x quieter
-      // -2: 0.5x or less quieter
-      if (volumeRatio >= 2.0) {
+      // +2: 30%+ louder
+      // +1: 15-30% louder  
+      // 0: within 15% of baseline
+      // -1: 15-30% quieter
+      // -2: 30%+ quieter
+      if (volumeRatio >= 1.3) {
         counts[2]++;
-      } else if (volumeRatio >= 1.5) {
+      } else if (volumeRatio >= 1.15) {
         counts[1]++;
-      } else if (volumeRatio <= 0.5) {
+      } else if (volumeRatio <= 0.7) {
         counts[-2]++;
-      } else if (volumeRatio <= 0.67) {
+      } else if (volumeRatio <= 0.85) {
         counts[-1]++;
       } else {
         counts[0]++;
@@ -1361,10 +1379,10 @@ const SermonViewer = () => {
     
     const volumeRatio = paragraphAverage / baselineAverage;
     
-    if (volumeRatio >= 2.0) return 2;
-    if (volumeRatio >= 1.5) return 1;
-    if (volumeRatio <= 0.5) return -2;
-    if (volumeRatio <= 0.67) return -1;
+    if (volumeRatio >= 1.3) return 2;
+    if (volumeRatio >= 1.15) return 1;
+    if (volumeRatio <= 0.7) return -2;
+    if (volumeRatio <= 0.85) return -1;
     return 0;
   };
 
