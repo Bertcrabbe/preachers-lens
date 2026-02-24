@@ -1162,24 +1162,22 @@ const SermonViewer = () => {
     return Math.round(Math.min(10, Math.max(1, score)));
   };
 
-  const getPaceVarietyScore = (): number => {
+  const getPaceDynamicsScore = (): number => {
     if (sentences.length === 0) return 5;
     const { stdDev } = getSpeedVariance();
     const avgWpm = getAverageSpeechRate();
     if (avgWpm === 0) return 5;
     const cv = stdDev / avgWpm;
-    // Most sermons land around 0.12-0.18 CV. Spread: 0.08=1, 0.15=5, 0.30=10
-    return scaleScore(cv, 0.08, 0.15, 0.30);
-  };
+    const cvScore = scaleScore(cv, 0.08, 0.15, 0.30);
 
-  const getSpeedDynamicsScore = (): number => {
-    if (sentences.length === 0) return 5;
     const paragraphs = groupIntoParagraphs(sentences);
-    if (paragraphs.length <= 1) return 5;
+    if (paragraphs.length <= 1) return cvScore;
     const transitions20 = countSpeedTransitions(20);
     const ratio = transitions20 / paragraphs.length;
-    // Most sermons: 0.3-0.5 ratio. Spread: 0.10=1, 0.40=5, 0.75=10
-    return scaleScore(ratio, 0.10, 0.40, 0.75);
+    const transitionScore = scaleScore(ratio, 0.10, 0.40, 0.75);
+
+    // Blend: 50% spread + 50% transitions
+    return Math.round((cvScore + transitionScore) / 2);
   };
 
   const getVolumeDynamicsScore = (): number => {
@@ -1241,16 +1239,14 @@ const SermonViewer = () => {
   };
 
   const getEngagementScore = (): { total: number; subscores: { label: string; score: number; icon: string }[] } => {
-    const paceVariety = getPaceVarietyScore();
-    const speedDynamics = getSpeedDynamicsScore();
+    const paceDynamics = getPaceDynamicsScore();
     const volumeDynamics = getVolumeDynamicsScore();
     const vocabDiversity = getVocabularyDiversityScore();
     const sentenceVariety = getSentenceVarietyScore();
     const illustrationScore = getIllustrationScore();
 
     const subscores = [
-      { label: "Pace Variety", score: paceVariety, icon: "🎯" },
-      { label: "Speed Changes", score: speedDynamics, icon: "⚡" },
+      { label: "Pace Dynamics", score: paceDynamics, icon: "🎯" },
       { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊" },
       { label: "Vocabulary Diversity", score: vocabDiversity, icon: "📚" },
       { label: "Sentence Variety", score: sentenceVariety, icon: "✏️" },
