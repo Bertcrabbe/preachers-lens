@@ -689,7 +689,7 @@ const Dashboard = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold">Preacher's Lens</h1>
-              <p className="text-xs text-muted-foreground">Sermon Transcription Tool</p>
+              <p className="text-xs text-muted-foreground">Sermon Evaluation Agent</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
