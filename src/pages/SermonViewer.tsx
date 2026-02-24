@@ -1074,51 +1074,61 @@ const SermonViewer = () => {
     setVisibleInsiderTerms(newSet);
   };
 
-  const getRepeatedWords = (minCount: number = 10): { word: string; count: number }[] => {
+  const getRepeatedPhrases = (minCount: number = 3): { word: string; count: number }[] => {
     const stopWords = new Set([
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
       'by', 'from', 'is', 'it', 'its', 'are', 'was', 'were', 'be', 'been', 'being',
       'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-      'may', 'might', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'i', 'me', 'my',
+      'may', 'might', 'shall', 'can', 'need', 'i', 'me', 'my',
       'we', 'us', 'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'they', 'them',
-      'their', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am',
-      'not', 'no', 'nor', 'as', 'if', 'then', 'than', 'too', 'very', 'just', 'about',
-      'above', 'after', 'again', 'all', 'also', 'any', 'because', 'before', 'between',
-      'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'into', 'over',
-      'own', 'same', 'so', 'here', 'there', 'when', 'where', 'why', 'how', 'out', 'up',
-      'down', 'off', 'only', 'get', 'got', 'go', 'going', 'gone', 'come', 'came',
-      'make', 'made', 'take', 'took', 'give', 'gave', 'say', 'said', 'tell', 'told',
-      'know', 'knew', 'think', 'thought', 'see', 'saw', 'want', 'let', 'like',
-      'even', 'well', 'back', 'still', 'way', 'thing', 'things', 'much', 'many',
-      'right', 'put', 'through', 'don', 'doesn', 'didn', 'won', 'wouldn', 'couldn',
-      'shouldn', 'aren', 'isn', 'wasn', 'weren', 'haven', 'hasn', 'hadn', 'll', 've',
-      're', 'okay', 'oh', 'yeah', 'yes', 'hey', 'gonna', 'gotta', 'wanna',
-      'really', 'actually', 'basically', 'literally', 'already',
-      'around', 'every', 'never', 'now', 'always', 'away', 'something', 'someone',
-      'everyone', 'everything', 'anything', 'nothing', 'one', 'two', 'first',
-      'new', 'old', 'big', 'long', 'great', 'little', 'good', 'bad',
-      'different', 'next', 'last', 'while', 'since', 'along', 'until', 'during',
-      'without', 'though', 'another', 'look', 'looked',
-      'part', 'else', 'yet', 'ever', 'keep', 'kept', 'done', 'set',
-      't', 's', 'd', 'm',
+      'their', 'what', 'which', 'who', 'this', 'that', 'these', 'those', 'am',
+      'not', 'no', 'as', 'if', 'then', 'than', 'so', 'just',
+      't', 's', 'd', 'm', 'll', 've', 're',
     ]);
 
-    const wordCounts: Record<string, number> = {};
-
+    // Collect all words from the transcript
+    const allWords: string[] = [];
     sentences.forEach(sentence => {
-      const words = sentence.sentence_text.toLowerCase().replace(/[^a-z'\s-]/g, '').split(/\s+/);
-      words.forEach(word => {
-        const cleaned = word.replace(/^'+|'+$/g, '');
-        if (cleaned.length > 2 && !stopWords.has(cleaned)) {
-          wordCounts[cleaned] = (wordCounts[cleaned] || 0) + 1;
-        }
+      const words = sentence.sentence_text.toLowerCase().replace(/[^a-z'\s-]/g, '').split(/\s+/).filter(w => w.length > 0);
+      words.forEach(w => {
+        const cleaned = w.replace(/^'+|'+$/g, '');
+        if (cleaned.length > 1) allWords.push(cleaned);
       });
     });
 
-    return Object.entries(wordCounts)
+    const phraseCounts: Record<string, number> = {};
+
+    // Extract n-grams of size 2, 3, and 4
+    for (let n = 2; n <= 4; n++) {
+      for (let i = 0; i <= allWords.length - n; i++) {
+        const phrase = allWords.slice(i, i + n);
+        // Skip phrases that are entirely stop words
+        const meaningfulWords = phrase.filter(w => !stopWords.has(w));
+        if (meaningfulWords.length < 1) continue;
+        // Skip if phrase starts AND ends with a stop word for 2-grams
+        if (n === 2 && stopWords.has(phrase[0]) && stopWords.has(phrase[1])) continue;
+        const key = phrase.join(' ');
+        phraseCounts[key] = (phraseCounts[key] || 0) + 1;
+      }
+    }
+
+    // Remove phrases that are substrings of higher-count longer phrases
+    const entries = Object.entries(phraseCounts)
       .filter(([, count]) => count >= minCount)
-      .sort((a, b) => b[1] - a[1])
-      .map(([word, count]) => ({ word, count }));
+      .sort((a, b) => b[1] - a[1]);
+
+    const filtered: [string, number][] = [];
+    for (const [phrase, count] of entries) {
+      // Check if this phrase is a subset of an already-accepted longer phrase with equal or higher count
+      const isRedundant = filtered.some(([longer, longerCount]) => 
+        longer.length > phrase.length && longer.includes(phrase) && longerCount >= count
+      );
+      if (!isRedundant) {
+        filtered.push([phrase, count]);
+      }
+    }
+
+    return filtered.map(([word, count]) => ({ word, count }));
   };
 
   const countSlowSpeechParagraphs = (threshold: number = 0.75): number => {
@@ -3702,7 +3712,7 @@ const SermonViewer = () => {
 
             <Card className="stats-card p-4">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-base font-bold text-teal-700">Repeated Words</h3>
+                <h3 className="text-base font-bold text-teal-700">Repeated Phrases</h3>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2">
@@ -3710,12 +3720,12 @@ const SermonViewer = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto bg-background border shadow-lg z-50">
-                    {getRepeatedWords(5).length === 0 ? (
+                    {getRepeatedPhrases(3).length === 0 ? (
                       <DropdownMenuItem disabled className="text-muted-foreground">
-                        No repeated words found
+                        No repeated phrases found
                       </DropdownMenuItem>
                     ) : (
-                      getRepeatedWords(5).map((item) => (
+                      getRepeatedPhrases(3).map((item) => (
                         <DropdownMenuItem 
                           key={item.word}
                           className="flex justify-between cursor-pointer"
@@ -3730,18 +3740,18 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-4">
                 <div className="text-3xl font-bold text-teal-600">
-                  <AnimatedCounter value={getRepeatedWords(12).length} />
+                  <AnimatedCounter value={getRepeatedPhrases(3).length} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Words Used 12+ Times
+                  Phrases Used 3+ Times
                 </div>
               </div>
-              {getRepeatedWords(12).length > 0 && (
+              {getRepeatedPhrases(3).length > 0 && (
                 <div className="space-y-1 max-h-40 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                   <div className="text-xs text-muted-foreground mb-2">
-                    <p className="font-medium">Most Repeated Words:</p>
+                    <p className="font-medium">Most Repeated Phrases:</p>
                   </div>
-                  {getRepeatedWords(12).slice(0, 10).map((item) => (
+                  {getRepeatedPhrases(3).slice(0, 10).map((item) => (
                     <div key={item.word} className="flex items-center justify-between text-sm">
                       <span className="capitalize">{item.word}</span>
                       <span className="font-medium text-teal-600">{item.count}×</span>
