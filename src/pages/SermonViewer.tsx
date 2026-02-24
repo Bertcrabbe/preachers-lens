@@ -211,6 +211,13 @@ const SermonViewer = () => {
     }
   }, [id]);
 
+  // Auto-run illustration detection when sentences are loaded
+  useEffect(() => {
+    if (sentences.length > 0 && !illustrationData && !loadingIllustrations) {
+      fetchIllustrations();
+    }
+  }, [sentences]);
+
   useEffect(() => {
     if (audioUrl) {
       generateWaveform(audioUrl);
@@ -3248,17 +3255,11 @@ const SermonViewer = () => {
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-base font-bold text-amber-700">Engagement Score</h3>
               <div className="flex gap-2">
-                {!illustrationData && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-xs px-2"
-                    onClick={fetchIllustrations}
-                    disabled={loadingIllustrations}
-                  >
-                    {loadingIllustrations ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                    {loadingIllustrations ? "Analyzing..." : "Detect Stories"}
-                  </Button>
+                {loadingIllustrations && (
+                  <span className="flex items-center text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    Analyzing stories...
+                  </span>
                 )}
                 <Button
                   variant="outline"
