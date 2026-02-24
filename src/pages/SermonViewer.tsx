@@ -1207,20 +1207,15 @@ const SermonViewer = () => {
     return scaleScore(cv, 0.03, 0.12, 0.35);
   };
 
-  const getVocabularyDiversityScore = (): number => {
-    if (sentences.length === 0) return 5;
-    const allWords: string[] = [];
-    sentences.forEach(s => {
-      s.sentence_text.toLowerCase().replace(/[^a-z'\s-]/g, '').split(/\s+/).forEach(w => {
-        const cleaned = w.replace(/^'+|'+$/g, '');
-        if (cleaned.length > 1) allWords.push(cleaned);
-      });
-    });
-    if (allWords.length === 0) return 5;
-    const uniqueWords = new Set(allWords).size;
-    const guiraud = uniqueWords / Math.sqrt(allWords.length);
-    // Most sermons: Guiraud 8-12. Spread: 6=1, 10=5, 16=10
-    return scaleScore(guiraud, 6, 10, 16);
+  const getUseOfSilenceScore = (): number => {
+    if (sentences.length < 2 || !sermon?.duration_seconds) return 5;
+    const durationMinutes = sermon.duration_seconds / 60;
+    if (durationMinutes === 0) return 5;
+    const pauseCount = countSilentPauses(3000);
+    // Pauses per minute — engaging speakers use ~0.5-2 strategic pauses/min
+    const pausesPerMin = pauseCount / durationMinutes;
+    // 0 pauses/min = 1 (no silence at all), 1/min = 5 (moderate), 2.5/min = 10 (excellent)
+    return scaleScore(pausesPerMin, 0, 1, 2.5);
   };
 
   const getSentenceVarietyScore = (): number => {
@@ -1229,7 +1224,6 @@ const SermonViewer = () => {
     const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
     const stdDev = Math.sqrt(lengths.reduce((sum, l) => sum + Math.pow(l - avg, 2), 0) / lengths.length);
     const cv = stdDev / avg;
-    // Most sermons: CV 0.65-0.80. Spread: 0.45=1, 0.75=5, 1.1=10
     return scaleScore(cv, 0.45, 0.75, 1.1);
   };
 
@@ -1241,13 +1235,13 @@ const SermonViewer = () => {
   const getEngagementScore = (): { total: number; subscores: { label: string; score: number; icon: string }[] } => {
     const paceDynamics = getPaceDynamicsScore();
     const volumeDynamics = getVolumeDynamicsScore();
-    const vocabDiversity = getVocabularyDiversityScore();
+    const useOfSilence = getUseOfSilenceScore();
     const illustrationScore = getIllustrationScore();
 
     const subscores = [
       { label: "Pace Dynamics", score: paceDynamics, icon: "🎯" },
       { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊" },
-      { label: "Vocabulary Diversity", score: vocabDiversity, icon: "📚" },
+      { label: "Use of Silence", score: useOfSilence, icon: "🤫" },
       { label: "Illustrations & Stories", score: illustrationScore, icon: "🎭" },
     ];
 
