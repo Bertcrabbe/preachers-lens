@@ -58,14 +58,14 @@ serve(async (req) => {
             content: `You are an expert at analyzing sermons for engagement. Your job is to identify illustrations, stories, humor, analogies, and personal anecdotes in the transcript. These are the elements that make a sermon engaging and relatable.
 
 Look for:
-- Personal stories or anecdotes ("I remember when...", "Last week I...")
+- Personal stories, anecdotes, or personal narratives ("I remember when...", "Last week I...")
 - Illustrations or examples that explain abstract concepts
 - Humor, jokes, or lighthearted moments
 - Analogies or metaphors that connect ideas
 - References to pop culture, current events, or everyday life
 - Audience interaction moments ("raise your hand", "turn to your neighbor")
 
-For each found element, classify it as: story, analogy, humor, anecdote, illustration, or audience_interaction.`
+For each found element, classify it as: story, analogy, humor, illustration, or audience_interaction. Note: personal anecdotes should be classified as "story".`
           },
           {
             role: "user",
@@ -88,7 +88,7 @@ ${transcript}`
                     items: {
                       type: "object",
                       properties: {
-                        type: { type: "string", enum: ["story", "analogy", "humor", "anecdote", "illustration", "audience_interaction"], description: "Type of engaging element" },
+                        type: { type: "string", enum: ["story", "analogy", "humor", "illustration", "audience_interaction"], description: "Type of engaging element" },
                         summary: { type: "string", description: "Brief summary of the element (1-2 sentences)" },
                         excerpt: { type: "string", description: "A short excerpt from the transcript showing this element" },
                       },
@@ -103,11 +103,10 @@ ${transcript}`
                       stories: { type: "number" },
                       analogies: { type: "number" },
                       humor: { type: "number" },
-                      anecdotes: { type: "number" },
                       illustrations: { type: "number" },
                       audience_interactions: { type: "number" },
                     },
-                    required: ["stories", "analogies", "humor", "anecdotes", "illustrations", "audience_interactions"]
+                    required: ["stories", "analogies", "humor", "illustrations", "audience_interactions"]
                   }
                 },
                 required: ["elements", "total_count", "illustration_score", "breakdown"]
