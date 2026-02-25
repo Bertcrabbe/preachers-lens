@@ -1386,38 +1386,80 @@ const SermonViewer = () => {
     return paragraphs.filter(p => getParagraphVolumeLevel(p) !== 0);
   };
 
-  // Build a Set of scripture sentence indices for O(1) lookup
+  // Build an expanded Set of scripture sentence indices that fills gaps.
+  // If sentences 17,18,20,21 are scripture, sentence 19 (between them) is too.
   const scriptureSentenceIndices = useMemo(() => {
-    if (!scriptureRefs?.scripture_sentence_indices) return new Set<number>();
-    return new Set(scriptureRefs.scripture_sentence_indices);
+    if (!scriptureRefs?.scripture_sentence_indices || scriptureRefs.scripture_sentence_indices.length === 0) {
+      return new Set<number>();
+    }
+    const raw = [...scriptureRefs.scripture_sentence_indices].sort((a, b) => a - b);
+    const expanded = new Set(raw);
+    
+    // Fill gaps of up to 3 sentences between scripture indices
+    for (let i = 0; i < raw.length - 1; i++) {
+      const gap = raw[i + 1] - raw[i];
+      if (gap <= 4) {
+        for (let j = raw[i] + 1; j < raw[i + 1]; j++) {
+          expanded.add(j);
+        }
+      }
+    }
+    return expanded;
   }, [scriptureRefs]);
 
+  // Build a set of normalized scripture sentence texts for cross-reference matching
+  // This catches re-quotes of the same verse later in the sermon
+  const scriptureTextFingerprints = useMemo(() => {
+    if (scriptureSentenceIndices.size === 0 || sentences.length === 0) return new Set<string>();
+    const fingerprints = new Set<string>();
+    sentences.forEach((s, idx) => {
+      if (scriptureSentenceIndices.has(idx)) {
+        // Create a normalized fingerprint: lowercase, no punctuation, trimmed
+        const fp = s.sentence_text.toLowerCase().replace(/[?.,!;:'"]/g, '').trim();
+        if (fp.length > 20) { // Only meaningful sentences
+          fingerprints.add(fp);
+        }
+      }
+    });
+    return fingerprints;
+  }, [scriptureSentenceIndices, sentences]);
+
   // Check if a sentence is part of a scripture quotation
-  // Uses index-based matching (from AI) with text fallback
   const isSentenceInScripture = (sentenceText: string, sentenceIndex?: number): boolean => {
     if (!scriptureRefs) return false;
     
-    // Primary: index-based matching (most reliable)
+    // 1. Index-based matching with gap-filling
     if (sentenceIndex !== undefined && scriptureSentenceIndices.size > 0) {
-      return scriptureSentenceIndices.has(sentenceIndex);
+      if (scriptureSentenceIndices.has(sentenceIndex)) return true;
     }
     
-    // Fallback: text-based matching for backward compatibility
-    const text = sentenceText.toLowerCase().trim();
-    const cleanText = text.replace(/[?.,!;:'"]/g, '').trim();
-    return scriptureRefs.references.some(ref => {
-      const context = ref.context.toLowerCase();
-      if (text.includes(ref.reference.toLowerCase())) return true;
-      if (cleanText.length > 15 && context.includes(cleanText)) return true;
-      const words = cleanText.split(/\s+/);
-      if (words.length >= 5) {
-        for (let i = 0; i <= words.length - 5; i++) {
-          const chunk = words.slice(i, i + 5).join(' ');
-          if (context.includes(chunk)) return true;
+    // 2. Cross-reference: check if this sentence's text closely matches any known scripture sentence
+    // This catches re-quotes of the same verse appearing elsewhere in the sermon
+    if (scriptureTextFingerprints.size > 0) {
+      const fp = sentenceText.toLowerCase().replace(/[?.,!;:'"]/g, '').trim();
+      if (fp.length > 20) {
+        // Exact fingerprint match
+        if (scriptureTextFingerprints.has(fp)) return true;
+        // Check if this sentence is substantially contained in or contains a scripture fingerprint
+        for (const sfp of scriptureTextFingerprints) {
+          if (fp.includes(sfp) || sfp.includes(fp)) return true;
+          // Check significant word overlap (>70% of words match)
+          const fpWords = fp.split(/\s+/);
+          const sfpWords = sfp.split(/\s+/);
+          if (fpWords.length >= 5 && sfpWords.length >= 5) {
+            const sfpSet = new Set(sfpWords);
+            const overlap = fpWords.filter(w => sfpSet.has(w)).length;
+            if (overlap / Math.min(fpWords.length, sfpWords.length) > 0.7) return true;
+          }
         }
       }
-      return false;
-    });
+    }
+    
+    // 3. Direct reference name match
+    const text = sentenceText.toLowerCase().trim();
+    if (scriptureRefs.references.some(ref => text.includes(ref.reference.toLowerCase()))) return true;
+    
+    return false;
   };
 
   const paragraphContainsScripture = (paragraph: Sentence[]): boolean => {
