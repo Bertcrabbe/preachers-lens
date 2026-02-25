@@ -58,6 +58,7 @@ const Dashboard = () => {
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [communicatorWpm, setCommunicatorWpm] = useState<Record<string, number>>({});
   const [sermonWpm, setSermonWpm] = useState<Record<string, number>>({});
+  const [sermonWords, setSermonWords] = useState<Record<string, number>>({});
   const [communicators, setCommunicators] = useState<Communicator[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -162,12 +163,14 @@ const Dashboard = () => {
   const fetchCommunicatorWpm = async (sermonsData: Sermon[], communicatorsData: Communicator[]) => {
     const wpmMap: Record<string, number> = {};
     const perSermonWpm: Record<string, number> = {};
+    const perSermonWords: Record<string, number> = {};
 
     // Fetch all sentences for completed sermons in one query
     const completedIds = sermonsData.filter(s => s.transcription_status === 'completed').map(s => s.id);
     if (completedIds.length === 0) {
       setCommunicatorWpm(wpmMap);
       setSermonWpm(perSermonWpm);
+      setSermonWords(perSermonWords);
       return;
     }
 
@@ -196,6 +199,7 @@ const Dashboard = () => {
     if (allSentences.length === 0) {
       setCommunicatorWpm(wpmMap);
       setSermonWpm(perSermonWpm);
+      setSermonWords(perSermonWords);
       return;
     }
 
@@ -217,6 +221,7 @@ const Dashboard = () => {
           totalDurationMs += dur;
         }
       }
+      perSermonWords[sermonId] = totalWords;
       if (totalDurationMs > 0) {
         perSermonWpm[sermonId] = Math.round((totalWords / (totalDurationMs / 1000)) * 60);
       }
@@ -247,6 +252,7 @@ const Dashboard = () => {
 
     setCommunicatorWpm(wpmMap);
     setSermonWpm(perSermonWpm);
+    setSermonWords(perSermonWords);
   };
 
   const handleLogout = async () => {
@@ -509,11 +515,16 @@ const Dashboard = () => {
             {getStatusBadge(sermon.transcription_status)}
           </div>
           <CardDescription>
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-3 w-3" />
-              {formatDuration(sermon.duration_seconds)}
+            <div className="flex items-center gap-2 text-sm flex-wrap">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatDuration(sermon.duration_seconds)}
+              </span>
               {sermonWpm[sermon.id] && (
                 <span className="text-primary font-medium">· {sermonWpm[sermon.id]} WPM</span>
+              )}
+              {sermonWords[sermon.id] && (
+                <span className="text-muted-foreground">· {sermonWords[sermon.id].toLocaleString()} words</span>
               )}
             </div>
           </CardDescription>
