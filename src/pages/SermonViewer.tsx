@@ -3958,7 +3958,7 @@ const SermonViewer = () => {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                        {ref.context.substring(0, 100)}...
+                        {ref.context ? `${ref.context.substring(0, 100)}...` : ''}
                       </div>
                     </div>
                   ))}
