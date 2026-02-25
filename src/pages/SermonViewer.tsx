@@ -4649,7 +4649,7 @@ const SermonViewer = () => {
                 const hasAudioComment = comments.some(
                   c => c.audio_url && c.start_time_ms >= firstSentence.start_time_ms && c.start_time_ms < rangeEnd
                 );
-                const hasPeak = paragraphHasPeak(paragraph);
+                const hasPeak = showVolumeChanges && paragraphHasPeak(paragraph);
                 const isFastSpeech = hasFastSpeechRate(paragraph, fastSpeechThreshold);
                 
                 // Determine active analytics highlights
