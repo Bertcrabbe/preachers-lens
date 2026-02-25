@@ -155,24 +155,28 @@ const CommunicatorTrends = () => {
   const handleRefreshAll = async () => {
     if (!id || metrics.length === 0) return;
     setRefreshing(true);
-    setRefreshProgress("Analyzing sermons...");
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const sermonIds = metrics.map(m => m.id);
-      setRefreshProgress(`Analyzing ${sermonIds.length} sermons...`);
+      let okCount = 0;
+      for (let i = 0; i < metrics.length; i++) {
+        const sermon = metrics[i];
+        setRefreshProgress(`Analyzing ${i + 1} of ${metrics.length}: "${sermon.title}"`);
 
-      const { data, error } = await supabase.functions.invoke("refresh-sermon-metrics", {
-        body: { sermonIds, userId: user.id },
-      });
+        try {
+          const { data, error } = await supabase.functions.invoke("refresh-sermon-metrics", {
+            body: { sermonIds: [sermon.id], userId: user.id },
+          });
+          if (!error && data?.results?.[0]?.status === "ok") okCount++;
+        } catch (e) {
+          console.error(`Failed for ${sermon.id}:`, e);
+        }
+      }
 
-      if (error) throw error;
-
-      const okCount = data?.results?.filter((r: any) => r.status === "ok").length ?? 0;
       toast({
         title: "Metrics refreshed",
-        description: `Updated ${okCount} of ${sermonIds.length} sermons`,
+        description: `Updated ${okCount} of ${metrics.length} sermons`,
       });
 
       await fetchTrends();
