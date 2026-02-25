@@ -4753,6 +4753,21 @@ const SermonViewer = () => {
                   };
                 } else if (hasPeak) {
                   highlightStyle = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
+                } else if (showQuestions && paragraph.some(s => {
+                  if (!s.sentence_text.trim().endsWith('?')) return false;
+                  if (scriptureRefs) {
+                    return !scriptureRefs.references.some(ref => {
+                      const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
+                      return s.sentence_text.includes(contextWords) || s.sentence_text.includes(ref.reference);
+                    });
+                  }
+                  return true;
+                })) {
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#f59e0b40',
+                    borderColor: '#f59e0b'
+                  };
                 }
                 
                 return (
