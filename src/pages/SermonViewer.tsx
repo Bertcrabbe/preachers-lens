@@ -3994,7 +3994,18 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-amber-600">
-                  <AnimatedCounter value={sentences.filter(s => s.sentence_text.trim().endsWith('?')).length} />
+                  <AnimatedCounter value={sentences.filter(s => {
+                    if (!s.sentence_text.trim().endsWith('?')) return false;
+                    // Exclude questions within scripture references
+                    if (scriptureRefs) {
+                      const isScripture = scriptureRefs.references.some(ref => {
+                        const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
+                        return s.sentence_text.includes(contextWords) || s.sentence_text.includes(ref.reference);
+                      });
+                      if (isScripture) return false;
+                    }
+                    return true;
+                  }).length} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   to the congregation
