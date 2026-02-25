@@ -3988,24 +3988,6 @@ const SermonViewer = () => {
               )}
             </Card>
 
-            <Card className="stats-card p-4">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-base font-bold text-violet-700">My Comments</h3>
-              </div>
-              <div className="flex flex-col items-center text-center">
-                <div className="text-3xl font-bold text-violet-600">
-                  <AnimatedCounter value={comments.length} />
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  Comments Added
-                </div>
-              </div>
-              {comments.length > 0 && (
-                <div className="mt-3 text-xs text-muted-foreground text-center">
-                  {comments.filter(c => c.audio_url).length} with audio
-                </div>
-              )}
-            </Card>
           </div>
 
           {/* WPM Timeline Chart */}
