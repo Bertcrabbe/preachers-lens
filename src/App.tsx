@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import SermonViewer from "./pages/SermonViewer";
 import Rules from "./pages/Rules";
+import CommunicatorTrends from "./pages/CommunicatorTrends";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sermon/:id" element={<SermonViewer />} />
           <Route path="/rules" element={<Rules />} />
+          <Route path="/communicator/:id/trends" element={<CommunicatorTrends />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
