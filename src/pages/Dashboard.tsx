@@ -171,12 +171,29 @@ const Dashboard = () => {
       return;
     }
 
-    const { data: allSentences } = await supabase
-      .from("sermon_sentences")
-      .select("sentence_text, start_time_ms, end_time_ms, sermon_id")
-      .in("sermon_id", completedIds);
+    // Fetch in batches to avoid the 1000-row limit
+    let allSentences: { sentence_text: string; start_time_ms: number; end_time_ms: number; sermon_id: string }[] = [];
+    
+    // Batch sermon IDs in groups of 10 to keep row counts manageable
+    const batchSize = 10;
+    for (let i = 0; i < completedIds.length; i += batchSize) {
+      const batch = completedIds.slice(i, i + batchSize);
+      let offset = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data } = await supabase
+          .from("sermon_sentences")
+          .select("sentence_text, start_time_ms, end_time_ms, sermon_id")
+          .in("sermon_id", batch)
+          .range(offset, offset + pageSize - 1);
+        if (!data || data.length === 0) break;
+        allSentences = allSentences.concat(data);
+        if (data.length < pageSize) break;
+        offset += pageSize;
+      }
+    }
 
-    if (!allSentences || allSentences.length === 0) {
+    if (allSentences.length === 0) {
       setCommunicatorWpm(wpmMap);
       setSermonWpm(perSermonWpm);
       return;
