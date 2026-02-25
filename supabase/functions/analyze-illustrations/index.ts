@@ -59,13 +59,12 @@ serve(async (req) => {
 
 Look for:
 - Personal stories, anecdotes, or personal narratives ("I remember when...", "Last week I...")
-- Illustrations or examples that explain abstract concepts
+- Illustrations, analogies, metaphors, or examples that explain abstract concepts
 - Humor, jokes, or lighthearted moments
-- Analogies or metaphors that connect ideas
 - References to pop culture, current events, or everyday life
 - Audience interaction moments ("raise your hand", "turn to your neighbor")
 
-For each found element, classify it as: story, analogy, humor, illustration, or audience_interaction. Note: personal anecdotes should be classified as "story".`
+For each found element, classify it as: story, illustration, humor, or audience_interaction. Note: personal anecdotes should be classified as "story". Analogies and metaphors should be classified as "illustration".`
           },
           {
             role: "user",
@@ -88,7 +87,7 @@ ${transcript}`
                     items: {
                       type: "object",
                       properties: {
-                        type: { type: "string", enum: ["story", "analogy", "humor", "illustration", "audience_interaction"], description: "Type of engaging element" },
+                        type: { type: "string", enum: ["story", "humor", "illustration", "audience_interaction"], description: "Type of engaging element" },
                         summary: { type: "string", description: "Brief summary of the element (1-2 sentences)" },
                         excerpt: { type: "string", description: "A short excerpt from the transcript showing this element" },
                       },
@@ -101,12 +100,11 @@ ${transcript}`
                     type: "object",
                     properties: {
                       stories: { type: "number" },
-                      analogies: { type: "number" },
                       humor: { type: "number" },
                       illustrations: { type: "number" },
                       audience_interactions: { type: "number" },
                     },
-                    required: ["stories", "analogies", "humor", "illustrations", "audience_interactions"]
+                    required: ["stories", "humor", "illustrations", "audience_interactions"]
                   }
                 },
                 required: ["elements", "total_count", "illustration_score", "breakdown"]

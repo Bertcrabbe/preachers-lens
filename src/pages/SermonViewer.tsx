@@ -199,7 +199,7 @@ const SermonViewer = () => {
     elements: Array<{ type: string; summary: string; excerpt: string }>;
     total_count: number;
     illustration_score: number;
-    breakdown: { stories: number; analogies: number; humor: number; illustrations: number; audience_interactions: number };
+    breakdown: { stories: number; humor: number; illustrations: number; audience_interactions: number };
   } | null>(null);
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
@@ -3437,9 +3437,6 @@ const SermonViewer = () => {
                     <div className="grid grid-cols-3 gap-2 text-xs text-center">
                       {illustrationData.breakdown.stories > 0 && (
                         <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.stories}</div><div className="text-muted-foreground">Stories</div></div>
-                      )}
-                      {illustrationData.breakdown.analogies > 0 && (
-                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.analogies}</div><div className="text-muted-foreground">Analogies</div></div>
                       )}
                       {illustrationData.breakdown.humor > 0 && (
                         <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.humor}</div><div className="text-muted-foreground">Humor</div></div>
