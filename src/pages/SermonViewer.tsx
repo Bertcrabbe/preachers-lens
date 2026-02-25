@@ -166,6 +166,8 @@ const SermonViewer = () => {
   const [loadingConfusing, setLoadingConfusing] = useState(false);
   const [showConfusingPhrases, setShowConfusingPhrases] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
+  const [congregationQuestionIndices, setCongregationQuestionIndices] = useState<Set<number> | null>(null);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [previewWithComments, setPreviewWithComments] = useState(true);
   const [playingCommentId, setPlayingCommentId] = useState<string | null>(null);
   const commentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -210,6 +212,7 @@ const SermonViewer = () => {
       fetchComments();
       fetchRules();
       fetchScriptureReferences();
+      fetchCongregationQuestions();
     }
   }, [id]);
 
@@ -1674,6 +1677,23 @@ const SermonViewer = () => {
     }
   };
 
+  const fetchCongregationQuestions = async () => {
+    setLoadingQuestions(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("classify-questions", {
+        body: { sermonId: id },
+      });
+      if (error) throw error;
+      if (data?.congregation_indices) {
+        setCongregationQuestionIndices(new Set(data.congregation_indices));
+      }
+    } catch (error: any) {
+      console.error("Failed to classify questions:", error);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
   const fetchConfusingPhrases = async () => {
     setLoadingConfusing(true);
     try {
@@ -2845,7 +2865,6 @@ const SermonViewer = () => {
               </div>
 
 
-
               {comments.filter(c => c.audio_url).length > 0 && (
                 <div className="flex items-center gap-2 border-l pl-4">
                   <Switch
@@ -3231,8 +3250,8 @@ const SermonViewer = () => {
                         {/* Question overlays */}
                         {showQuestions && sentences.map((sentence, idx) => {
                           if (!sentence.sentence_text.trim().endsWith('?')) return null;
-                          // Exclude scripture questions
                           if (isSentenceInScripture(sentence.sentence_text, idx)) return null;
+                          if (congregationQuestionIndices && !congregationQuestionIndices.has(idx)) return null;
                           const left = (sentence.start_time_ms / totalDuration) * 100;
                           const width = ((sentence.end_time_ms - sentence.start_time_ms) / totalDuration) * 100;
                           return (
@@ -4103,10 +4122,16 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-amber-600">
-                  <AnimatedCounter value={sentences.filter((s, sIdx) => {
-                    if (!s.sentence_text.trim().endsWith('?')) return false;
-                    return !isSentenceInScripture(s.sentence_text, sIdx);
-                  }).length} />
+                  {loadingQuestions ? (
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  ) : (
+                    <AnimatedCounter value={sentences.filter((s, sIdx) => {
+                      if (!s.sentence_text.trim().endsWith('?')) return false;
+                      if (isSentenceInScripture(s.sentence_text, sIdx)) return false;
+                      if (congregationQuestionIndices && !congregationQuestionIndices.has(sIdx)) return false;
+                      return true;
+                    }).length} />
+                  )}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   to the congregation
@@ -4544,7 +4569,7 @@ const SermonViewer = () => {
                   className={`p-3 rounded-lg transition-colors cursor-pointer ${
                     isCurrentSentence(sentence)
                       ? "bg-primary/10 border border-primary"
-                      : showQuestions && sentence.sentence_text.trim().endsWith('?') && !isSentenceInScripture(sentence.sentence_text, sentences.indexOf(sentence))
+                      : showQuestions && sentence.sentence_text.trim().endsWith('?') && !isSentenceInScripture(sentence.sentence_text, sentences.indexOf(sentence)) && (!congregationQuestionIndices || congregationQuestionIndices.has(sentences.indexOf(sentence)))
                         ? "bg-amber-100 border border-amber-300"
                         : "hover:bg-muted"
                   }`}
@@ -4815,7 +4840,9 @@ const SermonViewer = () => {
                   highlightStyle = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
                 } else if (showQuestions && paragraph.some(s => {
                   if (!s.sentence_text.trim().endsWith('?')) return false;
-                  return !isSentenceInScripture(s.sentence_text, sentences.indexOf(s));
+                  if (isSentenceInScripture(s.sentence_text, sentences.indexOf(s))) return false;
+                  if (congregationQuestionIndices && !congregationQuestionIndices.has(sentences.indexOf(s))) return false;
+                  return true;
                 })) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {
