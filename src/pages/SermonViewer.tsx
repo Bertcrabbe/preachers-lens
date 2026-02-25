@@ -3445,7 +3445,7 @@ const SermonViewer = () => {
                         <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.illustrations}</div><div className="text-muted-foreground">Illustrations</div></div>
                       )}
                       {illustrationData.breakdown.audience_interactions > 0 && (
-                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.audience_interactions}</div><div className="text-muted-foreground">Interactions</div></div>
+                        <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.audience_interactions}</div><div className="text-muted-foreground">Crowd Work</div></div>
                       )}
                     </div>
                   </div>
