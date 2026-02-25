@@ -164,6 +164,7 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingConfusing, setLoadingConfusing] = useState(false);
   const [showConfusingPhrases, setShowConfusingPhrases] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
   const [previewWithComments, setPreviewWithComments] = useState(true);
   const [playingCommentId, setPlayingCommentId] = useState<string | null>(null);
   const commentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -3150,6 +3151,29 @@ const SermonViewer = () => {
                             />
                           );
                         })}
+
+                        {/* Question overlays */}
+                        {showQuestions && sentences.map((sentence, idx) => {
+                          if (!sentence.sentence_text.trim().endsWith('?')) return null;
+                          // Exclude scripture questions
+                          if (scriptureRefs) {
+                            const isScripture = scriptureRefs.references.some(ref => {
+                              const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
+                              return sentence.sentence_text.includes(contextWords) || sentence.sentence_text.includes(ref.reference);
+                            });
+                            if (isScripture) return null;
+                          }
+                          const left = (sentence.start_time_ms / totalDuration) * 100;
+                          const width = ((sentence.end_time_ms - sentence.start_time_ms) / totalDuration) * 100;
+                          return (
+                            <div
+                              key={`question-${idx}`}
+                              className="absolute h-full border-t-2 border-b-2 border-amber-500 bg-amber-500/30"
+                              style={{ left: `${left}%`, width: `${Math.max(width, 0.3)}%` }}
+                              title={`❓ ${sentence.sentence_text}`}
+                            />
+                          );
+                        })}
                       </>
                     );
                   })()}
@@ -3241,6 +3265,12 @@ const SermonViewer = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-2 bg-red-500/40 border-t border-b border-red-500 rounded" />
                   <span>Visitor Confusion</span>
+                </div>
+              )}
+              {showQuestions && (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-2 bg-amber-500/50 border-t border-b border-amber-600 rounded" />
+                  <span>Questions</span>
                 </div>
               )}
             </div>
@@ -3988,15 +4018,23 @@ const SermonViewer = () => {
               )}
             </Card>
 
-            <Card className="stats-card p-4">
+            <Card 
+              className="stats-card p-4 cursor-pointer"
+              onClick={() => setShowQuestions(!showQuestions)}
+            >
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-base font-bold text-amber-700">Questions Asked</h3>
+                <Checkbox
+                  checked={showQuestions}
+                  onCheckedChange={(checked) => setShowQuestions(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                />
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-amber-600">
                   <AnimatedCounter value={sentences.filter(s => {
                     if (!s.sentence_text.trim().endsWith('?')) return false;
-                    // Exclude questions within scripture references
                     if (scriptureRefs) {
                       const isScripture = scriptureRefs.references.some(ref => {
                         const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
@@ -4443,7 +4481,12 @@ const SermonViewer = () => {
                   className={`p-3 rounded-lg transition-colors cursor-pointer ${
                     isCurrentSentence(sentence)
                       ? "bg-primary/10 border border-primary"
-                      : "hover:bg-muted"
+                      : showQuestions && sentence.sentence_text.trim().endsWith('?') && !(scriptureRefs?.references.some(ref => {
+                          const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
+                          return sentence.sentence_text.includes(contextWords) || sentence.sentence_text.includes(ref.reference);
+                        }))
+                        ? "bg-amber-100 border border-amber-300"
+                        : "hover:bg-muted"
                   }`}
                   onClick={() => seekTo(sentence.start_time_ms)}
                 >
