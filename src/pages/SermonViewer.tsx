@@ -3988,6 +3988,20 @@ const SermonViewer = () => {
               )}
             </Card>
 
+            <Card className="stats-card p-4">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-base font-bold text-amber-700">Questions Asked</h3>
+              </div>
+              <div className="flex flex-col items-center text-center mb-3">
+                <div className="text-3xl font-bold text-amber-600">
+                  <AnimatedCounter value={sentences.filter(s => s.sentence_text.trim().endsWith('?')).length} />
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  to the congregation
+                </div>
+              </div>
+            </Card>
+
           </div>
 
           {/* WPM Timeline Chart */}
