@@ -73,9 +73,11 @@ serve(async (req) => {
 1. Only count verses actually READ or QUOTED.
 2. Consolidate consecutive verses into ranges (e.g., "Romans 1:29-31").
 3. Count individual verses per reference.
+4. For "context", return the EXACT text from the transcript that contains or quotes the scripture. Copy it verbatim from the transcript, do not paraphrase.
+5. For "quoted_sentences", list every sentence from the transcript that is part of reading/quoting this scripture reference. Copy each sentence EXACTLY as it appears in the transcript.
 
 Respond with ONLY valid JSON (no markdown):
-{"references": [{"reference": "Romans 6:1-4", "context": "brief quote", "verse_count": 4}], "total_count": 1, "total_verses": 4}
+{"references": [{"reference": "Romans 6:1-4", "context": "exact transcript text here", "verse_count": 4, "quoted_sentences": ["exact sentence 1 from transcript", "exact sentence 2 from transcript"]}], "total_count": 1, "total_verses": 4}
 
 Transcript:\n\n${transcript}`
               }
