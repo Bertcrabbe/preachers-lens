@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown } from "lucide-react";
+import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp } from "lucide-react";
 import logo from "@/assets/preacherslens-logo.png";
 import { UploadDialog } from "@/components/UploadDialog";
 import {
@@ -706,10 +706,18 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <Button onClick={() => setUploadOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Sermon
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedCommunicator?.id !== "unassigned" && (
+              <Button variant="outline" onClick={() => navigate(`/communicator/${selectedCommunicator!.id}/trends`)}>
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Trends
+              </Button>
+            )}
+            <Button onClick={() => setUploadOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Sermon
+            </Button>
+          </div>
         </div>
 
         {selectedCommunicator?.id !== "unassigned" && (
