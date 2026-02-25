@@ -57,6 +57,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [communicatorWpm, setCommunicatorWpm] = useState<Record<string, number>>({});
+  const [sermonWpm, setSermonWpm] = useState<Record<string, number>>({});
   const [communicators, setCommunicators] = useState<Communicator[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -160,25 +161,38 @@ const Dashboard = () => {
 
   const fetchCommunicatorWpm = async (sermonsData: Sermon[], communicatorsData: Communicator[]) => {
     const wpmMap: Record<string, number> = {};
+    const perSermonWpm: Record<string, number> = {};
 
-    // For each communicator, get completed sermons and their sentences
-    for (const comm of communicatorsData) {
-      const commSermons = sermonsData.filter(
-        s => s.communicator_id === comm.id && s.transcription_status === "completed"
-      );
-      if (commSermons.length === 0) continue;
+    // Fetch all sentences for completed sermons in one query
+    const completedIds = sermonsData.filter(s => s.transcription_status === 'completed').map(s => s.id);
+    if (completedIds.length === 0) {
+      setCommunicatorWpm(wpmMap);
+      setSermonWpm(perSermonWpm);
+      return;
+    }
 
-      const sermonIds = commSermons.map(s => s.id);
-      const { data: sentences } = await supabase
-        .from("sermon_sentences")
-        .select("sentence_text, start_time_ms, end_time_ms, sermon_id")
-        .in("sermon_id", sermonIds);
+    const { data: allSentences } = await supabase
+      .from("sermon_sentences")
+      .select("sentence_text, start_time_ms, end_time_ms, sermon_id")
+      .in("sermon_id", completedIds);
 
-      if (!sentences || sentences.length === 0) continue;
+    if (!allSentences || allSentences.length === 0) {
+      setCommunicatorWpm(wpmMap);
+      setSermonWpm(perSermonWpm);
+      return;
+    }
 
+    // Group by sermon
+    const bySermon: Record<string, typeof allSentences> = {};
+    for (const s of allSentences) {
+      if (!bySermon[s.sermon_id]) bySermon[s.sermon_id] = [];
+      bySermon[s.sermon_id].push(s);
+    }
+
+    // Calculate per-sermon WPM
+    for (const [sermonId, sentences] of Object.entries(bySermon)) {
       let totalWords = 0;
       let totalDurationMs = 0;
-
       for (const s of sentences) {
         const dur = s.end_time_ms - s.start_time_ms;
         if (dur > 0) {
@@ -186,13 +200,36 @@ const Dashboard = () => {
           totalDurationMs += dur;
         }
       }
+      if (totalDurationMs > 0) {
+        perSermonWpm[sermonId] = Math.round((totalWords / (totalDurationMs / 1000)) * 60);
+      }
+    }
 
+    // Calculate per-communicator WPM
+    for (const comm of communicatorsData) {
+      const commSermonIds = sermonsData
+        .filter(s => s.communicator_id === comm.id && s.transcription_status === 'completed')
+        .map(s => s.id);
+      let totalWords = 0;
+      let totalDurationMs = 0;
+      for (const sid of commSermonIds) {
+        const sentences = bySermon[sid];
+        if (!sentences) continue;
+        for (const s of sentences) {
+          const dur = s.end_time_ms - s.start_time_ms;
+          if (dur > 0) {
+            totalWords += s.sentence_text.split(/\s+/).length;
+            totalDurationMs += dur;
+          }
+        }
+      }
       if (totalDurationMs > 0) {
         wpmMap[comm.id] = Math.round((totalWords / (totalDurationMs / 1000)) * 60);
       }
     }
 
     setCommunicatorWpm(wpmMap);
+    setSermonWpm(perSermonWpm);
   };
 
   const handleLogout = async () => {
@@ -458,6 +495,9 @@ const Dashboard = () => {
             <div className="flex items-center gap-2 text-sm">
               <Clock className="h-3 w-3" />
               {formatDuration(sermon.duration_seconds)}
+              {sermonWpm[sermon.id] && (
+                <span className="text-primary font-medium">· {sermonWpm[sermon.id]} WPM</span>
+              )}
             </div>
           </CardDescription>
         </CardHeader>
