@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -154,6 +154,7 @@ const SermonViewer = () => {
     references: Array<{ reference: string; context: string; verse_count?: number; quoted_sentences?: string[] }>;
     total_count: number;
     total_verses?: number;
+    scripture_sentence_indices?: number[];
   } | null>(null);
   const [loadingScriptures, setLoadingScriptures] = useState(false);
   const [showScriptureRefs, setShowScriptureRefs] = useState(false);
@@ -1385,32 +1386,29 @@ const SermonViewer = () => {
     return paragraphs.filter(p => getParagraphVolumeLevel(p) !== 0);
   };
 
-  // Check if a sentence is part of a scripture quotation using multiple heuristics
-  const isSentenceInScripture = (sentenceText: string): boolean => {
+  // Build a Set of scripture sentence indices for O(1) lookup
+  const scriptureSentenceIndices = useMemo(() => {
+    if (!scriptureRefs?.scripture_sentence_indices) return new Set<number>();
+    return new Set(scriptureRefs.scripture_sentence_indices);
+  }, [scriptureRefs]);
+
+  // Check if a sentence is part of a scripture quotation
+  // Uses index-based matching (from AI) with text fallback
+  const isSentenceInScripture = (sentenceText: string, sentenceIndex?: number): boolean => {
     if (!scriptureRefs) return false;
+    
+    // Primary: index-based matching (most reliable)
+    if (sentenceIndex !== undefined && scriptureSentenceIndices.size > 0) {
+      return scriptureSentenceIndices.has(sentenceIndex);
+    }
+    
+    // Fallback: text-based matching for backward compatibility
     const text = sentenceText.toLowerCase().trim();
     const cleanText = text.replace(/[?.,!;:'"]/g, '').trim();
     return scriptureRefs.references.some(ref => {
-      // 1. Check quoted_sentences array (most reliable - exact matches from AI)
-      if (ref.quoted_sentences && ref.quoted_sentences.length > 0) {
-        const match = ref.quoted_sentences.some(qs => {
-          const qsLower = qs.toLowerCase().trim();
-          const qsClean = qsLower.replace(/[?.,!;:'"]/g, '').trim();
-          // Exact or near-exact match
-          return qsLower === text || qsClean === cleanText || 
-                 text.includes(qsLower) || qsLower.includes(text) ||
-                 cleanText.includes(qsClean) || qsClean.includes(cleanText);
-        });
-        if (match) return true;
-      }
       const context = ref.context.toLowerCase();
-      // 2. Direct reference name match
       if (text.includes(ref.reference.toLowerCase())) return true;
-      // 3. Check if sentence text appears within context
       if (cleanText.length > 15 && context.includes(cleanText)) return true;
-      // 4. Check if context contains the sentence
-      if (text.length > 15 && context.includes(text.replace(/[?.,!]/g, ''))) return true;
-      // 5. Sliding window: check if a significant chunk of the sentence appears in context
       const words = cleanText.split(/\s+/);
       if (words.length >= 5) {
         for (let i = 0; i <= words.length - 5; i++) {
@@ -3192,7 +3190,7 @@ const SermonViewer = () => {
                         {showQuestions && sentences.map((sentence, idx) => {
                           if (!sentence.sentence_text.trim().endsWith('?')) return null;
                           // Exclude scripture questions
-                          if (isSentenceInScripture(sentence.sentence_text)) return null;
+                          if (isSentenceInScripture(sentence.sentence_text, idx)) return null;
                           const left = (sentence.start_time_ms / totalDuration) * 100;
                           const width = ((sentence.end_time_ms - sentence.start_time_ms) / totalDuration) * 100;
                           return (
@@ -4063,9 +4061,9 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center mb-3">
                 <div className="text-3xl font-bold text-amber-600">
-                  <AnimatedCounter value={sentences.filter(s => {
+                  <AnimatedCounter value={sentences.filter((s, sIdx) => {
                     if (!s.sentence_text.trim().endsWith('?')) return false;
-                    return !isSentenceInScripture(s.sentence_text);
+                    return !isSentenceInScripture(s.sentence_text, sIdx);
                   }).length} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
@@ -4504,7 +4502,7 @@ const SermonViewer = () => {
                   className={`p-3 rounded-lg transition-colors cursor-pointer ${
                     isCurrentSentence(sentence)
                       ? "bg-primary/10 border border-primary"
-                      : showQuestions && sentence.sentence_text.trim().endsWith('?') && !isSentenceInScripture(sentence.sentence_text)
+                      : showQuestions && sentence.sentence_text.trim().endsWith('?') && !isSentenceInScripture(sentence.sentence_text, sentences.indexOf(sentence))
                         ? "bg-amber-100 border border-amber-300"
                         : "hover:bg-muted"
                   }`}
@@ -4775,7 +4773,7 @@ const SermonViewer = () => {
                   highlightStyle = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
                 } else if (showQuestions && paragraph.some(s => {
                   if (!s.sentence_text.trim().endsWith('?')) return false;
-                  return !isSentenceInScripture(s.sentence_text);
+                  return !isSentenceInScripture(s.sentence_text, sentences.indexOf(s));
                 })) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {

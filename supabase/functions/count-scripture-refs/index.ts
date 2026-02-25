@@ -37,15 +37,17 @@ serve(async (req) => {
     }
 
     const sentences = await sentencesResponse.json();
-    const fullTranscript = sentences.map((s: any) => s.sentence_text).join(" ");
+    
+    // Build numbered transcript so AI can reference sentence indices
+    const numberedTranscript = sentences.map((s: any, i: number) => `[${i}] ${s.sentence_text}`).join("\n");
     
     // Truncate to avoid exceeding AI context limits
     const maxChars = 80000;
-    const transcript = fullTranscript.length > maxChars 
-      ? fullTranscript.substring(0, maxChars) + "\n\n[TRANSCRIPT TRUNCATED]"
-      : fullTranscript;
+    const transcript = numberedTranscript.length > maxChars 
+      ? numberedTranscript.substring(0, maxChars) + "\n\n[TRANSCRIPT TRUNCATED]"
+      : numberedTranscript;
 
-    console.log(`Transcript length: ${fullTranscript.length} chars, sending: ${transcript.length} chars`);
+    console.log(`Transcript length: ${numberedTranscript.length} chars, sending: ${transcript.length} chars`);
 
     // Try multiple models in case one is unavailable
     const models = ["openai/gpt-5-nano", "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash"];
@@ -69,15 +71,18 @@ serve(async (req) => {
               },
               {
                 role: "user",
-                content: `Analyze this sermon transcript and identify ALL scripture references. Rules:
+                content: `Analyze this sermon transcript. Each sentence is numbered with [index]. Identify ALL scripture references. Rules:
 1. Only count verses actually READ or QUOTED.
 2. Consolidate consecutive verses into ranges (e.g., "Romans 1:29-31").
 3. Count individual verses per reference.
-4. For "context", return the EXACT text from the transcript that contains or quotes the scripture. Copy it verbatim from the transcript, do not paraphrase.
-5. For "quoted_sentences", list every sentence from the transcript that is part of reading/quoting this scripture reference. Copy each sentence EXACTLY as it appears in the transcript.
+4. For "scripture_sentence_indices", list ALL sentence indices [n] that contain or are part of scripture being read/quoted. This includes:
+   - Sentences where the preacher is reading scripture aloud
+   - Sentences that are direct quotes from the Bible (even if the preacher doesn't explicitly say the reference)
+   - Questions that come from scripture (e.g., Jesus asking "Do you think I came to bring peace?")
+   Be thorough - include EVERY sentence that is part of a scripture passage being read.
 
 Respond with ONLY valid JSON (no markdown):
-{"references": [{"reference": "Romans 6:1-4", "context": "exact transcript text here", "verse_count": 4, "quoted_sentences": ["exact sentence 1 from transcript", "exact sentence 2 from transcript"]}], "total_count": 1, "total_verses": 4}
+{"references": [{"reference": "Romans 6:1-4", "context": "brief quote", "verse_count": 4}], "total_count": 1, "total_verses": 4, "scripture_sentence_indices": [0, 1, 2, 3]}
 
 Transcript:\n\n${transcript}`
               }
@@ -97,6 +102,13 @@ Transcript:\n\n${transcript}`
         
         const jsonStr = content.replace(/```json?\s*/g, '').replace(/```\s*/g, '').trim();
         const result = JSON.parse(jsonStr);
+        
+        // Ensure scripture_sentence_indices is always an array
+        if (!result.scripture_sentence_indices) {
+          result.scripture_sentence_indices = [];
+        }
+        
+        console.log(`Found ${result.scripture_sentence_indices.length} scripture sentence indices`);
 
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
