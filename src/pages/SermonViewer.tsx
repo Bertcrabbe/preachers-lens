@@ -223,6 +223,46 @@ const SermonViewer = () => {
     }
   }, [sentences]);
 
+  // Persist metrics to sermon_metrics table for trends tracking
+  useEffect(() => {
+    const persistMetrics = async () => {
+      if (!id || sentences.length === 0) return;
+      if (loadingIllustrations || loadingQuestions) return;
+      
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const totalWords = sentences.reduce((sum: number, s: any) => sum + s.sentence_text.split(/\s+/).filter(Boolean).length, 0);
+        const totalDurationMs = sentences.reduce((sum: number, s: any) => sum + (s.end_time_ms - s.start_time_ms), 0);
+        const wpm = totalDurationMs > 0 ? Math.round(totalWords / (totalDurationMs / 60000)) : null;
+
+        const congQuestions = sentences.filter((s: any, idx: number) => {
+          if (!s.sentence_text.trim().endsWith('?')) return false;
+          if (congregationQuestionIndices && !congregationQuestionIndices.has(idx)) return false;
+          return true;
+        }).length;
+
+        const engagement = getEngagementScore().total;
+        const illScore = illustrationData?.illustration_score ?? null;
+
+        await supabase.from("sermon_metrics" as any).upsert({
+          sermon_id: id,
+          user_id: user.id,
+          engagement_score: engagement,
+          illustration_score: illScore,
+          congregation_questions: congQuestions,
+          wpm,
+          word_count: totalWords,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "sermon_id" });
+      } catch (err) {
+        console.error("Failed to persist metrics:", err);
+      }
+    };
+    persistMetrics();
+  }, [id, sentences, illustrationData, loadingIllustrations, congregationQuestionIndices, loadingQuestions]);
+
   useEffect(() => {
     if (audioUrl) {
       generateWaveform(audioUrl);
