@@ -160,6 +160,50 @@ export type Database = {
           },
         ]
       }
+      sermon_metrics: {
+        Row: {
+          congregation_questions: number | null
+          engagement_score: number | null
+          id: string
+          illustration_score: number | null
+          sermon_id: string
+          updated_at: string
+          user_id: string
+          word_count: number | null
+          wpm: number | null
+        }
+        Insert: {
+          congregation_questions?: number | null
+          engagement_score?: number | null
+          id?: string
+          illustration_score?: number | null
+          sermon_id: string
+          updated_at?: string
+          user_id: string
+          word_count?: number | null
+          wpm?: number | null
+        }
+        Update: {
+          congregation_questions?: number | null
+          engagement_score?: number | null
+          id?: string
+          illustration_score?: number | null
+          sermon_id?: string
+          updated_at?: string
+          user_id?: string
+          word_count?: number | null
+          wpm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sermon_metrics_sermon_id_fkey"
+            columns: ["sermon_id"]
+            isOneToOne: true
+            referencedRelation: "sermons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sermon_sentences: {
         Row: {
           created_at: string

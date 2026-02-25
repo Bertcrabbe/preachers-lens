@@ -55,49 +55,76 @@ const CommunicatorTrends = () => {
         return;
       }
 
-      // Fetch all sentences for these sermons (paginated)
+      // Fetch all sentences and stored metrics in parallel
       const sermonIds = sermons.map(s => s.id);
+      
+      // Fetch stored metrics
+      const { data: storedMetrics } = await supabase
+        .from("sermon_metrics" as any)
+        .select("sermon_id, engagement_score, illustration_score, congregation_questions, wpm, word_count")
+        .in("sermon_id", sermonIds);
+
+      const metricsMap: Record<string, any> = {};
+      for (const m of ((storedMetrics || []) as any[])) {
+        metricsMap[m.sermon_id] = m;
+      }
+
+      // Fetch sentences for sermons missing stored metrics (fallback)
+      const missingIds = sermonIds.filter(id => !metricsMap[id]);
       const allSentences: any[] = [];
-      const batchSize = 10;
-      for (let i = 0; i < sermonIds.length; i += batchSize) {
-        const batch = sermonIds.slice(i, i + batchSize);
-        let from = 0;
-        const pageSize = 1000;
-        while (true) {
-          const { data } = await supabase
-            .from("sermon_sentences")
-            .select("sermon_id, sentence_text, start_time_ms, end_time_ms, order_index")
-            .in("sermon_id", batch)
-            .range(from, from + pageSize - 1);
-          if (!data || data.length === 0) break;
-          allSentences.push(...data);
-          if (data.length < pageSize) break;
-          from += pageSize;
+      if (missingIds.length > 0) {
+        const batchSize = 10;
+        for (let i = 0; i < missingIds.length; i += batchSize) {
+          const batch = missingIds.slice(i, i + batchSize);
+          let from = 0;
+          const pageSize = 1000;
+          while (true) {
+            const { data } = await supabase
+              .from("sermon_sentences")
+              .select("sermon_id, sentence_text, start_time_ms, end_time_ms, order_index")
+              .in("sermon_id", batch)
+              .range(from, from + pageSize - 1);
+            if (!data || data.length === 0) break;
+            allSentences.push(...data);
+            if (data.length < pageSize) break;
+            from += pageSize;
+          }
         }
       }
 
-      // Group sentences by sermon
       const sentencesBySermon: Record<string, any[]> = {};
       for (const s of allSentences) {
         if (!sentencesBySermon[s.sermon_id]) sentencesBySermon[s.sermon_id] = [];
         sentencesBySermon[s.sermon_id].push(s);
       }
 
-      // Compute per-sermon metrics
+      // Build metrics: prefer stored, fallback to computed
       const results: SermonMetrics[] = sermons.map(sermon => {
+        const stored = metricsMap[sermon.id];
+        if (stored) {
+          return {
+            id: sermon.id,
+            title: sermon.title || "Untitled",
+            date: new Date(sermon.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }),
+            wpm: stored.wpm,
+            wordCount: stored.word_count,
+            durationMin: sermon.duration_seconds ? Math.round(sermon.duration_seconds / 60) : null,
+            engagementScore: stored.engagement_score ? Number(stored.engagement_score) : null,
+            questionsAsked: stored.congregation_questions,
+            illustrationScore: stored.illustration_score ? Number(stored.illustration_score) : null,
+          };
+        }
+
+        // Fallback: compute from sentences
         const sentences = (sentencesBySermon[sermon.id] || []).sort((a: any, b: any) => a.order_index - b.order_index);
         let wpm: number | null = null;
         let wordCount: number | null = null;
-
         if (sentences.length > 0) {
           const totalWords = sentences.reduce((sum: number, s: any) => sum + s.sentence_text.split(/\s+/).filter(Boolean).length, 0);
           const totalDurationMs = sentences.reduce((sum: number, s: any) => sum + (s.end_time_ms - s.start_time_ms), 0);
           wordCount = totalWords;
-          if (totalDurationMs > 0) {
-            wpm = Math.round(totalWords / (totalDurationMs / 60000));
-          }
+          if (totalDurationMs > 0) wpm = Math.round(totalWords / (totalDurationMs / 60000));
         }
-
         const questionCount = sentences.filter((s: any) => s.sentence_text.trim().endsWith("?")).length;
 
         return {
@@ -107,9 +134,9 @@ const CommunicatorTrends = () => {
           wpm,
           wordCount,
           durationMin: sermon.duration_seconds ? Math.round(sermon.duration_seconds / 60) : null,
-          engagementScore: null, // Would need stored data
+          engagementScore: null,
           questionsAsked: questionCount,
-          illustrationScore: null, // Would need stored data
+          illustrationScore: null,
         };
       });
 
@@ -123,7 +150,9 @@ const CommunicatorTrends = () => {
 
   const chartConfigs = [
     { key: "wpm", label: "Words Per Minute", color: "hsl(var(--primary))", unit: " WPM" },
+    { key: "engagementScore", label: "Engagement Score", color: "hsl(var(--chart-1))", unit: "/10" },
     { key: "questionsAsked", label: "Questions Asked", color: "hsl(var(--chart-2))", unit: "" },
+    { key: "illustrationScore", label: "Illustration Score", color: "hsl(var(--chart-5, 280 65% 60%))", unit: "/10" },
     { key: "wordCount", label: "Word Count", color: "hsl(var(--chart-3))", unit: " words" },
     { key: "durationMin", label: "Duration (minutes)", color: "hsl(var(--chart-4))", unit: " min" },
   ];
