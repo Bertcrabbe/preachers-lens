@@ -151,7 +151,7 @@ const SermonViewer = () => {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
   const [scriptureRefs, setScriptureRefs] = useState<{
-    references: Array<{ reference: string; context: string; verse_count?: number }>;
+    references: Array<{ reference: string; context: string; verse_count?: number; quoted_sentences?: string[] }>;
     total_count: number;
     total_verses?: number;
   } | null>(null);
@@ -1389,17 +1389,28 @@ const SermonViewer = () => {
   const isSentenceInScripture = (sentenceText: string): boolean => {
     if (!scriptureRefs) return false;
     const text = sentenceText.toLowerCase().trim();
+    const cleanText = text.replace(/[?.,!;:'"]/g, '').trim();
     return scriptureRefs.references.some(ref => {
+      // 1. Check quoted_sentences array (most reliable - exact matches from AI)
+      if (ref.quoted_sentences && ref.quoted_sentences.length > 0) {
+        const match = ref.quoted_sentences.some(qs => {
+          const qsLower = qs.toLowerCase().trim();
+          const qsClean = qsLower.replace(/[?.,!;:'"]/g, '').trim();
+          // Exact or near-exact match
+          return qsLower === text || qsClean === cleanText || 
+                 text.includes(qsLower) || qsLower.includes(text) ||
+                 cleanText.includes(qsClean) || qsClean.includes(cleanText);
+        });
+        if (match) return true;
+      }
       const context = ref.context.toLowerCase();
-      // 1. Direct reference name match
+      // 2. Direct reference name match
       if (text.includes(ref.reference.toLowerCase())) return true;
-      // 2. First 10 context words match (original check)
-      const first10 = context.split(' ').slice(0, 10).join(' ');
-      if (text.includes(first10) || context.includes(text.replace(/[?.,!]/g, ''))) return true;
-      // 3. Check if the sentence text (minus punctuation) appears within the scripture context
-      const cleanText = text.replace(/[?.,!;:'"]/g, '').trim();
+      // 3. Check if sentence text appears within context
       if (cleanText.length > 15 && context.includes(cleanText)) return true;
-      // 4. Sliding window: check if a significant chunk of the sentence appears in context
+      // 4. Check if context contains the sentence
+      if (text.length > 15 && context.includes(text.replace(/[?.,!]/g, ''))) return true;
+      // 5. Sliding window: check if a significant chunk of the sentence appears in context
       const words = cleanText.split(/\s+/);
       if (words.length >= 5) {
         for (let i = 0; i <= words.length - 5; i++) {
