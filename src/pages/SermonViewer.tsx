@@ -1385,6 +1385,32 @@ const SermonViewer = () => {
     return paragraphs.filter(p => getParagraphVolumeLevel(p) !== 0);
   };
 
+  // Check if a sentence is part of a scripture quotation using multiple heuristics
+  const isSentenceInScripture = (sentenceText: string): boolean => {
+    if (!scriptureRefs) return false;
+    const text = sentenceText.toLowerCase().trim();
+    return scriptureRefs.references.some(ref => {
+      const context = ref.context.toLowerCase();
+      // 1. Direct reference name match
+      if (text.includes(ref.reference.toLowerCase())) return true;
+      // 2. First 10 context words match (original check)
+      const first10 = context.split(' ').slice(0, 10).join(' ');
+      if (text.includes(first10) || context.includes(text.replace(/[?.,!]/g, ''))) return true;
+      // 3. Check if the sentence text (minus punctuation) appears within the scripture context
+      const cleanText = text.replace(/[?.,!;:'"]/g, '').trim();
+      if (cleanText.length > 15 && context.includes(cleanText)) return true;
+      // 4. Sliding window: check if a significant chunk of the sentence appears in context
+      const words = cleanText.split(/\s+/);
+      if (words.length >= 5) {
+        for (let i = 0; i <= words.length - 5; i++) {
+          const chunk = words.slice(i, i + 5).join(' ');
+          if (context.includes(chunk)) return true;
+        }
+      }
+      return false;
+    });
+  };
+
   const paragraphContainsScripture = (paragraph: Sentence[]): boolean => {
     if (!scriptureRefs || !showScriptureRefs) return false;
     
@@ -1392,7 +1418,6 @@ const SermonViewer = () => {
     
     // Check if any scripture reference context appears in this paragraph
     return scriptureRefs.references.some(ref => {
-      // Extract a meaningful snippet from the context to search for
       const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
       return paragraphText.includes(contextWords) || paragraphText.includes(ref.reference);
     });
@@ -3156,13 +3181,7 @@ const SermonViewer = () => {
                         {showQuestions && sentences.map((sentence, idx) => {
                           if (!sentence.sentence_text.trim().endsWith('?')) return null;
                           // Exclude scripture questions
-                          if (scriptureRefs) {
-                            const isScripture = scriptureRefs.references.some(ref => {
-                              const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
-                              return sentence.sentence_text.includes(contextWords) || sentence.sentence_text.includes(ref.reference);
-                            });
-                            if (isScripture) return null;
-                          }
+                          if (isSentenceInScripture(sentence.sentence_text)) return null;
                           const left = (sentence.start_time_ms / totalDuration) * 100;
                           const width = ((sentence.end_time_ms - sentence.start_time_ms) / totalDuration) * 100;
                           return (
@@ -4035,14 +4054,7 @@ const SermonViewer = () => {
                 <div className="text-3xl font-bold text-amber-600">
                   <AnimatedCounter value={sentences.filter(s => {
                     if (!s.sentence_text.trim().endsWith('?')) return false;
-                    if (scriptureRefs) {
-                      const isScripture = scriptureRefs.references.some(ref => {
-                        const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
-                        return s.sentence_text.includes(contextWords) || s.sentence_text.includes(ref.reference);
-                      });
-                      if (isScripture) return false;
-                    }
-                    return true;
+                    return !isSentenceInScripture(s.sentence_text);
                   }).length} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
@@ -4481,10 +4493,7 @@ const SermonViewer = () => {
                   className={`p-3 rounded-lg transition-colors cursor-pointer ${
                     isCurrentSentence(sentence)
                       ? "bg-primary/10 border border-primary"
-                      : showQuestions && sentence.sentence_text.trim().endsWith('?') && !(scriptureRefs?.references.some(ref => {
-                          const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
-                          return sentence.sentence_text.includes(contextWords) || sentence.sentence_text.includes(ref.reference);
-                        }))
+                      : showQuestions && sentence.sentence_text.trim().endsWith('?') && !isSentenceInScripture(sentence.sentence_text)
                         ? "bg-amber-100 border border-amber-300"
                         : "hover:bg-muted"
                   }`}
@@ -4755,13 +4764,7 @@ const SermonViewer = () => {
                   highlightStyle = "bg-orange-500/20 border border-orange-500/50 hover:bg-orange-500/30";
                 } else if (showQuestions && paragraph.some(s => {
                   if (!s.sentence_text.trim().endsWith('?')) return false;
-                  if (scriptureRefs) {
-                    return !scriptureRefs.references.some(ref => {
-                      const contextWords = ref.context.split(' ').slice(0, 10).join(' ');
-                      return s.sentence_text.includes(contextWords) || s.sentence_text.includes(ref.reference);
-                    });
-                  }
-                  return true;
+                  return !isSentenceInScripture(s.sentence_text);
                 })) {
                   highlightStyle = "border-2 hover:opacity-90 transition-all";
                   customStyle = {
