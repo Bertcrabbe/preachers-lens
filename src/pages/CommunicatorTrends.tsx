@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, TrendingUp, Loader2 } from "lucide-react";
+import { ArrowLeft, TrendingUp, Loader2, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import logo from "@/assets/preacherslens-logo.png";
 
@@ -25,6 +26,9 @@ const CommunicatorTrends = () => {
   const [communicatorName, setCommunicatorName] = useState("");
   const [metrics, setMetrics] = useState<SermonMetrics[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
     if (id) fetchTrends();
@@ -148,6 +152,43 @@ const CommunicatorTrends = () => {
     }
   };
 
+  const handleRefreshAll = async () => {
+    if (!id || metrics.length === 0) return;
+    setRefreshing(true);
+    setRefreshProgress("Analyzing sermons...");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const sermonIds = metrics.map(m => m.id);
+      setRefreshProgress(`Analyzing ${sermonIds.length} sermons...`);
+
+      const { data, error } = await supabase.functions.invoke("refresh-sermon-metrics", {
+        body: { sermonIds, userId: user.id },
+      });
+
+      if (error) throw error;
+
+      const okCount = data?.results?.filter((r: any) => r.status === "ok").length ?? 0;
+      toast({
+        title: "Metrics refreshed",
+        description: `Updated ${okCount} of ${sermonIds.length} sermons`,
+      });
+
+      await fetchTrends();
+    } catch (err: any) {
+      console.error("Refresh failed:", err);
+      toast({
+        title: "Refresh failed",
+        description: err.message || "Could not refresh metrics",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+      setRefreshProgress("");
+    }
+  };
+
   const chartConfigs = [
     { key: "wpm", label: "Words Per Minute", color: "hsl(var(--primary))", unit: " WPM" },
     { key: "engagementScore", label: "Engagement Score", color: "hsl(var(--chart-1))", unit: "/10" },
@@ -180,20 +221,41 @@ const CommunicatorTrends = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-5xl">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              {communicatorName} — Trends
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              {metrics.length} {metrics.length === 1 ? "sermon" : "sermons"} over time
-            </p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <TrendingUp className="h-6 w-6 text-primary" />
+                {communicatorName} — Trends
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {metrics.length} {metrics.length === 1 ? "sermon" : "sermons"} over time
+              </p>
+            </div>
           </div>
+          {metrics.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleRefreshAll}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {refreshProgress}
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh All Metrics
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         {metrics.length < 2 ? (
