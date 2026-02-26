@@ -3675,10 +3675,10 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-rose-600">
-                  <AnimatedCounter value={countSustainedDeviations(15).total} />
+                  <AnimatedCounter value={countSustainedDeviations(25).total} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Sustained Deviations (15%+, ≥10s)
+                  Sustained Deviations (25%+, ≥10s)
                 </div>
               </div>
               {/* Pace Dynamics Sparkline - show % deviation from baseline */}
