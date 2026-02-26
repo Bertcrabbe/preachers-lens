@@ -3400,7 +3400,7 @@ const SermonViewer = () => {
               {showConfusingPhrases && (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-2 bg-red-500/40 border-t border-b border-red-500 rounded" />
-                  <span>Visitor Confusion</span>
+                  <span>Insider Language</span>
                 </div>
               )}
               {showQuestions && (
@@ -4041,7 +4041,7 @@ const SermonViewer = () => {
               }}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-base font-bold text-red-700">Visitor Confusion</h3>
+                <h3 className="text-base font-bold text-red-700">Insider Language</h3>
                 <Checkbox
                   checked={showConfusingPhrases}
                   onCheckedChange={(checked) => setShowConfusingPhrases(checked === true)}
@@ -4997,7 +4997,7 @@ const SermonViewer = () => {
                     )}
                     {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && !hasInsiderTerm && hasConfusing && (
                       <Badge variant="outline" className="absolute top-2 right-2 text-xs bg-red-500/40 border-red-500">
-                        ⚠️ Visitor Confusion
+                        ⚠️ Insider Language
                       </Badge>
                     )}
                     {!hasAudioComment && !isActiveFastSpeech && !isSlowSpeech && !hasVolumeChange && !hasVerbalPause && !hasInsiderTerm && !hasConfusing && hasPeak && (
