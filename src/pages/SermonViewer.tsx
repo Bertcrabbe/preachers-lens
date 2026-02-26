@@ -194,7 +194,7 @@ const SermonViewer = () => {
     time: number;
     stopFn: (() => void) | null;
   }>({ isRecording: false, time: 0, stopFn: null });
-  const [preAcquiredStream, setPreAcquiredStream] = useState<MediaStream | null>(null);
+  const [preAcquiredStream, setPreAcquiredStream] = useState<MediaStream | null | undefined>(undefined);
   const [showAudioEditor, setShowAudioEditor] = useState(false);
   const [illustrationData, setIllustrationData] = useState<{
     elements: Array<{ type: string; summary: string; excerpt: string }>;
@@ -1965,8 +1965,9 @@ const SermonViewer = () => {
 
   const openCommentDialog = (start: number, end: number) => {
     setSelectedTimeRange({ start, end });
+    setPreAcquiredStream(null); // null = pending, AudioRecorder waits for stream
     setCommentDialogOpen(true);
-    // Pre-acquire mic stream in parallel – don't block dialog open
+    // Acquire mic stream in parallel – don't block dialog open
     const audioConstraints: MediaTrackConstraints = {
       ...(selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : {}),
       sampleRate: 44100,
@@ -1978,7 +1979,7 @@ const SermonViewer = () => {
       setPreAcquiredStream(stream);
     }).catch(e => {
       console.error('Failed to pre-acquire mic stream:', e);
-      setPreAcquiredStream(null);
+      setPreAcquiredStream(undefined); // undefined = no stream, AudioRecorder uses own
     });
   };
 
@@ -2039,7 +2040,7 @@ const SermonViewer = () => {
       setAudioBlob(null);
       if (preAcquiredStream) {
         preAcquiredStream.getTracks().forEach(t => t.stop());
-        setPreAcquiredStream(null);
+        setPreAcquiredStream(undefined);
       }
       
       // Seek to the next sentence so spacebar resumes past the comment
@@ -5222,7 +5223,7 @@ const SermonViewer = () => {
                 // Clean up pre-acquired stream
                 if (preAcquiredStream) {
                   preAcquiredStream.getTracks().forEach(t => t.stop());
-                  setPreAcquiredStream(null);
+                  setPreAcquiredStream(undefined);
                 }
               }
             }}>
