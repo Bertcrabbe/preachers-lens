@@ -3853,7 +3853,7 @@ const SermonViewer = () => {
               onClick={() => setShowSilentPauses(!showSilentPauses)}
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-base font-bold text-blue-700">Silent Pauses</h3>
+                <h3 className="text-base font-bold text-blue-700">Use of Silence</h3>
                 <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
