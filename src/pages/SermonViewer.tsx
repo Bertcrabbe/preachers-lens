@@ -3674,22 +3674,22 @@ const SermonViewer = () => {
                 />
               </div>
               <div className="mt-2 border-t pt-3">
-                <div className="grid grid-cols-5 gap-1 text-xs text-center">
-                  <div className="col-span-5 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
+                <div className="grid grid-cols-3 gap-1 text-xs text-center">
+                  <div className="col-span-3 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 rounded-full bg-rose-500" /> Faster
                   </div>
-                  {[10, 15, 20, 25, 30].map(pct => (
+                  {[25, 35, 45].map(pct => (
                     <div key={pct}>
                       <div className="font-semibold text-rose-600">{countSustainedDeviations(pct).faster}</div>
                       <div className="text-muted-foreground">+{pct}%</div>
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-5 gap-1 text-xs text-center mt-2">
-                  <div className="col-span-5 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
+                <div className="grid grid-cols-3 gap-1 text-xs text-center mt-2">
+                  <div className="col-span-3 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 rounded-full bg-blue-500" /> Slower
                   </div>
-                  {[10, 15, 20, 25, 30].map(pct => (
+                  {[25, 35, 45].map(pct => (
                     <div key={pct}>
                       <div className="font-semibold text-blue-600">{countSustainedDeviations(pct).slower}</div>
                       <div className="text-muted-foreground">-{pct}%</div>
