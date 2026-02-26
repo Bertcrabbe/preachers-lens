@@ -4227,9 +4227,21 @@ const SermonViewer = () => {
                       width={40}
                     />
                     <Tooltip 
-                      formatter={(value: number) => [`${value} WPM`, 'Speed']}
-                      labelFormatter={(ms: number) => `Time: ${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
-                      contentStyle={{ fontSize: 12 }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const wpm = payload[0].value as number;
+                        const avg = getAverageSpeechRate();
+                        const pctDev = avg > 0 ? ((wpm - avg) / avg) * 100 : 0;
+                        const ms = payload[0].payload.time as number;
+                        const sign = pctDev >= 0 ? '+' : '';
+                        return (
+                          <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg text-xs">
+                            <p className="text-muted-foreground">{`${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}</p>
+                            <p className="font-semibold">{wpm} WPM</p>
+                            <p className={pctDev >= 0 ? 'text-rose-600' : 'text-blue-600'}>{sign}{pctDev.toFixed(1)}% from avg</p>
+                          </div>
+                        );
+                      }}
                     />
                     <ReferenceLine 
                       y={Math.round(getAverageSpeechRate())} 
