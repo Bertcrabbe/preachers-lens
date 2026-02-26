@@ -67,9 +67,13 @@ Look for:
 - Cultural shorthand that only regular churchgoers would understand
 
 Do NOT flag:
+- The name "Jesus" on its own — it is universally understood and should never be flagged
 - Common English words or phrases that happen to have religious origins
-- Simple, self-explanatory references to God, Jesus, prayer, or the Bible
-- Phrases where the speaker already explains what they mean in context`
+- Simple, self-explanatory references to God, prayer, or the Bible
+- Phrases where the speaker already explains what they mean in context
+
+Special rule for biblical names:
+- Other biblical figure names used on their own (e.g., "Paul", "Apostle Paul", "Moses", "Abraham", "David", "Elijah", "Isaiah") should be flagged as "mild" severity since a newcomer may not know who they are, but they are not deeply confusing`
           },
           {
             role: "user",
