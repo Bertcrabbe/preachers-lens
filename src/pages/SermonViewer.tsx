@@ -1285,23 +1285,47 @@ const SermonViewer = () => {
     const avgWpm = getAverageSpeechRate();
     if (avgWpm === 0) return 5;
 
-    // Find all sustained 25%+ deviations
-    const deviations = countSustainedDeviations(25);
-    const totalDeviations = deviations.total;
+    const deviations25 = countSustainedDeviations(25);
+    const deviations35 = countSustainedDeviations(35);
+    const deviations45 = countSustainedDeviations(45);
 
-    // Calculate sermon duration in minutes
     const lastSentence = sentences[sentences.length - 1];
     const durationMinutes = lastSentence.end_time_ms / 60000;
     if (durationMinutes <= 0) return 5;
 
-    // Target: at least 1 deviation per 5 minutes = 10/10
+    // === FREQUENCY (40%): one 25%+ shift per 5 min = full marks ===
     const targetDeviations = durationMinutes / 5;
-    if (targetDeviations <= 0) return 5;
+    const freqRatio = targetDeviations > 0 ? Math.min(1, deviations25.total / targetDeviations) : 0;
+    const frequencyScore = 1 + freqRatio * 9; // 1-10
 
-    const ratio = totalDeviations / targetDeviations;
-    // ratio >= 1.0 → 10, scale down linearly below that, minimum 1
-    if (ratio >= 1.0) return 10;
-    return Math.round(Math.max(1, 1 + ratio * 9));
+    // === MAGNITUDE (30%): reward bigger shifts ===
+    // ≥30% of deviations at 35%+ AND ≥10% at 45%+ = full marks
+    let magnitudeScore = 1;
+    if (deviations25.total > 0) {
+      const ratio35 = deviations35.total / deviations25.total; // fraction hitting 35%+
+      const ratio45 = deviations45.total / deviations25.total; // fraction hitting 45%+
+      // 35% component: 0→0, 0.30→1 (capped)
+      const mag35 = Math.min(1, ratio35 / 0.30);
+      // 45% component: 0→0, 0.10→1 (capped)
+      const mag45 = Math.min(1, ratio45 / 0.10);
+      // Blend 60/40 between the two thresholds
+      const magRatio = mag35 * 0.6 + mag45 * 0.4;
+      magnitudeScore = 1 + magRatio * 9;
+    }
+
+    // === VARIETY (30%): reward balance between faster and slower ===
+    let varietyScore = 1;
+    if (deviations25.total > 0) {
+      const fasterFrac = deviations25.faster / deviations25.total;
+      // Balance: 0.5 = perfect (1.0), 0 or 1 = worst (0.0)
+      // balance = 1 - |0.5 - frac| * 2 → range [0, 1]
+      const balance = 1 - Math.abs(0.5 - fasterFrac) * 2;
+      varietyScore = 1 + balance * 9;
+    }
+
+    // Weighted average: 40% frequency, 30% magnitude, 30% variety
+    const combined = frequencyScore * 0.4 + magnitudeScore * 0.3 + varietyScore * 0.3;
+    return Math.round(Math.max(1, Math.min(10, combined)));
   };
 
   const getVolumeDynamicsScore = (): number => {
