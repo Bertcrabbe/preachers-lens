@@ -4483,122 +4483,120 @@ const SermonViewer = () => {
         </div>
         
         <Card className="p-6 flex-1 min-w-0">
-          {/* Intro comment section at top */}
-          <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-dashed border-border">
-            {/* Show existing intro comment if there is one */}
-            {comments.filter(c => c.start_time_ms === 0 && c.end_time_ms === 0).map((comment) => (
-              <div 
-                key={comment.id}
-                className="p-3 rounded-lg bg-accent/10 border border-accent/30"
-              >
-                <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="text-xs bg-accent/20">
-                    Intro
-                  </Badge>
-                  <p className="flex-1 text-sm font-bold">{comment.comment_text}</p>
-                  {comment.audio_url && (
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto scroll-smooth transcript-parallax" ref={transcriptContainerRef}>
+            {/* Intro comment section at top - scrolls with transcript */}
+            <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-dashed border-border">
+              {/* Show existing intro comment if there is one */}
+              {comments.filter(c => c.start_time_ms === 0 && c.end_time_ms === 0).map((comment) => (
+                <div 
+                  key={comment.id}
+                  className="p-3 rounded-lg bg-accent/10 border border-accent/30"
+                >
+                  <div className="flex items-start gap-2">
+                    <Badge variant="outline" className="text-xs bg-accent/20">
+                      Intro
+                    </Badge>
+                    <p className="flex-1 text-sm font-bold">{comment.comment_text}</p>
+                    {comment.audio_url && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          
+                          if (playingCommentId === comment.id && commentAudioRef.current) {
+                            if (commentAudioRef.current.paused) {
+                              commentAudioRef.current.play().catch(() => {});
+                            } else {
+                              commentAudioRef.current.pause();
+                            }
+                            return;
+                          }
+                          
+                          stopCommentAudio();
+                          if (audioRef.current) {
+                            audioRef.current.pause();
+                          }
+                          
+                          setPlayingCommentId(comment.id);
+                          
+                          let url = commentSignedUrls[comment.id];
+                          if (!url) {
+                            const { data } = await supabase.storage
+                              .from("sermon-comments-audio")
+                              .createSignedUrl(comment.audio_url!, 3600);
+                            if (data?.signedUrl) {
+                              url = data.signedUrl;
+                              setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
+                            }
+                          }
+                          
+                          if (url) {
+                            const audio = new Audio(url);
+                            commentAudioRef.current = audio;
+                            let handled = false;
+                            const cleanup = () => {
+                              if (handled) return;
+                              handled = true;
+                              setPlayingCommentId(null);
+                              commentAudioRef.current = null;
+                            };
+                            audio.onended = cleanup;
+                            audio.onerror = () => {
+                              const mediaError = audio.error;
+                              if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                cleanup();
+                              }
+                            };
+                            try {
+                              await audio.play();
+                            } catch (err: any) {
+                              if (err.name !== 'AbortError') {
+                                cleanup();
+                              }
+                            }
+                          }
+                        }}
+                      >
+                        {playingCommentId === comment.id ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={async (e) => {
                         e.stopPropagation();
-                        
-                        // If this comment is already playing, toggle pause/play
-                        if (playingCommentId === comment.id && commentAudioRef.current) {
-                          if (commentAudioRef.current.paused) {
-                            commentAudioRef.current.play().catch(() => {});
-                          } else {
-                            commentAudioRef.current.pause();
-                          }
-                          return;
-                        }
-                        
-                        // Stop any current audio
-                        stopCommentAudio();
-                        if (audioRef.current) {
-                          audioRef.current.pause();
-                        }
-                        
-                        setPlayingCommentId(comment.id);
-                        
-                        let url = commentSignedUrls[comment.id];
-                        if (!url) {
-                          const { data } = await supabase.storage
-                            .from("sermon-comments-audio")
-                            .createSignedUrl(comment.audio_url!, 3600);
-                          if (data?.signedUrl) {
-                            url = data.signedUrl;
-                            setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
-                          }
-                        }
-                        
-                        if (url) {
-                          const audio = new Audio(url);
-                          commentAudioRef.current = audio;
-                          let handled = false;
-                          const cleanup = () => {
-                            if (handled) return;
-                            handled = true;
-                            setPlayingCommentId(null);
-                            commentAudioRef.current = null;
-                          };
-                          audio.onended = cleanup;
-                          audio.onerror = () => {
-                            const mediaError = audio.error;
-                            if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
-                              cleanup();
-                            }
-                          };
-                          try {
-                            await audio.play();
-                          } catch (err: any) {
-                            if (err.name !== 'AbortError') {
-                              cleanup();
-                            }
-                          }
+                        if (confirm("Delete this comment?")) {
+                          await supabase.from("sermon_comments").delete().eq("id", comment.id);
+                          fetchComments();
                         }
                       }}
                     >
-                      {playingCommentId === comment.id ? (
-                        <Pause className="h-4 w-4" />
-                      ) : (
-                        <Play className="h-4 w-4" />
-                      )}
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (confirm("Delete this comment?")) {
-                        await supabase.from("sermon_comments").delete().eq("id", comment.id);
-                        fetchComments();
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
+              ))}
+              
+              {/* Add intro comment button */}
+              <div className="flex justify-center">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full h-8 px-4 bg-background shadow-sm border-dashed"
+                  onClick={() => openCommentDialog(0, 0)}
+                >
+                  <MessageSquare className="h-3 w-3 mr-2" />
+                  <span className="text-xs">Add intro comment</span>
+                </Button>
               </div>
-            ))}
-            
-            {/* Add intro comment button */}
-            <div className="flex justify-center">
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-full h-8 px-4 bg-background shadow-sm border-dashed"
-                onClick={() => openCommentDialog(0, 0)}
-              >
-                <MessageSquare className="h-3 w-3 mr-2" />
-                <span className="text-xs">Add intro comment</span>
-              </Button>
             </div>
-          </div>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto scroll-smooth transcript-parallax" ref={transcriptContainerRef}>
             {viewMode === "sentence" ? (
               sentences.map((sentence) => (
                 <div
