@@ -94,7 +94,7 @@ export const useMicrophoneSelector = () => {
           const isPhone = (
             label.includes('iphone') ||
             label.includes('android') ||
-            label.includes('phone')
+            (label.includes('phone') && !label.includes('microphone'))
           );
           if (isPhone) {
             console.log('Filtering out phone device:', device.label);
