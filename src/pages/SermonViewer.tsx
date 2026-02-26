@@ -3417,7 +3417,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-2 bg-amber-500/50 border-t border-b border-amber-600 rounded" />
-                <span>Volume Changes</span>
+                <span>Volume Dynamics</span>
               </div>
               {getTopInsiderTerms().map((term) => (
                 <div key={term.word} className="flex items-center gap-2">
@@ -3628,7 +3628,7 @@ const SermonViewer = () => {
               onClick={() => setShowVolumeChanges(!showVolumeChanges)}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-base font-bold text-amber-700">Volume Changes</h3>
+                <h3 className="text-base font-bold text-amber-700">Volume Dynamics</h3>
                 <Checkbox
                   checked={showVolumeChanges}
                   onCheckedChange={(checked) => setShowVolumeChanges(checked === true)}
@@ -3653,7 +3653,7 @@ const SermonViewer = () => {
                   Volume Shifts by Level
                 </div>
               </div>
-              {/* Volume Changes Sparkline */}
+              {/* Volume Dynamics Sparkline */}
               <div className="flex justify-center mb-2">
                 <Sparkline 
                   data={getVolumeTimelineData().map(d => d.volume)} 
