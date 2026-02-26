@@ -1330,29 +1330,43 @@ const SermonViewer = () => {
 
   const getVolumeDynamicsScore = (): number => {
     if (sentences.length === 0 || waveformData.length === 0) return 5;
-    
-    const paragraphs = groupIntoParagraphs(sentences);
-    if (paragraphs.length < 2) return 5;
-    
-    const baselineAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
-    if (baselineAverage === 0) return 1;
-    
-    const paragraphVolumes = paragraphs.map(paragraph => {
-      const first = paragraph[0];
-      const last = paragraph[paragraph.length - 1];
-      if (!first || !last || !sermon?.duration_seconds) return baselineAverage;
-      const startIdx = Math.floor((first.start_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
-      const endIdx = Math.ceil((last.end_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
-      const slice = waveformData.slice(Math.max(0, startIdx), Math.min(waveformData.length, endIdx));
-      return slice.length > 0 ? slice.reduce((a, b) => a + b, 0) / slice.length : baselineAverage;
-    });
-    
-    const mean = paragraphVolumes.reduce((a, b) => a + b, 0) / paragraphVolumes.length;
-    if (mean === 0) return 1;
-    const variance = paragraphVolumes.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / paragraphVolumes.length;
-    const cv = Math.sqrt(variance) / mean;
-    // Spread: 0.03=1, 0.12=5, 0.35=10
-    return scaleScore(cv, 0.03, 0.12, 0.35);
+    if (!sermon?.duration_seconds) return 5;
+
+    const deviations25 = countSustainedVolumeDeviations(25);
+    const deviations35 = countSustainedVolumeDeviations(35);
+    const deviations45 = countSustainedVolumeDeviations(45);
+
+    const lastSentence = sentences[sentences.length - 1];
+    const durationMinutes = lastSentence.end_time_ms / 60000;
+    if (durationMinutes <= 0) return 5;
+
+    // === FREQUENCY (40%): one 25%+ shift per 5 min = full marks ===
+    const targetDeviations = durationMinutes / 5;
+    const freqRatio = targetDeviations > 0 ? Math.min(1, deviations25.total / targetDeviations) : 0;
+    const frequencyScore = 1 + freqRatio * 9;
+
+    // === MAGNITUDE (30%): reward bigger shifts ===
+    let magnitudeScore = 1;
+    if (deviations25.total > 0) {
+      const ratio35 = deviations35.total / deviations25.total;
+      const ratio45 = deviations45.total / deviations25.total;
+      const mag35 = Math.min(1, ratio35 / 0.30);
+      const mag45 = Math.min(1, ratio45 / 0.10);
+      const magRatio = mag35 * 0.6 + mag45 * 0.4;
+      magnitudeScore = 1 + magRatio * 9;
+    }
+
+    // === VARIETY (30%): reward balance between louder and softer ===
+    let varietyScore = 1;
+    if (deviations25.total > 0) {
+      const louderFrac = deviations25.louder / deviations25.total;
+      const balance = 1 - Math.abs(0.5 - louderFrac) * 2;
+      varietyScore = 1 + balance * 9;
+    }
+
+    // Weighted average: 40% frequency, 30% magnitude, 30% variety
+    const combined = frequencyScore * 0.4 + magnitudeScore * 0.3 + varietyScore * 0.3;
+    return Math.round(Math.max(1, Math.min(10, combined)));
   };
 
   const getUseOfSilenceScore = (): number => {
