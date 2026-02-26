@@ -4178,6 +4178,42 @@ const SermonViewer = () => {
                   to the congregation
                 </div>
               </div>
+              {!loadingQuestions && (() => {
+                const questions = sentences
+                  .map((s, sIdx) => ({ s, sIdx }))
+                  .filter(({ s, sIdx }) => {
+                    if (!s.sentence_text.trim().endsWith('?')) return false;
+                    if (isSentenceInScripture(s.sentence_text, sIdx)) return false;
+                    if (congregationQuestionIndices && !congregationQuestionIndices.has(sIdx)) return false;
+                    return true;
+                  });
+                return questions.length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                    <div className="text-xs text-muted-foreground mb-2">
+                      <p className="font-medium">Questions identified:</p>
+                    </div>
+                    {questions.map(({ s, sIdx }) => (
+                      <div 
+                        key={sIdx} 
+                        className="text-sm border-l-2 border-amber-500 pl-2 py-1 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-r"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (audioRef.current) {
+                            audioRef.current.currentTime = s.start_time_ms / 1000;
+                            audioRef.current.play();
+                            setPlaying(true);
+                          }
+                        }}
+                      >
+                        <div className="text-amber-800 dark:text-amber-300">"{s.sentence_text}"</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {Math.floor(s.start_time_ms / 1000 / 60)}:{String(Math.floor((s.start_time_ms / 1000) % 60)).padStart(2, "0")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
             </Card>
 
           </div>
