@@ -25,7 +25,7 @@ export const FloatingRecordingIndicator = ({
       <div className="flex items-center gap-3 bg-destructive text-destructive-foreground px-4 py-3 rounded-full shadow-lg">
         <div className="flex items-center gap-2">
           <Mic className="h-4 w-4 animate-pulse" />
-          <span className="text-sm font-medium">Recording {formatTime(recordingTime)}</span>
+          <span className="text-sm font-medium">Recording</span>
         </div>
         <Button
           onClick={onStopRecording}
