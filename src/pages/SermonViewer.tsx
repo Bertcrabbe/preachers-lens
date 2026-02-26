@@ -1282,20 +1282,26 @@ const SermonViewer = () => {
 
   const getPaceDynamicsScore = (): number => {
     if (sentences.length === 0) return 5;
-    const { stdDev } = getSpeedVariance();
     const avgWpm = getAverageSpeechRate();
     if (avgWpm === 0) return 5;
-    const cv = stdDev / avgWpm;
-    const cvScore = scaleScore(cv, 0.08, 0.15, 0.30);
 
-    const paragraphs = groupIntoParagraphs(sentences);
-    if (paragraphs.length <= 1) return cvScore;
-    const transitions15 = countSpeedTransitions(15);
-    const ratio = transitions15 / paragraphs.length;
-    const transitionScore = scaleScore(ratio, 0.10, 0.40, 0.75);
+    // Find all sustained 25%+ deviations
+    const deviations = countSustainedDeviations(25);
+    const totalDeviations = deviations.total;
 
-    // Blend: 50% spread + 50% transitions
-    return Math.round((cvScore + transitionScore) / 2);
+    // Calculate sermon duration in minutes
+    const lastSentence = sentences[sentences.length - 1];
+    const durationMinutes = lastSentence.end_time_ms / 60000;
+    if (durationMinutes <= 0) return 5;
+
+    // Target: at least 1 deviation per 5 minutes = 10/10
+    const targetDeviations = durationMinutes / 5;
+    if (targetDeviations <= 0) return 5;
+
+    const ratio = totalDeviations / targetDeviations;
+    // ratio >= 1.0 → 10, scale down linearly below that, minimum 1
+    if (ratio >= 1.0) return 10;
+    return Math.round(Math.max(1, 1 + ratio * 9));
   };
 
   const getVolumeDynamicsScore = (): number => {
