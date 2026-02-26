@@ -672,15 +672,19 @@ const SermonViewer = () => {
     return { min, max, stdDev, range: max - min };
   };
 
-  const countSpeedTransitions = (thresholdWpm: number = 20): number => {
+  const countSpeedTransitions = (thresholdPct: number = 15): number => {
     if (sentences.length === 0) return 0;
+    
+    const avgWpm = getAverageSpeechRate();
+    if (avgWpm === 0) return 0;
     
     const paragraphs = groupIntoParagraphs(sentences);
     const rates = paragraphs.map(p => calculateSpeechRate(p));
     
     let transitions = 0;
     for (let i = 1; i < rates.length; i++) {
-      if (Math.abs(rates[i] - rates[i - 1]) >= thresholdWpm) {
+      const pctChange = (Math.abs(rates[i] - rates[i - 1]) / avgWpm) * 100;
+      if (pctChange >= thresholdPct) {
         transitions++;
       }
     }
@@ -1224,8 +1228,8 @@ const SermonViewer = () => {
 
     const paragraphs = groupIntoParagraphs(sentences);
     if (paragraphs.length <= 1) return cvScore;
-    const transitions20 = countSpeedTransitions(20);
-    const ratio = transitions20 / paragraphs.length;
+    const transitions15 = countSpeedTransitions(15);
+    const ratio = transitions15 / paragraphs.length;
     const transitionScore = scaleScore(ratio, 0.10, 0.40, 0.75);
 
     // Blend: 50% spread + 50% transitions
@@ -3582,18 +3586,20 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-rose-600">
-                  <AnimatedCounter value={countSpeedTransitions(20)} />
+                  <AnimatedCounter value={countSpeedTransitions(15)} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Pace Changes (20+ WPM)
+                  Pace Changes (15%+ deviation)
                 </div>
               </div>
-              {/* Speed Transitions Sparkline - show WPM deltas */}
+              {/* Speed Transitions Sparkline - show % deviation from baseline */}
               <div className="flex justify-center mt-2 mb-1">
                 <Sparkline 
                   data={(() => {
+                    const avgWpm = getAverageSpeechRate();
+                    if (avgWpm === 0) return [];
                     const wpm = getWpmTimelineData().map(d => d.wpm);
-                    return wpm.slice(1).map((v, i) => Math.abs(v - wpm[i]));
+                    return wpm.slice(1).map((v, i) => Math.abs(v - wpm[i]) / avgWpm * 100);
                   })()}
                   color="#e11d48"
                   width={140} 
@@ -3603,15 +3609,15 @@ const SermonViewer = () => {
               <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
                 <div>
                   <div className="font-semibold text-rose-600">{countSpeedTransitions(10)}</div>
-                  <div className="text-muted-foreground">10+ WPM</div>
+                  <div className="text-muted-foreground">10%+</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-rose-600">{countSpeedTransitions(20)}</div>
+                  <div className="text-muted-foreground">20%+</div>
                 </div>
                 <div>
                   <div className="font-semibold text-rose-600">{countSpeedTransitions(30)}</div>
-                  <div className="text-muted-foreground">30+ WPM</div>
-                </div>
-                <div>
-                  <div className="font-semibold text-rose-600">{countSpeedTransitions(40)}</div>
-                  <div className="text-muted-foreground">40+ WPM</div>
+                  <div className="text-muted-foreground">30%+</div>
                 </div>
               </div>
             </Card>
