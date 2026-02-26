@@ -73,7 +73,12 @@ Do NOT flag:
 - Phrases where the speaker already explains what they mean in context
 
 Special rule for biblical names:
-- Other biblical figure names used on their own (e.g., "Paul", "Apostle Paul", "Moses", "Abraham", "David", "Elijah", "Isaiah") should be flagged as "mild" severity since a newcomer may not know who they are, but they are not deeply confusing`
+- Other biblical figure names used on their own (e.g., "Paul", "Apostle Paul", "Moses", "Abraham", "David", "Elijah", "Isaiah") should be flagged as "mild" severity since a newcomer may not know who they are, but they are not deeply confusing
+
+Severity guidelines:
+- "mild": standalone biblical names, simple church terms like "small groups"
+- "moderate": theological terms that can be briefly explained (e.g., "grace", "redemption")
+- "severe": dense theological language, loaded doctrinal phrases, or multi-concept constructs that require significant background knowledge (e.g., "royal priesthood", "holy nation", "washed in the blood", "justification by faith", "propitiation"). If a phrase packs multiple unfamiliar theological concepts together, it is severe.`
           },
           {
             role: "user",
