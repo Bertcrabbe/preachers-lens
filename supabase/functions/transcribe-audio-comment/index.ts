@@ -24,7 +24,12 @@ serve(async (req) => {
       throw new Error('No audio file provided');
     }
 
-    console.log('Transcribing audio comment with AssemblyAI:', audioFile.name, 'Size:', audioFile.size);
+    // Ensure we have actual audio data (not an empty/corrupt file)
+    if (audioFile.size < 1000) {
+      throw new Error(`Audio file too small (${audioFile.size} bytes) - recording may have failed`);
+    }
+
+    console.log('Transcribing audio comment with AssemblyAI:', audioFile.name, 'Size:', audioFile.size, 'Type:', audioFile.type);
 
     // Step 1: Upload the audio file to AssemblyAI
     const audioBuffer = await audioFile.arrayBuffer();
@@ -33,6 +38,7 @@ serve(async (req) => {
       headers: {
         'Authorization': assemblyAIApiKey,
         'Content-Type': 'application/octet-stream',
+        'Transfer-Encoding': 'chunked',
       },
       body: audioBuffer,
     });

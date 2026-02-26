@@ -64,16 +64,32 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
 
   const startRecording = async () => {
     try {
-      // Use selected device or fall back to default
+      // Use selected device with fallback to default if unavailable
       const audioConstraints: MediaTrackConstraints = selectedDeviceId 
-        ? { deviceId: { exact: selectedDeviceId } }
+        ? { deviceId: { ideal: selectedDeviceId } }
         : {};
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       streamRef.current = stream;
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      
+      // Pick best supported audio MIME type
+      const mimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/mp4',
+      ];
+      let selectedMimeType = '';
+      for (const mt of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mt)) {
+          selectedMimeType = mt;
+          break;
+        }
+      }
+      console.log('Selected recording MIME type:', selectedMimeType || 'browser default');
+      
+      const recorderOptions: MediaRecorderOptions = selectedMimeType ? { mimeType: selectedMimeType } : {};
+      const mediaRecorder = new MediaRecorder(stream, recorderOptions);
       
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -85,7 +101,8 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
+        const actualType = mediaRecorder.mimeType || selectedMimeType || 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type: actualType });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
