@@ -70,9 +70,13 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
       if (preAcquiredStream && preAcquiredStream.active) {
         stream = preAcquiredStream;
       } else {
-        const audioConstraints: MediaTrackConstraints = selectedDeviceId 
-          ? { deviceId: { ideal: selectedDeviceId } }
-          : {};
+        const audioConstraints: MediaTrackConstraints = {
+          ...(selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : {}),
+          sampleRate: 44100,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: true,
+        };
         stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       }
       streamRef.current = stream;

@@ -1967,9 +1967,13 @@ const SermonViewer = () => {
     setSelectedTimeRange({ start, end });
     // Pre-acquire mic stream in user gesture context to avoid empty recordings
     try {
-      const audioConstraints: MediaTrackConstraints = selectedDeviceId 
-        ? { deviceId: { ideal: selectedDeviceId } }
-        : {};
+      const audioConstraints: MediaTrackConstraints = {
+        ...(selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : {}),
+        sampleRate: 44100,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: true,
+      };
       const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       setPreAcquiredStream(stream);
     } catch (e) {
