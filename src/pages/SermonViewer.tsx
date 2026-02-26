@@ -194,6 +194,7 @@ const SermonViewer = () => {
     time: number;
     stopFn: (() => void) | null;
   }>({ isRecording: false, time: 0, stopFn: null });
+  const [preAcquiredStream, setPreAcquiredStream] = useState<MediaStream | null>(null);
   const [showAudioEditor, setShowAudioEditor] = useState(false);
   const [illustrationData, setIllustrationData] = useState<{
     elements: Array<{ type: string; summary: string; excerpt: string }>;
@@ -496,8 +497,7 @@ const SermonViewer = () => {
             );
             const timeMs = currentSentence ? currentSentence.start_time_ms : Math.round(currentTime);
             const endMs = currentSentence ? currentSentence.end_time_ms : Math.round(currentTime) + 1000;
-            setSelectedTimeRange({ start: timeMs, end: endMs });
-            setCommentDialogOpen(true);
+            openCommentDialog(timeMs, endMs);
           }
           break;
       }
@@ -1956,8 +1956,19 @@ const SermonViewer = () => {
     stopCommentAudio();
   };
 
-  const openCommentDialog = (start: number, end: number) => {
+  const openCommentDialog = async (start: number, end: number) => {
     setSelectedTimeRange({ start, end });
+    // Pre-acquire mic stream in user gesture context to avoid empty recordings
+    try {
+      const audioConstraints: MediaTrackConstraints = selectedDeviceId 
+        ? { deviceId: { ideal: selectedDeviceId } }
+        : {};
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      setPreAcquiredStream(stream);
+    } catch (e) {
+      console.error('Failed to pre-acquire mic stream:', e);
+      setPreAcquiredStream(null);
+    }
     setCommentDialogOpen(true);
   };
 
@@ -2016,6 +2027,10 @@ const SermonViewer = () => {
       toast({ title: "Audio comment saved" });
       setCommentDialogOpen(false);
       setAudioBlob(null);
+      if (preAcquiredStream) {
+        preAcquiredStream.getTracks().forEach(t => t.stop());
+        setPreAcquiredStream(null);
+      }
       
       // Seek to the next sentence so spacebar resumes past the comment
       const nextSentence = sentences.find(s => s.start_time_ms > selectedTimeRange.start);
@@ -5194,6 +5209,11 @@ const SermonViewer = () => {
               if (!transcribing) {
                 setCommentDialogOpen(false);
                 setAudioBlob(null);
+                // Clean up pre-acquired stream
+                if (preAcquiredStream) {
+                  preAcquiredStream.getTracks().forEach(t => t.stop());
+                  setPreAcquiredStream(null);
+                }
               }
             }}>
               <X className="h-4 w-4" />
@@ -5201,6 +5221,7 @@ const SermonViewer = () => {
           </div>
           <AudioRecorder
             autoStart={commentDialogOpen}
+            preAcquiredStream={preAcquiredStream}
             onRecordingComplete={(blob) => {
               setAudioBlob(blob);
               handleAutoSaveAudioComment(blob);

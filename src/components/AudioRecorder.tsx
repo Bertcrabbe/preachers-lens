@@ -9,9 +9,10 @@ interface AudioRecorderProps {
   selectedDeviceId?: string | null;
   onRecordingStateChange?: (isRecording: boolean, time: number, stopFn: () => void) => void;
   autoStart?: boolean;
+  preAcquiredStream?: MediaStream | null;
 }
 
-export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, onRecordingStateChange, autoStart }: AudioRecorderProps) => {
+export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, onRecordingStateChange, autoStart, preAcquiredStream }: AudioRecorderProps) => {
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -64,12 +65,16 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
 
   const startRecording = async () => {
     try {
-      // Use selected device with fallback to default if unavailable
-      const audioConstraints: MediaTrackConstraints = selectedDeviceId 
-        ? { deviceId: { ideal: selectedDeviceId } }
-        : {};
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      // Use pre-acquired stream if available (preserves user gesture context)
+      let stream: MediaStream;
+      if (preAcquiredStream && preAcquiredStream.active) {
+        stream = preAcquiredStream;
+      } else {
+        const audioConstraints: MediaTrackConstraints = selectedDeviceId 
+          ? { deviceId: { ideal: selectedDeviceId } }
+          : {};
+        stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      }
       streamRef.current = stream;
       
       // Pick best supported audio MIME type
@@ -109,7 +114,7 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
         onRecordingComplete(blob);
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000); // Collect data every second for reliability
       setIsRecording(true);
       setRecordingTime(0);
       
