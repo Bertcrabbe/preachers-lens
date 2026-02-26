@@ -223,6 +223,13 @@ const SermonViewer = () => {
     }
   }, [sentences]);
 
+  // Auto-run visitor confusion detection when sentences are loaded
+  useEffect(() => {
+    if (sentences.length > 0 && !confusingPhrases && !loadingConfusing) {
+      fetchConfusingPhrases();
+    }
+  }, [sentences]);
+
   // Persist metrics to sermon_metrics table for trends tracking
   useEffect(() => {
     const persistMetrics = async () => {
