@@ -3582,7 +3582,7 @@ const SermonViewer = () => {
 
             <Card className="stats-card p-4">
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-base font-bold text-rose-700">Speed Transitions</h3>
+                <h3 className="text-base font-bold text-rose-700">Pace Dynamics</h3>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-rose-600">
@@ -3592,7 +3592,7 @@ const SermonViewer = () => {
                   Pace Changes (15%+ deviation)
                 </div>
               </div>
-              {/* Speed Transitions Sparkline - show % deviation from baseline */}
+              {/* Pace Dynamics Sparkline - show % deviation from baseline */}
               <div className="flex justify-center mt-2 mb-1">
                 <Sparkline 
                   data={(() => {
