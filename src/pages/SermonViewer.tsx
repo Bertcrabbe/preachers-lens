@@ -5306,11 +5306,7 @@ const SermonViewer = () => {
         </DialogContent>
       </Dialog>
 
-      <FloatingRecordingIndicator
-        isRecording={floatingRecording.isRecording}
-        recordingTime={floatingRecording.time}
-        onStopRecording={() => floatingRecording.stopFn?.()}
-      />
+      {/* FloatingRecordingIndicator removed - comment panel already has stop button */}
 
       {/* Floating Add Comment button when audio is paused */}
       {!playing && !playingCommentId && !floatingRecording.isRecording && audioUrl && currentTime > 0 && (
