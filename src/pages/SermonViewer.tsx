@@ -1858,8 +1858,12 @@ const SermonViewer = () => {
               // Stop any existing comment audio before playing new one
               if (commentAudioRef.current) {
                 try {
+                  // Remove event handlers BEFORE clearing src to prevent race conditions
+                  commentAudioRef.current.onended = null;
+                  commentAudioRef.current.onerror = null;
                   commentAudioRef.current.pause();
-                  commentAudioRef.current.src = '';
+                  commentAudioRef.current.removeAttribute('src');
+                  commentAudioRef.current.load();
                 } catch (e) {
                   // Ignore errors when stopping
                 }
@@ -1921,8 +1925,11 @@ const SermonViewer = () => {
   // Helper to stop any currently playing comment audio
   const stopCommentAudio = () => {
     if (commentAudioRef.current) {
+      commentAudioRef.current.onended = null;
+      commentAudioRef.current.onerror = null;
       commentAudioRef.current.pause();
-      commentAudioRef.current.src = '';
+      commentAudioRef.current.removeAttribute('src');
+      commentAudioRef.current.load();
       commentAudioRef.current = null;
     }
     setPlayingCommentId(null);
