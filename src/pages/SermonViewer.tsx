@@ -1963,24 +1963,23 @@ const SermonViewer = () => {
     stopCommentAudio();
   };
 
-  const openCommentDialog = async (start: number, end: number) => {
+  const openCommentDialog = (start: number, end: number) => {
     setSelectedTimeRange({ start, end });
-    // Pre-acquire mic stream in user gesture context to avoid empty recordings
-    try {
-      const audioConstraints: MediaTrackConstraints = {
-        ...(selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : {}),
-        sampleRate: 44100,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: true,
-      };
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+    setCommentDialogOpen(true);
+    // Pre-acquire mic stream in parallel – don't block dialog open
+    const audioConstraints: MediaTrackConstraints = {
+      ...(selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : {}),
+      sampleRate: 44100,
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: true,
+    };
+    navigator.mediaDevices.getUserMedia({ audio: audioConstraints }).then(stream => {
       setPreAcquiredStream(stream);
-    } catch (e) {
+    }).catch(e => {
       console.error('Failed to pre-acquire mic stream:', e);
       setPreAcquiredStream(null);
-    }
-    setCommentDialogOpen(true);
+    });
   };
 
   const handleAutoSaveAudioComment = async (blob: Blob) => {
