@@ -3678,7 +3678,7 @@ const SermonViewer = () => {
                   <AnimatedCounter value={countSustainedDeviations(25).total} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Sustained Deviations (25%+, ≥10s)
+                  Sustained Deviations
                 </div>
               </div>
               {/* Pace Dynamics Sparkline - show % deviation from baseline */}
@@ -3745,7 +3745,7 @@ const SermonViewer = () => {
                   <AnimatedCounter value={countSustainedVolumeDeviations(25).total} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Sustained Deviations (25%+)
+                  Sustained Deviations
                 </div>
               </div>
               {/* Volume Dynamics Sparkline */}
