@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -41,16 +41,16 @@ serve(async (req) => {
     // Build numbered transcript so AI can reference sentence indices
     const numberedTranscript = sentences.map((s: any, i: number) => `[${i}] ${s.sentence_text}`).join("\n");
     
-    // Truncate to avoid exceeding AI context limits
-    const maxChars = 80000;
+    // Truncate to avoid exceeding AI context limits and reduce latency
+    const maxChars = 40000;
     const transcript = numberedTranscript.length > maxChars 
       ? numberedTranscript.substring(0, maxChars) + "\n\n[TRANSCRIPT TRUNCATED]"
       : numberedTranscript;
 
     console.log(`Transcript length: ${numberedTranscript.length} chars, sending: ${transcript.length} chars`);
 
-    // Try multiple models in case one is unavailable
-    const models = ["openai/gpt-5-nano", "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash"];
+    // Use fastest models first to minimize response time
+    const models = ["google/gemini-2.5-flash-lite", "openai/gpt-5-nano", "google/gemini-2.5-flash"];
     let lastError = "";
     
     for (const model of models) {
