@@ -694,11 +694,12 @@ const SermonViewer = () => {
 
   // Count sustained deviations: contiguous runs of sentences where WPM deviates
   // from baseline by >= thresholdPct%, lasting at least minDurationMs
-  const countSustainedDeviations = (thresholdPct: number = 15, minDurationMs: number = 10000): number => {
-    if (sentences.length === 0) return 0;
+  // Returns { faster, slower } counts based on direction
+  const countSustainedDeviations = (thresholdPct: number = 15, minDurationMs: number = 10000): { faster: number; slower: number; total: number } => {
+    if (sentences.length === 0) return { faster: 0, slower: 0, total: 0 };
 
     const avgWpm = getAverageSpeechRate();
-    if (avgWpm === 0) return 0;
+    if (avgWpm === 0) return { faster: 0, slower: 0, total: 0 };
 
     // Compute per-sentence WPM
     const sentenceWpms = sentences.map(s => {
@@ -708,23 +709,36 @@ const SermonViewer = () => {
       return (words / durationSec) * 60;
     });
 
-    let deviationCount = 0;
+    let fasterCount = 0;
+    let slowerCount = 0;
     let runStartMs: number | null = null;
+    let runDirection: 'faster' | 'slower' | null = null;
 
     for (let i = 0; i < sentences.length; i++) {
-      const pctDev = (Math.abs(sentenceWpms[i] - avgWpm) / avgWpm) * 100;
-      if (pctDev >= thresholdPct) {
+      const diff = sentenceWpms[i] - avgWpm;
+      const pctDev = (Math.abs(diff) / avgWpm) * 100;
+      const dir: 'faster' | 'slower' = diff >= 0 ? 'faster' : 'slower';
+
+      if (pctDev >= thresholdPct && (runDirection === null || dir === runDirection)) {
         if (runStartMs === null) {
           runStartMs = sentences[i].start_time_ms;
+          runDirection = dir;
         }
       } else {
-        // End of a run
+        // End of a run (direction changed or dropped below threshold)
         if (runStartMs !== null) {
           const runEndMs = sentences[i - 1].end_time_ms;
           if (runEndMs - runStartMs >= minDurationMs) {
-            deviationCount++;
+            if (runDirection === 'faster') fasterCount++;
+            else slowerCount++;
           }
           runStartMs = null;
+          runDirection = null;
+        }
+        // Start new run if this sentence still deviates
+        if (pctDev >= thresholdPct) {
+          runStartMs = sentences[i].start_time_ms;
+          runDirection = dir;
         }
       }
     }
@@ -732,11 +746,12 @@ const SermonViewer = () => {
     if (runStartMs !== null) {
       const runEndMs = sentences[sentences.length - 1].end_time_ms;
       if (runEndMs - runStartMs >= minDurationMs) {
-        deviationCount++;
+        if (runDirection === 'faster') fasterCount++;
+        else slowerCount++;
       }
     }
 
-    return deviationCount;
+    return { faster: fasterCount, slower: slowerCount, total: fasterCount + slowerCount };
   };
 
   const getWpmTimelineData = (): { time: number; wpm: number; timeLabel: string }[] => {
@@ -3633,7 +3648,7 @@ const SermonViewer = () => {
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="text-3xl font-bold text-rose-600">
-                  <AnimatedCounter value={countSustainedDeviations(15)} />
+                  <AnimatedCounter value={countSustainedDeviations(15).total} />
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Sustained Deviations (15%+, ≥10s)
@@ -3658,13 +3673,29 @@ const SermonViewer = () => {
                   height={28} 
                 />
               </div>
-              <div className="mt-2 grid grid-cols-5 gap-1 text-xs text-center border-t pt-3">
-                {[10, 15, 20, 25, 30].map(pct => (
-                  <div key={pct}>
-                    <div className="font-semibold text-rose-600">{countSustainedDeviations(pct)}</div>
-                    <div className="text-muted-foreground">{pct}%+</div>
+              <div className="mt-2 border-t pt-3">
+                <div className="grid grid-cols-5 gap-1 text-xs text-center">
+                  <div className="col-span-5 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-rose-500" /> Faster
                   </div>
-                ))}
+                  {[10, 15, 20, 25, 30].map(pct => (
+                    <div key={pct}>
+                      <div className="font-semibold text-rose-600">{countSustainedDeviations(pct).faster}</div>
+                      <div className="text-muted-foreground">+{pct}%</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-5 gap-1 text-xs text-center mt-2">
+                  <div className="col-span-5 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-blue-500" /> Slower
+                  </div>
+                  {[10, 15, 20, 25, 30].map(pct => (
+                    <div key={pct}>
+                      <div className="font-semibold text-blue-600">{countSustainedDeviations(pct).slower}</div>
+                      <div className="text-muted-foreground">-{pct}%</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </Card>
 
