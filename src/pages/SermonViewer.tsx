@@ -1839,17 +1839,53 @@ const SermonViewer = () => {
     }
   };
 
+  const scriptureAbortRef = useRef<AbortController | null>(null);
+
   const fetchScriptureReferences = async () => {
+    // Abort any in-flight request
+    if (scriptureAbortRef.current) {
+      scriptureAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    scriptureAbortRef.current = controller;
+
+    // Set a 120-second timeout to allow the AI model enough time
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
     setLoadingScriptures(true);
     try {
-      const { data, error } = await supabase.functions.invoke("count-scripture-refs", {
-        body: { sermonId: id },
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/count-scripture-refs`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ sermonId: id }),
+          signal: controller.signal,
+        }
+      );
 
-      if (error) throw error;
+      clearTimeout(timeoutId);
 
-      setScriptureRefs(data);
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(errBody || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Only set state if this request wasn't aborted
+      if (!controller.signal.aborted) {
+        setScriptureRefs(data);
+      }
     } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === "AbortError") {
+        console.log("Scripture references request was aborted");
+        return;
+      }
       console.error("Failed to load scripture references:", error);
       toast({
         title: "Failed to load scripture references",
