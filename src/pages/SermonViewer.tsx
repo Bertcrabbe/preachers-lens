@@ -1424,7 +1424,6 @@ const SermonViewer = () => {
     const paragraphs = groupIntoParagraphs(sentences);
     const counts: { [key: number]: number } = { '-2': 0, '-1': 0, '0': 0, '1': 0, '2': 0 };
     
-    // Calculate baseline average volume for entire sermon
     const baselineAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
     
     paragraphs.forEach(paragraph => {
@@ -1441,16 +1440,8 @@ const SermonViewer = () => {
       if (paragraphData.length === 0) return;
       
       const paragraphAverage = paragraphData.reduce((sum, val) => sum + val, 0) / paragraphData.length;
-      
-      // Calculate the ratio of paragraph volume to baseline volume
       const volumeRatio = paragraphAverage / baselineAverage;
       
-      // Categorize based on how much louder/quieter relative to baseline
-      // +2: 30%+ louder
-      // +1: 15-30% louder  
-      // 0: within 15% of baseline
-      // -1: 15-30% quieter
-      // -2: 30%+ quieter
       if (volumeRatio >= 1.3) {
         counts[2]++;
       } else if (volumeRatio >= 1.15) {
@@ -1465,6 +1456,42 @@ const SermonViewer = () => {
     });
     
     return counts;
+  };
+
+  // Count sustained volume deviations similar to pace deviations
+  // Uses paragraph-level volume analysis with louder/softer direction
+  const countSustainedVolumeDeviations = (thresholdPct: number = 25): { louder: number; softer: number; total: number } => {
+    if (sentences.length === 0 || !sermon?.duration_seconds || waveformData.length === 0) {
+      return { louder: 0, softer: 0, total: 0 };
+    }
+
+    const paragraphs = groupIntoParagraphs(sentences);
+    const baselineAverage = waveformData.reduce((sum, val) => sum + val, 0) / waveformData.length;
+    if (baselineAverage === 0) return { louder: 0, softer: 0, total: 0 };
+
+    let louder = 0;
+    let softer = 0;
+
+    paragraphs.forEach(paragraph => {
+      const firstSentence = paragraph[0];
+      const lastSentence = paragraph[paragraph.length - 1];
+      if (!firstSentence || !lastSentence) return;
+
+      const startIndex = Math.floor((firstSentence.start_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+      const endIndex = Math.ceil((lastSentence.end_time_ms / 1000 / sermon.duration_seconds) * waveformData.length);
+      if (startIndex >= waveformData.length || endIndex > waveformData.length) return;
+
+      const paragraphData = waveformData.slice(startIndex, endIndex);
+      if (paragraphData.length === 0) return;
+
+      const paragraphAverage = paragraphData.reduce((sum, val) => sum + val, 0) / paragraphData.length;
+      const pctDev = ((paragraphAverage - baselineAverage) / baselineAverage) * 100;
+
+      if (pctDev >= thresholdPct) louder++;
+      else if (pctDev <= -thresholdPct) softer++;
+    });
+
+    return { louder, softer, total: louder + softer };
   };
 
   const getParagraphVolumeLevel = (paragraph: Sentence[]): number => {
@@ -3713,25 +3740,16 @@ const SermonViewer = () => {
                   className="mt-1"
                 />
               </div>
-              <div className="flex flex-col items-center text-center mb-3">
-                <div className="grid grid-cols-5 gap-2 w-full px-2">
-                  {[-2, -1, 0, 1, 2].map(level => (
-                    <div key={level} className="flex flex-col items-center">
-                      <div className="text-lg font-bold text-amber-600">
-                        {countVolumeChangeParagraphs()[level]}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {level > 0 ? `+${level}` : level}
-                      </div>
-                    </div>
-                  ))}
+              <div className="flex flex-col items-center text-center">
+                <div className="text-3xl font-bold text-amber-600">
+                  <AnimatedCounter value={countSustainedVolumeDeviations(25).total} />
                 </div>
-                <div className="text-sm text-muted-foreground mt-2">
-                  Volume Shifts by Level
+                <div className="text-sm text-muted-foreground mt-1">
+                  Sustained Deviations (25%+)
                 </div>
               </div>
               {/* Volume Dynamics Sparkline */}
-              <div className="flex justify-center mb-2">
+              <div className="flex justify-center mt-2 mb-1">
                 <Sparkline 
                   data={getVolumeTimelineData().map(d => d.volume)} 
                   color="#f59e0b" 
@@ -3740,19 +3758,29 @@ const SermonViewer = () => {
                   showAvgLine
                 />
               </div>
-              <div className="px-2" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>Threshold</span>
-                  <span>{volumeChangeThreshold > 0 ? '+' : ''}{volumeChangeThreshold.toFixed(1)}</span>
+              <div className="mt-2 border-t pt-3">
+                <div className="grid grid-cols-3 gap-1 text-xs text-center">
+                  <div className="col-span-3 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> Louder
+                  </div>
+                  {[25, 35, 45].map(pct => (
+                    <div key={pct}>
+                      <div className="font-semibold text-amber-600">{countSustainedVolumeDeviations(pct).louder}</div>
+                      <div className="text-muted-foreground">+{pct}%</div>
+                    </div>
+                  ))}
                 </div>
-                <Slider
-                  value={[volumeChangeThreshold]}
-                  onValueChange={([value]) => setVolumeChangeThreshold(value)}
-                  min={-2}
-                  max={2}
-                  step={0.1}
-                  className="w-full"
-                />
+                <div className="grid grid-cols-3 gap-1 text-xs text-center mt-2">
+                  <div className="col-span-3 text-left text-muted-foreground font-medium mb-1 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-blue-500" /> Softer
+                  </div>
+                  {[25, 35, 45].map(pct => (
+                    <div key={pct}>
+                      <div className="font-semibold text-blue-600">{countSustainedVolumeDeviations(pct).softer}</div>
+                      <div className="text-muted-foreground">-{pct}%</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </Card>
 
