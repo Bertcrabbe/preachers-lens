@@ -1372,8 +1372,8 @@ const SermonViewer = () => {
   const getUseOfSilenceScore = (): number => {
     if (sentences.length < 2) return 5;
     const pauseCount = countSilentPauses(3000);
-    // 0 pauses = 1 (no silence), 8 = 5 (moderate), 20 = 10 (excellent)
-    return scaleScore(pauseCount, 0, 8, 20);
+    // 1 point per pause, max 10
+    return Math.max(1, Math.min(10, pauseCount));
   };
 
   const getSentenceVarietyScore = (): number => {
