@@ -9,7 +9,7 @@ interface AudioRecorderProps {
   selectedDeviceId?: string | null;
   onRecordingStateChange?: (isRecording: boolean, time: number, stopFn: () => void) => void;
   autoStart?: boolean;
-  preAcquiredStream?: MediaStream | null;
+  preAcquiredStream?: MediaStream | null | undefined;
 }
 
 export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, onRecordingStateChange, autoStart, preAcquiredStream }: AudioRecorderProps) => {
@@ -43,14 +43,21 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
     }
   };
 
-  // Auto-start recording if requested
+  // Auto-start recording when autoStart is set and stream is ready
   const autoStartedRef = useRef(false);
   useEffect(() => {
-    if (autoStart && !autoStartedRef.current && !isRecording && !audioBlob) {
+    if (!autoStart || autoStartedRef.current || isRecording || audioBlob) return;
+    // Wait until preAcquiredStream is actually provided (not null)
+    if (preAcquiredStream && preAcquiredStream.active) {
       autoStartedRef.current = true;
       startRecording();
     }
-  }, [autoStart]);
+    // If no preAcquiredStream prop at all (undefined), start without it
+    if (preAcquiredStream === undefined) {
+      autoStartedRef.current = true;
+      startRecording();
+    }
+  }, [autoStart, preAcquiredStream]);
 
   useEffect(() => {
     return () => {
