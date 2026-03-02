@@ -1,4 +1,4 @@
-import lamejs from "@breezystack/lamejs";
+// lamejs is imported dynamically to avoid blocking the build
 
 export async function combineAudioFiles(
   sermonAudioUrl: string,
@@ -122,7 +122,7 @@ export async function combineAudioFiles(
     const renderedBuffer = await offlineContext.startRendering();
     
     onProgress?.(90, "Encoding to MP3...");
-    const mp3Blob = audioBufferToMp3(renderedBuffer);
+    const mp3Blob = await audioBufferToMp3(renderedBuffer);
     
     onProgress?.(100, "Complete!");
     return mp3Blob;
@@ -131,12 +131,13 @@ export async function combineAudioFiles(
   }
 }
 
-function audioBufferToMp3(buffer: AudioBuffer): Blob {
+async function audioBufferToMp3(buffer: AudioBuffer): Promise<Blob> {
+  const lamejs = await import("@breezystack/lamejs");
   const sampleRate = buffer.sampleRate;
   const numChannels = buffer.numberOfChannels;
   const kbps = 192;
 
-  const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
+  const mp3encoder = new lamejs.default.Mp3Encoder(numChannels, sampleRate, kbps);
   const mp3Data: Uint8Array[] = [];
 
   const left = convertFloat32ToInt16(buffer.getChannelData(0));
