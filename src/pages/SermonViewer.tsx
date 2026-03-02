@@ -2871,18 +2871,13 @@ const SermonViewer = () => {
                           }
                         };
                         audio.onended = cleanup;
-                        audio.onerror = (e) => {
-                          const mediaError = audio.error;
-                          if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
-                            cleanup();
-                          }
+                        audio.onerror = () => {
+                          cleanup();
                         };
                         try {
                           await audio.play();
                         } catch (err: any) {
-                          if (err.name !== 'AbortError') {
-                            cleanup();
-                          }
+                          cleanup();
                         }
                       } else {
                         setPlayingCommentId(null);
