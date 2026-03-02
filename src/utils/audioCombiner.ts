@@ -1,3 +1,5 @@
+import lamejs from "@breezystack/lamejs";
+
 export async function combineAudioFiles(
   sermonAudioUrl: string,
   commentAudios: { url: string; timestamp: number }[],
@@ -43,7 +45,7 @@ export async function combineAudioFiles(
         const buffer = await audioContext.decodeAudioData(arrayBuffer);
         commentBuffers.push({ 
           buffer, 
-          timestamp: commentAudios[i].timestamp / 1000 // Convert ms to seconds
+          timestamp: commentAudios[i].timestamp / 1000
         });
       } catch (e) {
         console.warn(`Skipping comment ${i + 1}: unable to decode audio`, e);
@@ -67,16 +69,10 @@ export async function combineAudioFiles(
     for (let i = 0; i < commentBuffers.length; i++) {
       const comment = commentBuffers[i];
       
-      // Add sermon segment before this comment
       if (comment.timestamp > currentTime) {
-        segments.push({
-          type: 'sermon',
-          start: currentTime,
-          end: comment.timestamp
-        });
+        segments.push({ type: 'sermon', start: currentTime, end: comment.timestamp });
       }
       
-      // Add comment segment
       segments.push({
         type: 'comment',
         start: comment.timestamp,
@@ -87,16 +83,10 @@ export async function combineAudioFiles(
       currentTime = comment.timestamp;
     }
     
-    // Add final sermon segment after last comment
     if (currentTime < sermonBuffer.duration) {
-      segments.push({
-        type: 'sermon',
-        start: currentTime,
-        end: sermonBuffer.duration
-      });
+      segments.push({ type: 'sermon', start: currentTime, end: sermonBuffer.duration });
     }
     
-    // Calculate total duration
     const totalDuration = segments.reduce((sum, seg) => {
       if (seg.type === 'sermon') {
         return sum + (seg.end - seg.start);
@@ -107,19 +97,11 @@ export async function combineAudioFiles(
     
     onProgress?.(70, "Creating combined audio...");
     
-    // Create offline context for rendering
-    const offlineContext = new OfflineAudioContext(
-      2, // stereo
-      Math.ceil(totalDuration * 44100),
-      44100
-    );
+    const offlineContext = new OfflineAudioContext(2, Math.ceil(totalDuration * 44100), 44100);
     
     let outputTime = 0;
-    
-    // Process each segment
     for (const segment of segments) {
       if (segment.type === 'sermon') {
-        // Copy sermon segment
         const duration = segment.end - segment.start;
         const source = offlineContext.createBufferSource();
         source.buffer = sermonBuffer;
@@ -127,7 +109,6 @@ export async function combineAudioFiles(
         source.start(outputTime, segment.start, duration);
         outputTime += duration;
       } else {
-        // Insert comment
         const comment = commentBuffers[segment.commentIndex!];
         const source = offlineContext.createBufferSource();
         source.buffer = comment.buffer;
@@ -138,76 +119,54 @@ export async function combineAudioFiles(
     }
     
     onProgress?.(85, "Rendering combined audio...");
-    
-    // Render the combined audio
     const renderedBuffer = await offlineContext.startRendering();
     
-    onProgress?.(95, "Encoding to WAV...");
-    
-    // Convert to WAV format
-    const wavBlob = audioBufferToWav(renderedBuffer);
+    onProgress?.(90, "Encoding to MP3...");
+    const mp3Blob = audioBufferToMp3(renderedBuffer);
     
     onProgress?.(100, "Complete!");
-    
-    return wavBlob;
+    return mp3Blob;
   } finally {
     await audioContext.close();
   }
 }
 
-function audioBufferToWav(buffer: AudioBuffer): Blob {
-  const numberOfChannels = buffer.numberOfChannels;
+function audioBufferToMp3(buffer: AudioBuffer): Blob {
   const sampleRate = buffer.sampleRate;
-  const format = 1; // PCM
-  const bitDepth = 16;
-  
-  const bytesPerSample = bitDepth / 8;
-  const blockAlign = numberOfChannels * bytesPerSample;
-  
-  const data = new Float32Array(buffer.length * numberOfChannels);
-  
-  // Interleave channels
-  for (let channel = 0; channel < numberOfChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < buffer.length; i++) {
-      data[i * numberOfChannels + channel] = channelData[i];
+  const numChannels = buffer.numberOfChannels;
+  const kbps = 192;
+
+  const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
+  const mp3Data: Uint8Array[] = [];
+
+  const left = convertFloat32ToInt16(buffer.getChannelData(0));
+  const right = numChannels > 1
+    ? convertFloat32ToInt16(buffer.getChannelData(1))
+    : left;
+
+  const sampleBlockSize = 1152;
+  for (let i = 0; i < left.length; i += sampleBlockSize) {
+    const leftChunk = left.subarray(i, i + sampleBlockSize);
+    const rightChunk = right.subarray(i, i + sampleBlockSize);
+    const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+    if (mp3buf.length > 0) {
+      mp3Data.push(new Uint8Array(mp3buf));
     }
   }
-  
-  const dataLength = data.length * bytesPerSample;
-  const bufferLength = 44 + dataLength;
-  const arrayBuffer = new ArrayBuffer(bufferLength);
-  const view = new DataView(arrayBuffer);
-  
-  // Write WAV header
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, bufferLength - 8, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, format, true);
-  view.setUint16(22, numberOfChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * blockAlign, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitDepth, true);
-  writeString(view, 36, 'data');
-  view.setUint32(40, dataLength, true);
-  
-  // Write audio data
-  let offset = 44;
-  for (let i = 0; i < data.length; i++) {
-    const sample = Math.max(-1, Math.min(1, data[i]));
-    const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-    view.setInt16(offset, intSample, true);
-    offset += 2;
+
+  const tail = mp3encoder.flush();
+  if (tail.length > 0) {
+    mp3Data.push(new Uint8Array(tail));
   }
-  
-  return new Blob([arrayBuffer], { type: 'audio/wav' });
+
+  return new Blob(mp3Data as unknown as BlobPart[], { type: 'audio/mpeg' });
 }
 
-function writeString(view: DataView, offset: number, string: string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
+function convertFloat32ToInt16(float32: Float32Array): Int16Array {
+  const int16 = new Int16Array(float32.length);
+  for (let i = 0; i < float32.length; i++) {
+    const s = Math.max(-1, Math.min(1, float32[i]));
+    int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
+  return int16;
 }
