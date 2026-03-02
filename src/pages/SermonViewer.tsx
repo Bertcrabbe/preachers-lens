@@ -2499,7 +2499,7 @@ const SermonViewer = () => {
       const url = URL.createObjectURL(combinedBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${sermon.title || 'sermon'}_combined.mp3`;
+      link.download = `${sermon.title || 'sermon'}_combined.wav`;
       link.click();
       URL.revokeObjectURL(url);
 

@@ -10,8 +10,19 @@ export async function combineAudioFiles(
     
     // Fetch and decode sermon audio
     const sermonResponse = await fetch(sermonAudioUrl);
+    if (!sermonResponse.ok) {
+      throw new Error(`Failed to download sermon audio (${sermonResponse.status})`);
+    }
     const sermonArrayBuffer = await sermonResponse.arrayBuffer();
-    const sermonBuffer = await audioContext.decodeAudioData(sermonArrayBuffer);
+    if (sermonArrayBuffer.byteLength === 0) {
+      throw new Error("Sermon audio file is empty");
+    }
+    let sermonBuffer: AudioBuffer;
+    try {
+      sermonBuffer = await audioContext.decodeAudioData(sermonArrayBuffer);
+    } catch (e) {
+      throw new Error("Could not decode sermon audio. The file format may not be supported.");
+    }
     
     onProgress?.(30, "Downloading commentary audio...");
     
@@ -19,13 +30,29 @@ export async function combineAudioFiles(
     const commentBuffers: { buffer: AudioBuffer; timestamp: number }[] = [];
     for (let i = 0; i < commentAudios.length; i++) {
       const response = await fetch(commentAudios[i].url);
+      if (!response.ok) {
+        console.warn(`Skipping comment ${i + 1}: download failed (${response.status})`);
+        continue;
+      }
       const arrayBuffer = await response.arrayBuffer();
-      const buffer = await audioContext.decodeAudioData(arrayBuffer);
-      commentBuffers.push({ 
-        buffer, 
-        timestamp: commentAudios[i].timestamp / 1000 // Convert ms to seconds
-      });
+      if (arrayBuffer.byteLength === 0) {
+        console.warn(`Skipping comment ${i + 1}: empty file`);
+        continue;
+      }
+      try {
+        const buffer = await audioContext.decodeAudioData(arrayBuffer);
+        commentBuffers.push({ 
+          buffer, 
+          timestamp: commentAudios[i].timestamp / 1000 // Convert ms to seconds
+        });
+      } catch (e) {
+        console.warn(`Skipping comment ${i + 1}: unable to decode audio`, e);
+      }
       onProgress?.(30 + (30 / commentAudios.length) * (i + 1), `Processing commentary ${i + 1}/${commentAudios.length}...`);
+    }
+    
+    if (commentBuffers.length === 0) {
+      throw new Error("None of the audio comments could be decoded. Try re-recording them.");
     }
     
     // Sort comments by timestamp
@@ -176,7 +203,7 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
     offset += 2;
   }
   
-  return new Blob([arrayBuffer], { type: 'audio/mpeg' });
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
 }
 
 function writeString(view: DataView, offset: number, string: string) {
