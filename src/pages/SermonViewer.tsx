@@ -206,7 +206,9 @@ const SermonViewer = () => {
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const dashboardSentinelRef = useRef<HTMLDivElement>(null);
-  const dashboardManualRef = useRef(false); // true when user manually toggled
+  const dashboardContentRef = useRef<HTMLDivElement>(null);
+  const dashboardManualRef = useRef(false);
+  const collapseCooldownRef = useRef(false);
 
   // Auto-collapse dashboard when scrolling past it
   useEffect(() => {
@@ -214,21 +216,39 @@ const SermonViewer = () => {
     if (!sentinel) return;
 
     let lastScrollY = window.scrollY;
+    let isCollapsed = false;
 
     const handleScroll = () => {
-      if (dashboardManualRef.current) return; // user took manual control
+      if (dashboardManualRef.current || collapseCooldownRef.current) return;
 
       const rect = sentinel.getBoundingClientRect();
       const scrollingDown = window.scrollY > lastScrollY;
       lastScrollY = window.scrollY;
 
-      // Collapse when sentinel is well above viewport (scrolled past dashboard)
-      if (scrollingDown && rect.top < -200) {
+      if (scrollingDown && !isCollapsed && rect.top < -300) {
+        isCollapsed = true;
+        collapseCooldownRef.current = true;
+
+        // Measure content height before collapsing so we can adjust scroll
+        const contentHeight = dashboardContentRef.current?.scrollHeight ?? 0;
+
         setDashboardCollapsed(true);
+
+        // After collapse, adjust scroll position to prevent bounce
+        requestAnimationFrame(() => {
+          window.scrollBy(0, -contentHeight);
+          lastScrollY = window.scrollY;
+          setTimeout(() => { collapseCooldownRef.current = false; }, 500);
+        });
       }
-      // Expand when sentinel is back in view (scrolled back up)
-      if (!scrollingDown && rect.top > -50) {
+
+      if (!scrollingDown && !isCollapsed) return; // nothing to do
+
+      if (!scrollingDown && isCollapsed && rect.top > 0) {
+        isCollapsed = false;
+        collapseCooldownRef.current = true;
         setDashboardCollapsed(false);
+        setTimeout(() => { collapseCooldownRef.current = false; }, 500);
       }
     };
 
@@ -3643,7 +3663,9 @@ const SermonViewer = () => {
             <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
           </button>
           <div
-            className={`overflow-hidden transition-all duration-500 ease-in-out ${dashboardCollapsed ? 'max-h-0 opacity-0 mt-0' : 'max-h-[5000px] opacity-100 mt-4'}`}
+            ref={dashboardContentRef}
+            className={`overflow-hidden ${dashboardCollapsed ? 'max-h-0 opacity-0 mt-0' : 'mt-4'}`}
+            style={{ transition: dashboardCollapsed ? 'none' : 'max-height 0.5s ease-in-out, opacity 0.3s ease-in-out' }}
           >
           {/* Engagement Score Card - Full Width */}
           <Card className="stats-card p-4 mb-4">
