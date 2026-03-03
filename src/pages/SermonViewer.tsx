@@ -351,12 +351,13 @@ const SermonViewer = () => {
     }
   }, [sermonVolume]);
 
-  // Apply comment volume to comment audio element
+  // Apply comment volume and playback rate to comment audio element
   useEffect(() => {
     if (commentAudioRef.current) {
       commentAudioRef.current.volume = commentVolume;
+      commentAudioRef.current.playbackRate = playbackRate;
     }
-  }, [commentVolume, playingCommentId]);
+  }, [commentVolume, playbackRate, playingCommentId]);
 
   // Auto-scroll transcript to keep active paragraph as second from top
   useEffect(() => {
