@@ -145,6 +145,23 @@ const CompareSpeakers = () => {
     return rows;
   }, [selectedIds, sermonData]);
 
+  // Compute averages per selected communicator
+  const averages = useMemo(() => {
+    return selectedIds.map(id => {
+      const points = (sermonData[id] || []).filter(d => d.wpm != null);
+      const comm = communicators.find(c => c.id === id);
+      const avgWpm = points.length > 0
+        ? Math.round(points.reduce((sum, p) => sum + (p.wpm || 0), 0) / points.length)
+        : null;
+      return {
+        id,
+        name: comm?.name || "Unknown",
+        avgWpm,
+        sermonCount: points.length,
+      };
+    });
+  }, [selectedIds, sermonData, communicators]);
+
   const selectedComms = communicators.filter(c => selectedIds.includes(c.id));
 
   if (loading) {
@@ -307,6 +324,47 @@ const CompareSpeakers = () => {
           <Card>
             <CardContent className="pt-8 pb-8 text-center text-muted-foreground">
               Select at least one more communicator to compare.
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Averages comparison */}
+        {selectedIds.length >= 1 && !dataLoading && averages.some(a => a.avgWpm != null) && (
+          <Card className="mt-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Average Speaking Pace</CardTitle>
+              <CardDescription>Mean WPM across all sermons per communicator</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(() => {
+                  const maxWpm = Math.max(...averages.filter(a => a.avgWpm != null).map(a => a.avgWpm!));
+                  return averages.map((a, idx) => (
+                    <div key={a.id} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium" style={{ color: COLORS[idx % COLORS.length] }}>
+                          {a.name}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {a.avgWpm != null ? `${a.avgWpm} WPM` : "No data"}{" "}
+                          <span className="text-xs">({a.sermonCount} sermon{a.sermonCount !== 1 ? "s" : ""})</span>
+                        </span>
+                      </div>
+                      {a.avgWpm != null && (
+                        <div className="h-3 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${(a.avgWpm / maxWpm) * 100}%`,
+                              backgroundColor: COLORS[idx % COLORS.length],
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ));
+                })()}
+              </div>
             </CardContent>
           </Card>
         )}
