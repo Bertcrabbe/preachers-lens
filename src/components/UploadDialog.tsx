@@ -365,8 +365,24 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
         body: { url, title: title || undefined, communicatorId: communicatorId || undefined }
       });
 
+      // Check for webpage detection in either error or data
+      const errorMsg = error?.message || '';
+      const dataError = data?.error || '';
+      const combinedMsg = `${errorMsg} ${dataError}`;
+      const isWebpage = combinedMsg.includes("webpage") || combinedMsg.includes("Content-Type: text/html");
+
+      if (isWebpage) {
+        setUploading(false);
+        toast({
+          title: "Scanning page for audio files...",
+          description: "That URL is a webpage. Looking for audio links on the page.",
+        });
+        await scrapeForAudioLinks(url);
+        return;
+      }
+
       if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      if (!data?.success) throw new Error(dataError || "Unknown error");
 
       toast({
         title: "Upload successful",
@@ -381,23 +397,11 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       setTitle("");
     } catch (error: any) {
       const msg = error.message || "Unknown error";
-      const isWebpage = msg.includes("webpage") || msg.includes("Content-Type: text/html");
-      
-      if (isWebpage) {
-        // Auto-scrape the page for audio links
-        setUploading(false);
-        toast({
-          title: "Scanning page for audio files...",
-          description: "That URL is a webpage. Looking for audio links on the page.",
-        });
-        await scrapeForAudioLinks(url);
-      } else {
-        toast({
-          title: "Upload failed",
-          description: msg,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Upload failed",
+        description: msg,
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
