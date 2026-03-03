@@ -73,6 +73,8 @@ const Dashboard = () => {
   const [deleteSermonOpen, setDeleteSermonOpen] = useState(false);
   const [sermonToDelete, setSermonToDelete] = useState<Sermon | null>(null);
   const [deletingSermon, setDeletingSermon] = useState(false);
+  const [editingCommunicatorId, setEditingCommunicatorId] = useState<string | null>(null);
+  const [editingCommunicatorName, setEditingCommunicatorName] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -460,6 +462,29 @@ const Dashboard = () => {
     }
   };
 
+  const handleEditCommunicatorSave = async (communicatorId: string) => {
+    const trimmed = editingCommunicatorName.trim();
+    if (!trimmed) return;
+    try {
+      const { error } = await supabase
+        .from("communicators")
+        .update({ name: trimmed })
+        .eq("id", communicatorId);
+      if (error) throw error;
+      setCommunicators(prev =>
+        prev.map(c => c.id === communicatorId ? { ...c, name: trimmed } : c).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      if (selectedCommunicator?.id === communicatorId) {
+        setSelectedCommunicator(prev => prev ? { ...prev, name: trimmed } : prev);
+      }
+      toast({ title: "Name updated", description: "Communicator name has been saved" });
+    } catch {
+      toast({ title: "Error", description: "Failed to update name", variant: "destructive" });
+    } finally {
+      setEditingCommunicatorId(null);
+    }
+  };
+
   const getSermonsForCommunicator = (communicatorId: string | null) => {
     return sermons.filter(s => s.communicator_id === communicatorId);
   };
@@ -612,7 +637,43 @@ const Dashboard = () => {
                     <FolderOpen className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">{communicator.name}</CardTitle>
+                    {editingCommunicatorId === communicator.id ? (
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <Input
+                          value={editingCommunicatorName}
+                          onChange={(e) => setEditingCommunicatorName(e.target.value)}
+                          className="h-8 text-sm w-40"
+                          placeholder="Communicator name"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleEditCommunicatorSave(communicator.id);
+                            if (e.key === "Escape") setEditingCommunicatorId(null);
+                          }}
+                        />
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEditCommunicatorSave(communicator.id); }}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingCommunicatorId(null); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 group/name">
+                        <CardTitle className="text-lg">{communicator.name}</CardTitle>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 opacity-0 group-hover/name:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCommunicatorId(communicator.id);
+                            setEditingCommunicatorName(communicator.name);
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                     <CardDescription>
                       {sermonCount} {sermonCount === 1 ? "sermon" : "sermons"}
                       {communicatorWpm[communicator.id] && (
@@ -700,7 +761,43 @@ const Dashboard = () => {
               Back
             </Button>
             <div>
-              <h2 className="text-2xl font-bold">{selectedCommunicator?.name}</h2>
+              {selectedCommunicator?.id !== "unassigned" && editingCommunicatorId === selectedCommunicator?.id ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={editingCommunicatorName}
+                    onChange={(e) => setEditingCommunicatorName(e.target.value)}
+                    className="h-9 text-lg font-bold w-48"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleEditCommunicatorSave(selectedCommunicator!.id);
+                      if (e.key === "Escape") setEditingCommunicatorId(null);
+                    }}
+                  />
+                  <Button size="icon" variant="ghost" onClick={() => handleEditCommunicatorSave(selectedCommunicator!.id)}>
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingCommunicatorId(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <h2 className="text-2xl font-bold">{selectedCommunicator?.name}</h2>
+                  {selectedCommunicator?.id !== "unassigned" && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        setEditingCommunicatorId(selectedCommunicator!.id);
+                        setEditingCommunicatorName(selectedCommunicator!.name);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
               <p className="text-muted-foreground">
                 {sermonsToShow.length} {sermonsToShow.length === 1 ? "sermon" : "sermons"}
               </p>
