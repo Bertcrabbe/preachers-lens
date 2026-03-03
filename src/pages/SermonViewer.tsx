@@ -205,56 +205,6 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
-  const dashboardSentinelRef = useRef<HTMLDivElement>(null);
-  const dashboardContentRef = useRef<HTMLDivElement>(null);
-  const dashboardManualRef = useRef(false);
-  const collapseCooldownRef = useRef(false);
-
-  // Auto-collapse dashboard when scrolling past it
-  useEffect(() => {
-    const sentinel = dashboardSentinelRef.current;
-    if (!sentinel) return;
-
-    let lastScrollY = window.scrollY;
-    let isCollapsed = false;
-
-    const handleScroll = () => {
-      if (dashboardManualRef.current || collapseCooldownRef.current) return;
-
-      const rect = sentinel.getBoundingClientRect();
-      const scrollingDown = window.scrollY > lastScrollY;
-      lastScrollY = window.scrollY;
-
-      if (scrollingDown && !isCollapsed && rect.top < -300) {
-        isCollapsed = true;
-        collapseCooldownRef.current = true;
-
-        // Measure content height before collapsing so we can adjust scroll
-        const contentHeight = dashboardContentRef.current?.scrollHeight ?? 0;
-
-        setDashboardCollapsed(true);
-
-        // After collapse, adjust scroll position to prevent bounce
-        requestAnimationFrame(() => {
-          window.scrollBy(0, -contentHeight);
-          lastScrollY = window.scrollY;
-          setTimeout(() => { collapseCooldownRef.current = false; }, 500);
-        });
-      }
-
-      if (!scrollingDown && !isCollapsed) return; // nothing to do
-
-      if (!scrollingDown && isCollapsed && rect.top > 0) {
-        isCollapsed = false;
-        collapseCooldownRef.current = true;
-        setDashboardCollapsed(false);
-        setTimeout(() => { collapseCooldownRef.current = false; }, 500);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [loading]);
   
   useEffect(() => {
     checkAuth();
@@ -3657,27 +3607,17 @@ const SermonViewer = () => {
           )}
         </Card>
 
-        {/* Dashboard scroll sentinel */}
-        <div ref={dashboardSentinelRef} className="h-0 w-full" />
-
         {/* Sermon Dashboard */}
         <Card className="mb-6 p-6 shadow-lg animate-slide-up">
           <button
             className="w-full flex items-center justify-between cursor-pointer"
-            onClick={() => {
-              dashboardManualRef.current = true;
-              setDashboardCollapsed(!dashboardCollapsed);
-              // Reset manual override after a short delay so auto-scroll resumes
-              setTimeout(() => { dashboardManualRef.current = false; }, 3000);
-            }}
+            onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
           >
             <h2 className="text-xl font-semibold text-gradient-primary">Sermon Analytics</h2>
             <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
           </button>
           <div
-            ref={dashboardContentRef}
-            className={`overflow-hidden ${dashboardCollapsed ? 'max-h-0 opacity-0 mt-0' : 'mt-4'}`}
-            style={{ transition: dashboardCollapsed ? 'none' : 'max-height 0.5s ease-in-out, opacity 0.3s ease-in-out' }}
+            className={`overflow-hidden transition-all duration-300 ${dashboardCollapsed ? 'max-h-0 opacity-0 mt-0' : 'mt-4'}`}
           >
           {/* Engagement Score Card - Full Width */}
           <Card className="stats-card p-4 mb-4">
