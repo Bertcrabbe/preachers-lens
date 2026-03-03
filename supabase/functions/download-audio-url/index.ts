@@ -62,7 +62,7 @@ serve(async (req) => {
                     url.match(/\.(mp3|wav|m4a|aac)(\?|$)/i);
     
     if (!isAudio) {
-      throw new Error(`URL does not appear to be an audio file. Content-Type: ${contentType}`);
+      throw new Error(`This URL points to a webpage, not an audio file. Please use a direct link to an MP3, WAV, or M4A file (the URL should end in .mp3, .wav, or .m4a).`);
     }
 
     // Check file size (300MB limit)
