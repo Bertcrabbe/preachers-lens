@@ -12,8 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2, Link } from "lucide-react";
+import { Upload, Loader2, Link, Search, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface AudioLinkResult {
+  url: string;
+  name: string;
+  potential?: boolean;
+}
 
 interface UploadDialogProps {
   open: boolean;
@@ -30,6 +37,9 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<"file" | "url">("url");
   const [isDragging, setIsDragging] = useState(false);
+  const [scraping, setScraping] = useState(false);
+  const [foundAudioLinks, setFoundAudioLinks] = useState<AudioLinkResult[]>([]);
+  const [showAudioPicker, setShowAudioPicker] = useState(false);
 
   const validateFile = useCallback((selectedFile: File): boolean => {
     const validTypes = ["audio/mpeg", "audio/wav", "audio/x-m4a", "audio/mp4"];
@@ -62,7 +72,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       if (!title) {
         setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
       }
-      // Auto-switch to file tab when a file is dropped
       setActiveTab("file");
     }
   }, [title, validateFile]);
@@ -83,7 +92,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set dragging to false if we're leaving the drop zone entirely
     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setIsDragging(false);
   }, []);
@@ -136,7 +144,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
 
       if (dbError) throw dbError;
 
-      // Trigger transcription via edge function (fire and forget - don't await)
       if (sermon) {
         supabase.functions.invoke('transcribe-sermon', {
           body: { sermonId: sermon.id }
@@ -165,7 +172,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
   };
 
-  // Check if URL is an Apple Podcasts link
   const isApplePodcastsUrl = (urlString: string): boolean => {
     try {
       const parsed = new URL(urlString);
@@ -175,7 +181,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
   };
 
-  // Check if URL is a YouTube link
   const isYouTubeUrl = (urlString: string): boolean => {
     try {
       const parsed = new URL(urlString);
@@ -188,7 +193,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
   };
 
-  // Check if URL is a Subsplash link
   const isSubsplashUrl = (urlString: string): boolean => {
     try {
       const parsed = new URL(urlString);
@@ -199,10 +203,85 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
   };
 
+  const scrapeForAudioLinks = async (pageUrl: string) => {
+    setScraping(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-audio-links', {
+        body: { url: pageUrl }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      const allLinks = [...(data.audioLinks || []), ...(data.potentialAudioLinks || [])];
+      
+      if (allLinks.length > 0) {
+        setFoundAudioLinks(allLinks);
+        setShowAudioPicker(true);
+        if (data.pageTitle && !title) {
+          setTitle(data.pageTitle);
+        }
+        toast({
+          title: `Found ${data.audioLinks?.length || 0} audio link(s)`,
+          description: "Select the audio file you want to import",
+        });
+      } else {
+        toast({
+          title: "No audio files found",
+          description: "This page doesn't contain direct links to audio files. Try right-clicking the audio player on the page, copying the audio URL, and pasting it here.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Scrape failed:", error);
+      toast({
+        title: "Could not scan page",
+        description: "Try right-clicking the audio player on the page and copying the audio URL directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setScraping(false);
+    }
+  };
+
+  const handleSelectAudioLink = async (audioUrl: string) => {
+    setShowAudioPicker(false);
+    setFoundAudioLinks([]);
+    setUrl(audioUrl);
+    
+    // Immediately start downloading the selected audio link
+    setUploading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('download-audio-url', {
+        body: { url: audioUrl, title: title || undefined, communicatorId: communicatorId || undefined }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      toast({
+        title: "Upload successful",
+        description: "Your sermon is being transcribed",
+      });
+
+      onUploadComplete();
+      onOpenChange(false);
+      setUrl("");
+      setTitle("");
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleUrlUpload = async () => {
     if (!url) return;
 
-    // URL validation
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -215,7 +294,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       return;
     }
 
-    // Validate hostname segments - each label cannot start or end with a hyphen (RFC 952/1123)
     const hostname = parsedUrl.hostname;
     const labels = hostname.split('.');
     const hasInvalidLabel = labels.some(label => label.startsWith('-') || label.endsWith('-'));
@@ -228,7 +306,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       return;
     }
 
-    // Validate it's http or https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       toast({
         title: "Invalid URL",
@@ -238,10 +315,8 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       return;
     }
 
-    // Check if it's an Apple Podcasts URL (supported)
     const isApplePodcast = isApplePodcastsUrl(url);
     
-    // Check if it's a YouTube URL - currently unsupported
     const isYouTube = isYouTubeUrl(url);
     if (isYouTube) {
       toast({
@@ -252,7 +327,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       return;
     }
 
-    // Check if it's a Subsplash URL - share links use invalid DNS hostnames
     if (isSubsplashUrl(url)) {
       toast({
         title: "Subsplash links not supported",
@@ -261,6 +335,7 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       });
       return;
     }
+
     if (!isApplePodcast) {
       const streamingServices = [
         { pattern: /spotify\.com/i, name: "Spotify" },
@@ -284,7 +359,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
 
     setUploading(true);
     try {
-      // Use different endpoint based on URL type
       const functionName = isApplePodcast ? 'download-podcast-url' : 'download-audio-url';
       
       const { data, error } = await supabase.functions.invoke(functionName, {
@@ -308,13 +382,22 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     } catch (error: any) {
       const msg = error.message || "Unknown error";
       const isWebpage = msg.includes("webpage") || msg.includes("Content-Type: text/html");
-      toast({
-        title: isWebpage ? "Not a direct audio link" : "Upload failed",
-        description: isWebpage 
-          ? "That URL points to a webpage. Please paste a direct link to an audio file (ending in .mp3, .wav, or .m4a)."
-          : msg,
-        variant: "destructive",
-      });
+      
+      if (isWebpage) {
+        // Auto-scrape the page for audio links
+        setUploading(false);
+        toast({
+          title: "Scanning page for audio files...",
+          description: "That URL is a webpage. Looking for audio links on the page.",
+        });
+        await scrapeForAudioLinks(url);
+      } else {
+        toast({
+          title: "Upload failed",
+          description: msg,
+          variant: "destructive",
+        });
+      }
     } finally {
       setUploading(false);
     }
@@ -331,8 +414,14 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
   const canUpload = activeTab === "file" ? !!file : !!url;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={(v) => {
+      if (!v) {
+        setShowAudioPicker(false);
+        setFoundAudioLinks([]);
+      }
+      onOpenChange(v);
+    }}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Upload Sermon</DialogTitle>
           <DialogDescription>
@@ -350,97 +439,151 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
             />
           </div>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "file" | "url")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="file">
-                <Upload className="mr-2 h-4 w-4" />
-                File Upload
-              </TabsTrigger>
-              <TabsTrigger value="url">
-                <Link className="mr-2 h-4 w-4" />
-                From URL
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="file" className="space-y-2">
-              <Label htmlFor="file">Audio File</Label>
-              <div
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                className={cn(
-                  "relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer",
-                  isDragging 
-                    ? "border-primary bg-primary/5" 
-                    : "border-muted-foreground/25 hover:border-muted-foreground/50",
-                  file && "border-primary/50 bg-primary/5"
-                )}
-                onClick={() => document.getElementById('file')?.click()}
-              >
-                <Input
-                  id="file"
-                  type="file"
-                  accept=".mp3,.wav,.m4a,audio/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <div className="flex flex-col items-center justify-center text-center">
-                  <Upload className={cn(
-                    "h-8 w-8 mb-2",
-                    isDragging ? "text-primary" : "text-muted-foreground"
-                  )} />
-                  {file ? (
-                    <div>
-                      <p className="font-medium text-sm">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(2)}MB
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-sm font-medium">
-                        {isDragging ? "Drop your file here" : "Drag & drop or click to upload"}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        MP3, WAV, or M4A (max 300MB)
-                      </p>
-                    </div>
-                  )}
-                </div>
+          {showAudioPicker ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Search className="h-4 w-4" />
+                Audio files found on page
               </div>
-            </TabsContent>
-            <TabsContent value="url" className="space-y-2">
-              <Label htmlFor="url">Audio URL</Label>
-              <Input
-                id="url"
-                type="url"
-                placeholder="https://example.com/sermon.mp3"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Paste a direct audio link (MP3, WAV, M4A) or Apple Podcasts link
-              </p>
-            </TabsContent>
-          </Tabs>
+              <ScrollArea className="max-h-60">
+                <div className="space-y-2 pr-3">
+                  {foundAudioLinks.map((link, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSelectAudioLink(link.url)}
+                      disabled={uploading}
+                      className={cn(
+                        "w-full text-left p-3 rounded-lg border transition-colors",
+                        "hover:bg-accent hover:border-primary/30",
+                        "focus:outline-none focus:ring-2 focus:ring-primary/50",
+                        link.potential && "opacity-70"
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <ExternalLink className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{link.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+                          {link.potential && (
+                            <p className="text-xs text-muted-foreground/70 mt-1 italic">May not be a direct audio file</p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowAudioPicker(false);
+                  setFoundAudioLinks([]);
+                }}
+              >
+                Back to URL input
+              </Button>
+            </div>
+          ) : (
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "file" | "url")}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="file">
+                  <Upload className="mr-2 h-4 w-4" />
+                  File Upload
+                </TabsTrigger>
+                <TabsTrigger value="url">
+                  <Link className="mr-2 h-4 w-4" />
+                  From URL
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="file" className="space-y-2">
+                <Label htmlFor="file">Audio File</Label>
+                <div
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className={cn(
+                    "relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer",
+                    isDragging 
+                      ? "border-primary bg-primary/5" 
+                      : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                    file && "border-primary/50 bg-primary/5"
+                  )}
+                  onClick={() => document.getElementById('file')?.click()}
+                >
+                  <Input
+                    id="file"
+                    type="file"
+                    accept=".mp3,.wav,.m4a,audio/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <Upload className={cn(
+                      "h-8 w-8 mb-2",
+                      isDragging ? "text-primary" : "text-muted-foreground"
+                    )} />
+                    {file ? (
+                      <div>
+                        <p className="font-medium text-sm">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)}MB
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm font-medium">
+                          {isDragging ? "Drop your file here" : "Drag & drop or click to upload"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          MP3, WAV, or M4A (max 300MB)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="url" className="space-y-2">
+                <Label htmlFor="url">Audio URL</Label>
+                <Input
+                  id="url"
+                  type="url"
+                  placeholder="https://example.com/sermon.mp3"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Paste a direct audio link, Apple Podcasts link, or a webpage — we'll try to find the audio
+                </p>
+              </TabsContent>
+            </Tabs>
+          )}
 
-          <Button
-            onClick={handleUpload}
-            disabled={!canUpload || uploading}
-            className="w-full"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {activeTab === "url" ? "Downloading..." : "Uploading..."}
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload and Transcribe
-              </>
-            )}
-          </Button>
+          {!showAudioPicker && (
+            <Button
+              onClick={handleUpload}
+              disabled={!canUpload || uploading || scraping}
+              className="w-full"
+            >
+              {scraping ? (
+                <>
+                  <Search className="mr-2 h-4 w-4 animate-pulse" />
+                  Scanning page for audio...
+                </>
+              ) : uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {activeTab === "url" ? "Downloading..." : "Uploading..."}
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload and Transcribe
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
