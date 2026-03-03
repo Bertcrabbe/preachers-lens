@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.flag-confusing-phrases]
 verify_jwt = false
+
+[functions.scrape-audio-links]
+verify_jwt = false
