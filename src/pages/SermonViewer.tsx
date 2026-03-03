@@ -443,6 +443,15 @@ const SermonViewer = () => {
         return;
       }
 
+      // Prevent spacebar from activating focused buttons (e.g. sidebar trigger)
+      if (e.code === "Space") {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.target instanceof HTMLButtonElement) {
+          e.target.blur();
+        }
+      }
+
       const sermonAudio = audioRef.current;
       const commentAudio = commentAudioRef.current;
 
