@@ -572,8 +572,8 @@ const SermonViewer = () => {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true); // capture phase to intercept before button activation
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [playing, playingCommentId, audioUrl, currentTime, sentences, commentDialogOpen, floatingRecording]);
 
   // Calculate time since last comment in audio timeline
