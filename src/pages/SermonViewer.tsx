@@ -509,6 +509,15 @@ const SermonViewer = () => {
       switch (e.code) {
         case "Space":
           e.preventDefault();
+          // If comment dialog is open, control recording
+          if (commentDialogOpen) {
+            if (floatingRecording.isRecording && floatingRecording.stopFn) {
+              floatingRecording.stopFn();
+            }
+            // If not recording and dialog is open, we can't restart from here
+            // (recording auto-starts on dialog open)
+            return;
+          }
           // If a comment is currently playing, control comment audio only
           if (playingCommentId) {
             if (commentAudio) {
@@ -518,7 +527,6 @@ const SermonViewer = () => {
                 commentAudio.pause();
               }
             }
-            // Don't fall through to sermon audio when comment is playing
             return;
           }
           // Otherwise control sermon audio
@@ -565,7 +573,7 @@ const SermonViewer = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [playing, playingCommentId, audioUrl, currentTime, sentences]);
+  }, [playing, playingCommentId, audioUrl, currentTime, sentences, commentDialogOpen, floatingRecording]);
 
   // Calculate time since last comment in audio timeline
   const timeSinceLastCommentInAudio = (() => {
