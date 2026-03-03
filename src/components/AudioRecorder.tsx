@@ -23,36 +23,63 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
   const streamRef = useRef<MediaStream | null>(null);
+  const stopFnRef = useRef<() => void>(() => {});
 
-  // Use a ref-based stop function that can be called from anywhere
-  const stopRecordingRef = useRef<() => void>(() => {});
-  
-  stopRecordingRef.current = () => {
+  // Stable stop function via ref
+  const stopRecordingImpl = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      onRecordingStateChange?.(false, 0, () => {});
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = undefined;
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     }
   };
+  stopFnRef.current = stopRecordingImpl;
+
+  // Dedicated timer effect — runs its own interval whenever isRecording is true
+  const onRecordingStateChangeRef = useRef(onRecordingStateChange);
+  onRecordingStateChangeRef.current = onRecordingStateChange;
+
+  useEffect(() => {
+    if (!isRecording) {
+      onRecordingStateChangeRef.current?.(false, 0, () => stopFnRef.current());
+      return;
+    }
+    // Reset time and notify parent
+    setRecordingTime(0);
+    const stopFn = () => stopFnRef.current();
+    onRecordingStateChangeRef.current?.(true, 0, stopFn);
+
+    let elapsed = 0;
+    timerRef.current = setInterval(() => {
+      elapsed += 1;
+      setRecordingTime(elapsed);
+      onRecordingStateChangeRef.current?.(true, elapsed, stopFn);
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = undefined;
+      }
+    };
+  }, [isRecording]);
 
   // Auto-start recording when autoStart is set and stream is ready
   const autoStartedRef = useRef(false);
   useEffect(() => {
     if (!autoStart || autoStartedRef.current || isRecording || audioBlob) return;
-    // Wait until preAcquiredStream is actually provided (not null)
     if (preAcquiredStream && preAcquiredStream.active) {
       autoStartedRef.current = true;
       startRecording();
     }
-    // If no preAcquiredStream prop at all (undefined), start without it
     if (preAcquiredStream === undefined) {
       autoStartedRef.current = true;
       startRecording();
@@ -61,9 +88,6 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
@@ -72,7 +96,6 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
 
   const startRecording = async () => {
     try {
-      // Use pre-acquired stream if available (preserves user gesture context)
       let stream: MediaStream;
       if (preAcquiredStream && preAcquiredStream.active) {
         stream = preAcquiredStream;
@@ -88,7 +111,6 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
       }
       streamRef.current = stream;
       
-      // Pick best supported audio MIME type
       const mimeTypes = [
         'audio/webm;codecs=opus',
         'audio/webm',
@@ -125,22 +147,9 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
         onRecordingComplete(blob);
       };
 
-      mediaRecorder.start(1000); // Collect data every second for reliability
+      mediaRecorder.start(1000);
+      // This triggers the timer useEffect
       setIsRecording(true);
-      setRecordingTime(0);
-      
-      // Notify parent of recording state - pass a wrapper that calls the ref
-      const stopFn = () => stopRecordingRef.current();
-      onRecordingStateChange?.(true, 0, stopFn);
-      
-      // Use a ref-based counter to avoid issues with React state updaters
-      const timeRef = { current: 0 };
-      timerRef.current = setInterval(() => {
-        timeRef.current += 1;
-        const newTime = timeRef.current;
-        setRecordingTime(newTime);
-        onRecordingStateChange?.(true, newTime, stopFn);
-      }, 1000);
     } catch (error: any) {
       toast({
         title: "Recording failed",
@@ -151,7 +160,7 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
   };
 
   const stopRecording = () => {
-    stopRecordingRef.current();
+    stopFnRef.current();
   };
 
   const togglePlayback = () => {
