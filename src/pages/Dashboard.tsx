@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp } from "lucide-react";
+import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp, Users } from "lucide-react";
 import logo from "@/assets/preacherslens-logo.png";
 import { UploadDialog } from "@/components/UploadDialog";
 import {
@@ -885,6 +885,10 @@ const Dashboard = () => {
                 <p className="text-muted-foreground">Organize sermons by speaker</p>
               </div>
               <div className="flex gap-2">
+                <Button onClick={() => navigate("/compare")} variant="outline">
+                  <Users className="mr-2 h-4 w-4" />
+                  Compare Speakers
+                </Button>
                 <Button onClick={() => navigate("/rules")} variant="outline">
                   <ListChecks className="mr-2 h-4 w-4" />
                   Evaluation Rules
