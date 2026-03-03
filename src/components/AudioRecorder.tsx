@@ -30,15 +30,16 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
   // Stable stop function via ref
   const stopRecordingImpl = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      // Flush any buffered audio data before stopping
+      try { mediaRecorderRef.current.requestData(); } catch (e) { /* ignore */ }
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = undefined;
       }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      // Don't stop stream tracks here — let onstop handler do it
+      // so the MediaRecorder can finish flushing data
     }
   };
   stopFnRef.current = stopRecordingImpl;
@@ -139,8 +140,13 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
       };
 
       mediaRecorder.onstop = () => {
+        // Now safe to stop the stream tracks
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
         const actualType = mediaRecorder.mimeType || selectedMimeType || 'audio/webm';
         const blob = new Blob(chunksRef.current, { type: actualType });
+        console.log('Recording complete, blob size:', blob.size, 'chunks:', chunksRef.current.length);
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
