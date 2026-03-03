@@ -133,12 +133,13 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
       const stopFn = () => stopRecordingRef.current();
       onRecordingStateChange?.(true, 0, stopFn);
       
+      // Use a ref-based counter to avoid issues with React state updaters
+      const timeRef = { current: 0 };
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => {
-          const newTime = prev + 1;
-          onRecordingStateChange?.(true, newTime, stopFn);
-          return newTime;
-        });
+        timeRef.current += 1;
+        const newTime = timeRef.current;
+        setRecordingTime(newTime);
+        onRecordingStateChange?.(true, newTime, stopFn);
       }, 1000);
     } catch (error: any) {
       toast({
