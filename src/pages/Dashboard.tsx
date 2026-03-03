@@ -279,7 +279,7 @@ const Dashboard = () => {
     };
 
     return (
-      <Badge variant={variants[status] || "outline"}>
+      <Badge variant={variants[status] || "outline"} className="shrink-0 whitespace-nowrap">
         {status === "processing" && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
         {status === "completed" ? (
           <>
