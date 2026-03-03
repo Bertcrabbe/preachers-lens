@@ -306,9 +306,13 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       setUrl("");
       setTitle("");
     } catch (error: any) {
+      const msg = error.message || "Unknown error";
+      const isWebpage = msg.includes("webpage") || msg.includes("Content-Type: text/html");
       toast({
-        title: "Upload failed",
-        description: error.message,
+        title: isWebpage ? "Not a direct audio link" : "Upload failed",
+        description: isWebpage 
+          ? "That URL points to a webpage. Please paste a direct link to an audio file (ending in .mp3, .wav, or .m4a)."
+          : msg,
         variant: "destructive",
       });
     } finally {
