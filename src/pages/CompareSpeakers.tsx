@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Loader2, Users } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceLine } from "recharts";
 import logo from "@/assets/preacherslens-logo.png";
 
 const COLORS = [
@@ -237,134 +237,124 @@ const CompareSpeakers = () => {
           </CardContent>
         </Card>
 
-        {/* Chart */}
-        {selectedIds.length >= 2 && (
+        {/* WPM Over Time Chart - sermon viewer style */}
+        {selectedIds.length >= 1 && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Speaking Pace (WPM) Over Time</CardTitle>
-              <CardDescription>
-                Each point represents a sermon in chronological order
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
+              <h3 className="text-base font-semibold mb-3">Speaking Pace Over Time</h3>
               {dataLoading ? (
-                <div className="flex items-center justify-center h-[300px]">
+                <div className="flex items-center justify-center h-[200px]">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : chartData.length === 0 ? (
                 <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
-                  No WPM data available for the selected communicators. Try refreshing metrics on their Trends pages.
+                  No WPM data available for the selected communicators.
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={350}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis
-                      dataKey="index"
-                      tick={{ fontSize: 11 }}
-                      label={{ value: "Sermon #", position: "insideBottom", offset: -5, fontSize: 12 }}
-                      className="fill-muted-foreground"
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      className="fill-muted-foreground"
-                      width={50}
-                      label={{ value: "WPM", angle: -90, position: "insideLeft", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        return (
-                          <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg text-sm space-y-1">
-                            {payload.map((entry: any) => {
-                              const commId = entry.dataKey;
-                              const comm = communicators.find(c => c.id === commId);
-                              const title = entry.payload[`${commId}_title`];
-                              const date = entry.payload[`${commId}_date`];
-                              return (
-                                <div key={commId}>
-                                  <p className="font-medium" style={{ color: entry.color }}>
-                                    {comm?.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">{title} • {date}</p>
-                                  <p className="font-semibold">{entry.value} WPM</p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Legend
-                      formatter={(value: string) => {
-                        const comm = communicators.find(c => c.id === value);
-                        return comm?.name || value;
-                      }}
-                    />
-                    {selectedIds.map((commId, idx) => (
-                      <Line
-                        key={commId}
-                        type="monotone"
-                        dataKey={commId}
-                        stroke={COLORS[idx % COLORS.length]}
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: COLORS[idx % COLORS.length] }}
-                        connectNulls
-                        name={commId}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {selectedIds.length === 1 && (
-          <Card>
-            <CardContent className="pt-8 pb-8 text-center text-muted-foreground">
-              Select at least one more communicator to compare.
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Averages comparison */}
-        {selectedIds.length >= 1 && !dataLoading && averages.some(a => a.avgWpm != null) && (
-          <Card className="mt-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Average Speaking Pace</CardTitle>
-              <CardDescription>Mean WPM across all sermons per communicator</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {(() => {
-                  const maxWpm = Math.max(...averages.filter(a => a.avgWpm != null).map(a => a.avgWpm!));
-                  return averages.map((a, idx) => (
-                    <div key={a.id} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium" style={{ color: COLORS[idx % COLORS.length] }}>
-                          {a.name}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {a.avgWpm != null ? `${a.avgWpm} WPM` : "No data"}{" "}
-                          <span className="text-xs">({a.sermonCount} sermon{a.sermonCount !== 1 ? "s" : ""})</span>
-                        </span>
-                      </div>
-                      {a.avgWpm != null && (
-                        <div className="h-3 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${(a.avgWpm / maxWpm) * 100}%`,
-                              backgroundColor: COLORS[idx % COLORS.length],
+                <>
+                  <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                        <XAxis
+                          dataKey="index"
+                          tick={{ fontSize: 10 }}
+                          tickFormatter={(v) => `#${v}`}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10 }}
+                          width={40}
+                          tickFormatter={(v) => `${v}`}
+                        />
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            return (
+                              <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1.5">
+                                {payload.map((entry: any) => {
+                                  const commId = entry.dataKey;
+                                  const comm = communicators.find(c => c.id === commId);
+                                  const title = entry.payload[`${commId}_title`];
+                                  const date = entry.payload[`${commId}_date`];
+                                  const avg = averages.find(a => a.id === commId)?.avgWpm;
+                                  const pctDev = avg ? Math.round(((entry.value - avg) / avg) * 100) : null;
+                                  return (
+                                    <div key={commId}>
+                                      <p className="font-medium" style={{ color: entry.color }}>
+                                        {comm?.name}
+                                      </p>
+                                      <p className="text-muted-foreground">{title} • {date}</p>
+                                      <p className="font-semibold">
+                                        {entry.value} WPM
+                                        {pctDev !== null && (
+                                          <span className={pctDev > 0 ? "text-rose-500 ml-1" : "text-blue-500 ml-1"}>
+                                            ({pctDev > 0 ? "+" : ""}{pctDev}%)
+                                          </span>
+                                        )}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          }}
+                        />
+                        {/* Average reference lines per speaker */}
+                        {averages.map((a, idx) => a.avgWpm != null && (
+                          <ReferenceLine
+                            key={`avg-${a.id}`}
+                            y={a.avgWpm}
+                            stroke={COLORS[idx % COLORS.length]}
+                            strokeDasharray="5 5"
+                            strokeOpacity={0.5}
+                            label={{
+                              value: `${a.name} avg: ${a.avgWpm}`,
+                              position: idx % 2 === 0 ? "right" : "left",
+                              fontSize: 9,
+                              fill: COLORS[idx % COLORS.length],
                             }}
                           />
+                        ))}
+                        {selectedIds.map((commId, idx) => (
+                          <Line
+                            key={commId}
+                            type="monotone"
+                            dataKey={commId}
+                            stroke={COLORS[idx % COLORS.length]}
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 4 }}
+                            connectNulls
+                            name={commId}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+                    {selectedIds.map((commId, idx) => {
+                      const comm = communicators.find(c => c.id === commId);
+                      const avg = averages.find(a => a.id === commId);
+                      return (
+                        <div key={commId} className="flex items-center gap-1">
+                          <div className="w-4 h-0.5" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                          <span>{comm?.name}</span>
                         </div>
-                      )}
-                    </div>
-                  ));
-                })()}
-              </div>
+                      );
+                    })}
+                    {selectedIds.map((commId, idx) => {
+                      const comm = communicators.find(c => c.id === commId);
+                      const avg = averages.find(a => a.id === commId);
+                      return avg?.avgWpm != null ? (
+                        <div key={`avg-${commId}`} className="flex items-center gap-1">
+                          <div className="w-4 h-0.5 border-t border-dashed" style={{ borderColor: COLORS[idx % COLORS.length] }} />
+                          <span>{comm?.name} Avg ({avg.avgWpm} WPM)</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
