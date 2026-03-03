@@ -206,22 +206,34 @@ const SermonViewer = () => {
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const dashboardSentinelRef = useRef<HTMLDivElement>(null);
+  const dashboardManualRef = useRef(false); // true when user manually toggled
 
   // Auto-collapse dashboard when scrolling past it
   useEffect(() => {
     const sentinel = dashboardSentinelRef.current;
     if (!sentinel) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // When the sentinel (top of dashboard) leaves the viewport, collapse
-        setDashboardCollapsed(!entry.isIntersecting);
-      },
-      { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
-    );
+    let lastScrollY = window.scrollY;
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    const handleScroll = () => {
+      if (dashboardManualRef.current) return; // user took manual control
+
+      const rect = sentinel.getBoundingClientRect();
+      const scrollingDown = window.scrollY > lastScrollY;
+      lastScrollY = window.scrollY;
+
+      // Collapse when sentinel is well above viewport (scrolled past dashboard)
+      if (scrollingDown && rect.top < -200) {
+        setDashboardCollapsed(true);
+      }
+      // Expand when sentinel is back in view (scrolled back up)
+      if (!scrollingDown && rect.top > -50) {
+        setDashboardCollapsed(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [loading]);
   
   useEffect(() => {
@@ -3620,7 +3632,12 @@ const SermonViewer = () => {
         <Card className="mb-6 p-6 shadow-lg animate-slide-up">
           <button
             className="w-full flex items-center justify-between cursor-pointer"
-            onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
+            onClick={() => {
+              dashboardManualRef.current = true;
+              setDashboardCollapsed(!dashboardCollapsed);
+              // Reset manual override after a short delay so auto-scroll resumes
+              setTimeout(() => { dashboardManualRef.current = false; }, 3000);
+            }}
           >
             <h2 className="text-xl font-semibold text-gradient-primary">Sermon Analytics</h2>
             <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
