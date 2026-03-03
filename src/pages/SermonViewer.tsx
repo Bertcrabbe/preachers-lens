@@ -2075,6 +2075,7 @@ const SermonViewer = () => {
               
               const audio = new Audio(url);
               audio.volume = commentVolume;
+              audio.playbackRate = playbackRate;
               commentAudioRef.current = audio;
               
               // Use a flag to prevent double-handling
@@ -2459,6 +2460,7 @@ const SermonViewer = () => {
           }
 
           const audio = new Audio(urlData.signedUrl);
+          audio.playbackRate = playbackRate;
           audio.onended = () => resolve();
           audio.onerror = () => resolve();
           
@@ -2928,6 +2930,7 @@ const SermonViewer = () => {
                       
                       if (url) {
                         const audio = new Audio(url);
+                        audio.playbackRate = playbackRate;
                         commentAudioRef.current = audio;
                         let handled = false;
                         const cleanup = () => {
@@ -4647,6 +4650,7 @@ const SermonViewer = () => {
                           
                           if (url) {
                             const audio = new Audio(url);
+                            audio.playbackRate = playbackRate;
                             commentAudioRef.current = audio;
                             let handled = false;
                             const cleanup = () => {
@@ -4827,6 +4831,7 @@ const SermonViewer = () => {
                                 
                                 if (url) {
                                   const audio = new Audio(url);
+                                  audio.playbackRate = playbackRate;
                                   commentAudioRef.current = audio;
                                   let handled = false;
                                   const cleanup = () => {
@@ -5223,6 +5228,7 @@ const SermonViewer = () => {
                                             
                                             if (url) {
                                               const audio = new Audio(url);
+                                              audio.playbackRate = playbackRate;
                                               commentAudioRef.current = audio;
                                               let handled = false;
                                               const cleanup = () => {
