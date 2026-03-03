@@ -23,6 +23,7 @@ import {
   RotateCcw,
   Mic,
   ChevronDown,
+  ChevronUp,
   Trash2,
   Pencil,
   Check,
@@ -4466,6 +4467,15 @@ const SermonViewer = () => {
               </CollapsibleContent>
             </Card>
           </Collapsible>
+          {/* Bottom collapse button */}
+          <button
+            className="w-full flex items-center justify-center gap-2 cursor-pointer mt-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setDashboardCollapsed(true)}
+          >
+            <ChevronUp className="h-4 w-4" />
+            <span>Collapse Analytics</span>
+            <ChevronUp className="h-4 w-4" />
+          </button>
           </div>
         </Card>
 
