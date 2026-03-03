@@ -204,6 +204,25 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
+  const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const dashboardSentinelRef = useRef<HTMLDivElement>(null);
+
+  // Auto-collapse dashboard when scrolling past it
+  useEffect(() => {
+    const sentinel = dashboardSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // When the sentinel (top of dashboard) leaves the viewport, collapse
+        setDashboardCollapsed(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loading]);
   
   useEffect(() => {
     checkAuth();
@@ -3594,9 +3613,21 @@ const SermonViewer = () => {
           )}
         </Card>
 
+        {/* Dashboard scroll sentinel */}
+        <div ref={dashboardSentinelRef} className="h-0 w-full" />
+
         {/* Sermon Dashboard */}
         <Card className="mb-6 p-6 shadow-lg animate-slide-up">
-          <h2 className="text-xl font-semibold mb-4 text-gradient-primary">Sermon Analytics</h2>
+          <button
+            className="w-full flex items-center justify-between cursor-pointer"
+            onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
+          >
+            <h2 className="text-xl font-semibold text-gradient-primary">Sermon Analytics</h2>
+            <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
+          </button>
+          <div
+            className={`overflow-hidden transition-all duration-500 ease-in-out ${dashboardCollapsed ? 'max-h-0 opacity-0 mt-0' : 'max-h-[5000px] opacity-100 mt-4'}`}
+          >
           {/* Engagement Score Card - Full Width */}
           <Card className="stats-card p-4 mb-4">
             <div className="flex items-start justify-between mb-3">
@@ -4444,6 +4475,7 @@ const SermonViewer = () => {
               </CollapsibleContent>
             </Card>
           </Collapsible>
+          </div>
         </Card>
 
         <div className="flex gap-4">
