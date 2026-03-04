@@ -121,46 +121,18 @@ export async function combineAudioFiles(
     onProgress?.(85, "Rendering combined audio...");
     const renderedBuffer = await offlineContext.startRendering();
     
-    onProgress?.(90, "Encoding to MP3...");
-    const mp3Blob = await audioBufferToMp3(renderedBuffer);
+    onProgress?.(90, "Encoding to MP3 (this may take a moment)...");
+    const mp3Blob = await audioBufferToMp3Worker(renderedBuffer, (encodePercent) => {
+      // Map encoding progress from 90% to 99%
+      const overall = 90 + (encodePercent / 100) * 9;
+      onProgress?.(Math.round(overall), `Encoding to MP3... ${encodePercent}%`);
+    });
     
     onProgress?.(100, "Complete!");
     return mp3Blob;
   } finally {
     await audioContext.close();
   }
-}
-
-async function audioBufferToMp3(buffer: AudioBuffer): Promise<Blob> {
-  const lamejs = await import("@breezystack/lamejs");
-  const sampleRate = buffer.sampleRate;
-  const numChannels = buffer.numberOfChannels;
-  const kbps = 192;
-
-  const mp3encoder = new lamejs.default.Mp3Encoder(numChannels, sampleRate, kbps);
-  const mp3Data: Uint8Array[] = [];
-
-  const left = convertFloat32ToInt16(buffer.getChannelData(0));
-  const right = numChannels > 1
-    ? convertFloat32ToInt16(buffer.getChannelData(1))
-    : left;
-
-  const sampleBlockSize = 1152;
-  for (let i = 0; i < left.length; i += sampleBlockSize) {
-    const leftChunk = left.subarray(i, i + sampleBlockSize);
-    const rightChunk = right.subarray(i, i + sampleBlockSize);
-    const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
-    if (mp3buf.length > 0) {
-      mp3Data.push(new Uint8Array(mp3buf));
-    }
-  }
-
-  const tail = mp3encoder.flush();
-  if (tail.length > 0) {
-    mp3Data.push(new Uint8Array(tail));
-  }
-
-  return new Blob(mp3Data as unknown as BlobPart[], { type: 'audio/mpeg' });
 }
 
 function convertFloat32ToInt16(float32: Float32Array): Int16Array {
@@ -170,4 +142,48 @@ function convertFloat32ToInt16(float32: Float32Array): Int16Array {
     int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
   return int16;
+}
+
+async function audioBufferToMp3Worker(
+  buffer: AudioBuffer,
+  onEncodeProgress?: (percent: number) => void
+): Promise<Blob> {
+  const left = convertFloat32ToInt16(buffer.getChannelData(0));
+  const right = buffer.numberOfChannels > 1
+    ? convertFloat32ToInt16(buffer.getChannelData(1))
+    : left;
+
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(
+      new URL('./mp3EncoderWorker.ts', import.meta.url),
+      { type: 'module' }
+    );
+
+    worker.onmessage = (e) => {
+      if (e.data.type === 'progress') {
+        onEncodeProgress?.(e.data.percent);
+      } else if (e.data.type === 'done') {
+        const mp3Blob = new Blob([e.data.buffer], { type: 'audio/mpeg' });
+        worker.terminate();
+        resolve(mp3Blob);
+      }
+    };
+
+    worker.onerror = (err) => {
+      worker.terminate();
+      reject(new Error(`MP3 encoding worker failed: ${err.message}`));
+    };
+
+    // Transfer the buffers to avoid copying
+    worker.postMessage(
+      {
+        leftChannel: left,
+        rightChannel: right,
+        sampleRate: buffer.sampleRate,
+        numChannels: buffer.numberOfChannels,
+        kbps: 192,
+      },
+      [left.buffer, right.buffer]
+    );
+  });
 }
