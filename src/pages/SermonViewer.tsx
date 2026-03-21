@@ -370,7 +370,7 @@ const SermonViewer = () => {
       gainNodeRef.current = gain;
     }
 
-    if (audioContextRef.current.state === 'suspended') {
+    if (audioContextRef.current.state !== 'running') {
       await audioContextRef.current.resume();
     }
 
@@ -567,11 +567,13 @@ const SermonViewer = () => {
           }
           // Otherwise control sermon audio
           if (sermonAudio) {
-            if (playing) {
+            if (!sermonAudio.paused) {
               sermonAudio.pause();
             } else {
-              // Ensure audio context is resumed and gain is applied before playing
+              // Ensure audio graph is active before resuming
               await ensureAudioGain();
+              sermonAudio.muted = false;
+              sermonAudio.volume = 1;
               await sermonAudio.play().catch(() => {});
               setPlaying(true);
             }
