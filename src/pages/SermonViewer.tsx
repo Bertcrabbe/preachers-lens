@@ -30,6 +30,8 @@ import {
   Scissors,
   Volume2,
   ZoomIn,
+  Maximize2,
+  Minimize2,
   ZoomOut,
   Highlighter,
 } from "lucide-react";
