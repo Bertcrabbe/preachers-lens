@@ -3727,6 +3727,7 @@ const SermonViewer = () => {
               <p className="text-sm text-muted-foreground text-center">{combineStatus}</p>
             </div>
           )}
+          </div>
         </Card>
 
         {/* Sermon Dashboard */}
