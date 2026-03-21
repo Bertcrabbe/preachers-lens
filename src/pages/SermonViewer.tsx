@@ -2971,7 +2971,10 @@ const SermonViewer = () => {
                           setPlayingCommentId(null);
                           commentAudioRef.current = null;
                           if (audioRef.current) {
-                            audioRef.current.play().catch(() => {});
+                            ensureAudioGain().then(() => {
+                              audioRef.current?.play().catch(() => {});
+                              setPlaying(true);
+                            });
                           }
                         };
                         audio.onended = cleanup;
@@ -2985,10 +2988,14 @@ const SermonViewer = () => {
                         }
                       } else {
                         setPlayingCommentId(null);
+                        await ensureAudioGain();
                         audioRef.current.play().catch(() => {});
+                        setPlaying(true);
                       }
                     } else {
+                      await ensureAudioGain();
                       audioRef.current.play().catch(() => {});
+                      setPlaying(true);
                     }
                   }
                 }}
