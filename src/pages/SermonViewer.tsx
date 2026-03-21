@@ -30,6 +30,8 @@ import {
   Scissors,
   Volume2,
   ZoomIn,
+  Maximize2,
+  Minimize2,
   ZoomOut,
   Highlighter,
 } from "lucide-react";
@@ -214,6 +216,7 @@ const SermonViewer = () => {
   const [highlights, setHighlights] = useState<Record<number, string>>({});
   const [highlightMode, setHighlightMode] = useState(false);
   const [activeHighlightColor, setActiveHighlightColor] = useState('#fbbf24');
+  const [transcriptFullscreen, setTranscriptFullscreen] = useState(false);
 
   const HIGHLIGHT_COLORS = ['#fbbf24', '#34d399', '#60a5fa', '#f87171', '#c084fc', '#fb923c'];
   
@@ -1947,7 +1950,7 @@ const SermonViewer = () => {
       audioRef.current.pause();
     }
   }, [playingCommentId]);
-
+  
 
   const fetchScriptureReferences = async () => {
     setLoadingScriptures(true);
@@ -4673,8 +4676,18 @@ const SermonViewer = () => {
           </Card>
         </div>
         
-        <Card className="p-6 flex-1 min-w-0">
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto scroll-smooth transcript-parallax" ref={transcriptContainerRef}>
+        <Card className={`p-6 flex-1 min-w-0 ${transcriptFullscreen ? 'fixed inset-0 z-50 rounded-none overflow-auto' : ''}`}>
+          <div className="flex items-center justify-end mb-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTranscriptFullscreen(f => !f)}
+              title={transcriptFullscreen ? "Exit fullscreen" : "Fullscreen transcript"}
+            >
+              {transcriptFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          </div>
+          <div className={`space-y-4 overflow-y-auto scroll-smooth transcript-parallax ${transcriptFullscreen ? 'max-h-[calc(100vh-5rem)]' : 'max-h-[70vh]'}`} ref={transcriptContainerRef}>
             {/* Intro comment section at top - scrolls with transcript */}
             <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-dashed border-border">
               {/* Show existing intro comment if there is one */}
