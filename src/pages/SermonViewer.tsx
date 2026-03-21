@@ -4620,7 +4620,7 @@ const SermonViewer = () => {
                     const currentIdx = speeds.indexOf(playbackRate);
                     if (currentIdx < speeds.length - 1) setPlaybackRate(speeds[currentIdx + 1]);
                   }}
-                  disabled={playbackRate >= 3}
+                  disabled={playbackRate >= 2.5}
                 >
                   <span className="text-xs font-bold">+</span>
                 </Button>
