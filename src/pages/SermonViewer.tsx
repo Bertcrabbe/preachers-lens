@@ -210,7 +210,56 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const [highlights, setHighlights] = useState<Record<number, string>>({});
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [activeHighlightColor, setActiveHighlightColor] = useState('#fbbf24');
+
+  const HIGHLIGHT_COLORS = ['#fbbf24', '#34d399', '#60a5fa', '#f87171', '#c084fc', '#fb923c'];
   
+  const fetchHighlights = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from('sermon_highlights' as any)
+      .select('sentence_index, color')
+      .eq('sermon_id', id);
+    if (data) {
+      const map: Record<number, string> = {};
+      (data as any[]).forEach((h: any) => { map[h.sentence_index] = h.color; });
+      setHighlights(map);
+    }
+  };
+
+  const toggleHighlight = async (sentenceIndex: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !id) return;
+
+    if (highlights[sentenceIndex]) {
+      // Remove highlight
+      await supabase
+        .from('sermon_highlights' as any)
+        .delete()
+        .eq('sermon_id', id)
+        .eq('user_id', user.id)
+        .eq('sentence_index', sentenceIndex);
+      setHighlights(prev => {
+        const next = { ...prev };
+        delete next[sentenceIndex];
+        return next;
+      });
+    } else {
+      // Add highlight
+      await supabase
+        .from('sermon_highlights' as any)
+        .upsert({
+          sermon_id: id,
+          user_id: user.id,
+          sentence_index: sentenceIndex,
+          color: activeHighlightColor,
+        } as any);
+      setHighlights(prev => ({ ...prev, [sentenceIndex]: activeHighlightColor }));
+    }
+  };
+
   useEffect(() => {
     checkAuth();
     if (id) {
@@ -220,6 +269,7 @@ const SermonViewer = () => {
       fetchRules();
       fetchScriptureReferences();
       fetchCongregationQuestions();
+      fetchHighlights();
     }
   }, [id]);
 
