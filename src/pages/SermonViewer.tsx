@@ -298,13 +298,13 @@ const SermonViewer = () => {
     }
   }, [playbackRate]);
 
-  // Set up Web Audio API gain node for volume boost beyond 100%
-  useEffect(() => {
+  // Helper to ensure Web Audio gain node is set up and context is resumed
+  const ensureAudioGain = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (!audioContextRef.current) {
-      const ctx = new AudioContext();
+      const ctx = new AudioContext({ sampleRate: 44100 });
       const source = ctx.createMediaElementSource(audio);
       const gain = ctx.createGain();
       source.connect(gain);
@@ -314,6 +314,17 @@ const SermonViewer = () => {
       gainNodeRef.current = gain;
     }
 
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = sermonVolume;
+    }
+  }, [sermonVolume]);
+
+  // Apply gain value when sermonVolume changes
+  useEffect(() => {
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = sermonVolume;
     }
