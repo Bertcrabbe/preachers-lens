@@ -4648,6 +4648,34 @@ const SermonViewer = () => {
                 </Button>
               </div>
             </div>
+
+            <div className="border-t border-border" />
+
+            {/* Highlighter controls */}
+            <div className="text-center space-y-2">
+              <div className="text-xs text-muted-foreground">Highlighter</div>
+              <Button
+                variant={highlightMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setHighlightMode(!highlightMode)}
+                className="w-full"
+              >
+                <Highlighter className="h-4 w-4 mr-2" />
+                {highlightMode ? "Done" : "Highlight"}
+              </Button>
+              {highlightMode && (
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                  {HIGHLIGHT_COLORS.map(color => (
+                    <button
+                      key={color}
+                      className={`w-6 h-6 rounded-full border-2 transition-transform ${activeHighlightColor === color ? 'scale-125 border-foreground' : 'border-transparent'}`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setActiveHighlightColor(color)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </Card>
         </div>
         
