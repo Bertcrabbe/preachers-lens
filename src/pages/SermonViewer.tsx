@@ -4670,9 +4670,40 @@ const SermonViewer = () => {
                       onClick={() => setActiveHighlightColor(color)}
                     />
                   ))}
-                </div>
+            </div>
               )}
             </div>
+
+            {userScrolledAway && (
+              <>
+                <div className="border-t border-border" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => {
+                    const activeIdx = sentences.findIndex(
+                      (s) => currentTime * 1000 >= s.start_time_ms && currentTime * 1000 < s.end_time_ms
+                    );
+                    if (activeIdx >= 0 && paragraphRefs.current[activeIdx] && transcriptContainerRef.current) {
+                      setAutoScrollEnabled(true);
+                      setUserScrolledAway(false);
+                      const container = transcriptContainerRef.current;
+                      const el = paragraphRefs.current[activeIdx];
+                      if (el) {
+                        const containerRect = container.getBoundingClientRect();
+                        const elRect = el.getBoundingClientRect();
+                        const targetOffset = containerRect.top + container.clientHeight * 0.15;
+                        container.scrollTop += elRect.top - targetOffset;
+                      }
+                    }
+                  }}
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Return to current
+                </Button>
+              </>
+            )}
           </Card>
         </div>
         
