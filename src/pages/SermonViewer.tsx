@@ -2988,10 +2988,14 @@ const SermonViewer = () => {
                         }
                       } else {
                         setPlayingCommentId(null);
+                        await ensureAudioGain();
                         audioRef.current.play().catch(() => {});
+                        setPlaying(true);
                       }
                     } else {
+                      await ensureAudioGain();
                       audioRef.current.play().catch(() => {});
+                      setPlaying(true);
                     }
                   }
                 }}
