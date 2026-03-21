@@ -213,6 +213,7 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const [playerCollapsed, setPlayerCollapsed] = useState(false);
   const [highlights, setHighlights] = useState<Record<number, string>>({});
   const [highlightMode, setHighlightMode] = useState(false);
   const [activeHighlightColor, setActiveHighlightColor] = useState('#fbbf24');
@@ -2920,7 +2921,27 @@ const SermonViewer = () => {
           />
         )}
 
-        <Card className="mb-6 p-6 shadow-md border-border/50">
+        <Card className={`mb-6 shadow-md border-border/50 transition-all duration-300 ${playerCollapsed ? 'py-2 px-4' : 'p-6'}`}>
+          <button
+            className="w-full flex items-center justify-between cursor-pointer"
+            onClick={() => setPlayerCollapsed(!playerCollapsed)}
+          >
+            <div className="flex items-center gap-3">
+              <h2 className={`font-semibold text-foreground transition-all duration-300 ${playerCollapsed ? 'text-sm' : 'text-base'}`}>Audio Player</h2>
+              {playerCollapsed && playing && (
+                <Badge variant="secondary" className="animate-pulse text-xs">
+                  Playing
+                </Badge>
+              )}
+              {playerCollapsed && (
+              <span className="text-xs text-muted-foreground font-mono">
+                  {Math.floor(currentTime / 1000 / 60)}:{String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")} / {sermon.duration_seconds ? `${Math.floor(sermon.duration_seconds / 60)}:${String(Math.floor(sermon.duration_seconds % 60)).padStart(2, "0")}` : "0:00"}
+                </span>
+              )}
+            </div>
+            <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${playerCollapsed ? '-rotate-90' : ''}`} />
+          </button>
+          <div className={`overflow-hidden transition-all duration-300 ${playerCollapsed ? 'max-h-0 opacity-0 mt-0' : 'mt-4'}`}>
           <div className="space-y-4">
             <div className="flex items-center gap-4 flex-wrap">
               <Button 
@@ -3706,6 +3727,7 @@ const SermonViewer = () => {
               <p className="text-sm text-muted-foreground text-center">{combineStatus}</p>
             </div>
           )}
+          </div>
         </Card>
 
         {/* Sermon Dashboard */}
