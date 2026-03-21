@@ -370,7 +370,7 @@ const SermonViewer = () => {
       gainNodeRef.current = gain;
     }
 
-    if (audioContextRef.current.state === 'suspended') {
+    if (audioContextRef.current.state !== 'running') {
       await audioContextRef.current.resume();
     }
 
