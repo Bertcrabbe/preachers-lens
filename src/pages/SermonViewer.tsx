@@ -2934,8 +2934,8 @@ const SermonViewer = () => {
                 </Badge>
               )}
               {playerCollapsed && (
-                <span className="text-xs text-muted-foreground font-mono">
-                  {formatTime(currentTime)} / {formatTime(sermon.duration_seconds || 0)}
+              <span className="text-xs text-muted-foreground font-mono">
+                  {Math.floor(currentTime / 1000 / 60)}:{String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")} / {sermon.duration_seconds ? `${Math.floor(sermon.duration_seconds / 60)}:${String(Math.floor(sermon.duration_seconds % 60)).padStart(2, "0")}` : "0:00"}
                 </span>
               )}
             </div>
