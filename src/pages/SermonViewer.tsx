@@ -379,6 +379,23 @@ const SermonViewer = () => {
     }
   }, [sermonVolume]);
 
+  const playSermonAudio = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    await ensureAudioGain();
+    audio.muted = false;
+    audio.volume = 1;
+
+    try {
+      await audio.play();
+      setPlaying(true);
+    } catch (err) {
+      console.error("Failed to play sermon audio:", err);
+      setPlaying(false);
+    }
+  }, [ensureAudioGain]);
+
   // Apply gain value when sermonVolume changes
   useEffect(() => {
     if (gainNodeRef.current) {
@@ -570,12 +587,7 @@ const SermonViewer = () => {
             if (!sermonAudio.paused) {
               sermonAudio.pause();
             } else {
-              // Ensure audio graph is active before resuming
-              await ensureAudioGain();
-              sermonAudio.muted = false;
-              sermonAudio.volume = 1;
-              await sermonAudio.play().catch(() => {});
-              setPlaying(true);
+              await playSermonAudio();
             }
           }
           break;
@@ -614,7 +626,7 @@ const SermonViewer = () => {
 
     window.addEventListener("keydown", handleKeyDown, true); // capture phase to intercept before button activation
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [playing, playingCommentId, audioUrl, currentTime, sentences, commentDialogOpen, floatingRecording]);
+  }, [playing, playingCommentId, audioUrl, currentTime, sentences, commentDialogOpen, floatingRecording, playSermonAudio]);
 
   // Calculate time since last comment in audio timeline
   const timeSinceLastCommentInAudio = (() => {
@@ -2057,10 +2069,9 @@ const SermonViewer = () => {
       if (playing) {
         audioRef.current.pause();
       } else {
-        await ensureAudioGain();
-        audioRef.current.play().catch(() => {});
+        await playSermonAudio();
       }
-      setPlaying(!playing);
+      if (playing) setPlaying(false);
     }
   };
 
@@ -2137,7 +2148,7 @@ const SermonViewer = () => {
                 commentAudioRef.current = null;
                 // Resume sermon playback
                 if (audioRef.current) {
-                  audioRef.current.play().catch(() => {});
+                  void playSermonAudio();
                 }
               };
               
@@ -2165,7 +2176,7 @@ const SermonViewer = () => {
               // If we couldn't get the URL, continue playback
               setPlayingCommentId(null);
               if (audioRef.current) {
-                audioRef.current.play();
+                await playSermonAudio();
               }
             }
             break;
@@ -3009,10 +3020,7 @@ const SermonViewer = () => {
                           setPlayingCommentId(null);
                           commentAudioRef.current = null;
                           if (audioRef.current) {
-                            ensureAudioGain().then(() => {
-                              audioRef.current?.play().catch(() => {});
-                              setPlaying(true);
-                            });
+                            void playSermonAudio();
                           }
                         };
                         audio.onended = cleanup;
@@ -3026,14 +3034,10 @@ const SermonViewer = () => {
                         }
                       } else {
                         setPlayingCommentId(null);
-                        await ensureAudioGain();
-                        audioRef.current.play().catch(() => {});
-                        setPlaying(true);
+                        await playSermonAudio();
                       }
                     } else {
-                      await ensureAudioGain();
-                      audioRef.current.play().catch(() => {});
-                      setPlaying(true);
+                      await playSermonAudio();
                     }
                   }
                 }}
@@ -3255,7 +3259,10 @@ const SermonViewer = () => {
                 src={audioUrl}
                 onTimeUpdate={handleTimeUpdate}
                 onSeeked={handleSeeked}
-                onPlay={() => setPlaying(true)}
+                onPlay={() => {
+                  setPlaying(true);
+                  void ensureAudioGain();
+                }}
                 onPause={handleAudioPause}
               />
                 
@@ -4331,8 +4338,7 @@ const SermonViewer = () => {
                           e.stopPropagation();
                           if (audioRef.current) {
                             audioRef.current.currentTime = s.start_time_ms / 1000;
-                            audioRef.current.play();
-                            setPlaying(true);
+                            void playSermonAudio();
                           }
                         }}
                       >
@@ -4362,8 +4368,7 @@ const SermonViewer = () => {
                       if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
                         const timeMs = data.activePayload[0].payload.time;
                         audioRef.current.currentTime = timeMs / 1000;
-                        audioRef.current.play();
-                        setPlaying(true);
+                        void playSermonAudio();
                         setWpmChartClockActive(true);
                       }
                     }}
@@ -4462,8 +4467,7 @@ const SermonViewer = () => {
                       if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
                         const timeMs = data.activePayload[0].payload.time;
                         audioRef.current.currentTime = timeMs / 1000;
-                        audioRef.current.play();
-                        setPlaying(true);
+                        void playSermonAudio();
                         setVolumeChartClockActive(true);
                       }
                     }}
