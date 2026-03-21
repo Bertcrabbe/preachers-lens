@@ -1988,6 +1988,7 @@ const SermonViewer = () => {
       if (playing) {
         audioRef.current.pause();
       } else {
+        await ensureAudioGain();
         audioRef.current.play().catch(() => {});
       }
       setPlaying(!playing);
