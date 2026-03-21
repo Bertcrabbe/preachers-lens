@@ -570,7 +570,10 @@ const SermonViewer = () => {
             if (playing) {
               sermonAudio.pause();
             } else {
-              ensureAudioGain().then(() => sermonAudio.play().catch(() => {}));
+              // Ensure audio context is resumed and gain is applied before playing
+              await ensureAudioGain();
+              await sermonAudio.play().catch(() => {});
+              setPlaying(true);
             }
           }
           break;
