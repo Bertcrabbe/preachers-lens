@@ -31,6 +31,7 @@ import {
   Volume2,
   ZoomIn,
   ZoomOut,
+  Highlighter,
 } from "lucide-react";
 import { AudioEditor } from "@/components/AudioEditor";
 import { Input } from "@/components/ui/input";
