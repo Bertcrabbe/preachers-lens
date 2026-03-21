@@ -1949,7 +1949,7 @@ const SermonViewer = () => {
       audioRef.current.pause();
     }
   }, [playingCommentId]);
-
+  const [transcriptFullscreen, setTranscriptFullscreen] = useState(false);
 
   const fetchScriptureReferences = async () => {
     setLoadingScriptures(true);
