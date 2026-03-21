@@ -2927,7 +2927,7 @@ const SermonViewer = () => {
             onClick={() => setPlayerCollapsed(!playerCollapsed)}
           >
             <div className="flex items-center gap-3">
-              <h2 className={`font-semibold text-foreground transition-all duration-300 ${playerCollapsed ? 'text-sm' : 'text-base'}`}>Audio Player</h2>
+              <h2 className={`font-semibold text-gradient-primary transition-all duration-300 ${playerCollapsed ? 'text-sm' : 'text-base'}`}>Audio Player</h2>
               {playerCollapsed && playing && (
                 <Badge variant="secondary" className="animate-pulse text-xs">
                   Playing
