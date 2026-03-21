@@ -268,38 +268,38 @@ All colors MUST be HSL.
 
   .transcript-paragraph:hover {
     @apply bg-primary/5;
-    transform: translateZ(12px) scale(1.005);
+    transform: translateZ(12px);
   }
   
   .transcript-paragraph.active {
     @apply bg-primary/10;
     box-shadow: inset 3px 0 0 hsl(var(--primary));
-    transform: translateZ(20px) scale(1.01);
+    transform: translateZ(20px);
   }
 
   /* Parallax depth tiers based on position in viewport */
   .transcript-paragraph[data-depth="far"] {
-    transform: translateZ(-15px) scale(0.985);
+    transform: translateZ(-15px);
     opacity: 0.5;
   }
 
   .transcript-paragraph[data-depth="mid"] {
-    transform: translateZ(-5px) scale(0.995);
+    transform: translateZ(-5px);
     opacity: 0.75;
   }
 
   .transcript-paragraph[data-depth="near"] {
-    transform: translateZ(0px) scale(1);
+    transform: translateZ(0px);
     opacity: 1;
   }
 
   .transcript-paragraph[data-depth="focus"] {
-    transform: translateZ(10px) scale(1.005);
+    transform: translateZ(10px);
     opacity: 1;
   }
 
   .transcript-paragraph.active[data-depth] {
-    transform: translateZ(20px) scale(1.01);
+    transform: translateZ(20px);
     opacity: 1;
   }
 
