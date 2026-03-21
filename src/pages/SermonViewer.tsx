@@ -1970,7 +1970,7 @@ const SermonViewer = () => {
     }
   };
 
-  const togglePlayPause = () => {
+  const togglePlayPause = async () => {
     const commentAudio = commentAudioRef.current;
     
     // If comment is playing, control comment audio
