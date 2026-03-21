@@ -103,6 +103,9 @@ const SermonViewer = () => {
   const { toast } = useToast();
   const { audioDevices, selectedDeviceId, setSelectedDeviceId, getSelectedDeviceLabel } = useMicrophoneSelector();
   const audioRef = useRef<HTMLAudioElement>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const [sermon, setSermon] = useState<Sermon | null>(null);
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
