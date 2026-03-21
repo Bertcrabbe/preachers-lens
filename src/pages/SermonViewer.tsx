@@ -3052,11 +3052,11 @@ const SermonViewer = () => {
                     <Slider
                       value={[sermonVolume * 100]}
                       onValueChange={([v]) => setSermonVolume(v / 100)}
-                      max={100}
+                      max={200}
                       step={5}
-                      className="w-20"
+                      className="w-24"
                     />
-                    <span className="text-xs text-muted-foreground w-8">{Math.round(sermonVolume * 100)}%</span>
+                    <span className={`text-xs w-10 ${sermonVolume > 1 ? 'text-orange-500 font-medium' : 'text-muted-foreground'}`}>{Math.round(sermonVolume * 100)}%</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground w-16">Comments:</span>
