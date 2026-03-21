@@ -103,6 +103,9 @@ const SermonViewer = () => {
   const { toast } = useToast();
   const { audioDevices, selectedDeviceId, setSelectedDeviceId, getSelectedDeviceLabel } = useMicrophoneSelector();
   const audioRef = useRef<HTMLAudioElement>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const [sermon, setSermon] = useState<Sermon | null>(null);
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
@@ -186,7 +189,7 @@ const SermonViewer = () => {
   const isAutoScrollingRef = useRef(false);
   const [transcribing, setTranscribing] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [sermonVolume, setSermonVolume] = useState(0.75);
+  const [sermonVolume, setSermonVolume] = useState(1.0);
   const [commentVolume, setCommentVolume] = useState(0.75);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
@@ -295,10 +298,24 @@ const SermonViewer = () => {
     }
   }, [playbackRate]);
 
-  // Apply sermon volume to audio element
+  // Set up Web Audio API gain node for volume boost beyond 100%
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = sermonVolume;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (!audioContextRef.current) {
+      const ctx = new AudioContext();
+      const source = ctx.createMediaElementSource(audio);
+      const gain = ctx.createGain();
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      audioContextRef.current = ctx;
+      mediaSourceRef.current = source;
+      gainNodeRef.current = gain;
+    }
+
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = sermonVolume;
     }
   }, [sermonVolume]);
 
@@ -3035,11 +3052,11 @@ const SermonViewer = () => {
                     <Slider
                       value={[sermonVolume * 100]}
                       onValueChange={([v]) => setSermonVolume(v / 100)}
-                      max={100}
+                      max={200}
                       step={5}
-                      className="w-20"
+                      className="w-24"
                     />
-                    <span className="text-xs text-muted-foreground w-8">{Math.round(sermonVolume * 100)}%</span>
+                    <span className={`text-xs w-10 ${sermonVolume > 1 ? 'text-orange-500 font-medium' : 'text-muted-foreground'}`}>{Math.round(sermonVolume * 100)}%</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground w-16">Comments:</span>
