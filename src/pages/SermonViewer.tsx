@@ -2056,7 +2056,7 @@ const SermonViewer = () => {
       
       // Check if we should play an audio comment
       // Use DOM element's paused state directly to avoid stale React state closure issues
-      if (previewWithComments && !audioRef.current.paused && !playingCommentId) {
+      if (previewWithComments && !audioRef.current.paused && !isPlayingCommentRef.current) {
         const audioComments = comments.filter(c => c.audio_url);
         
         // Find comments whose start time we've crossed over since last update
