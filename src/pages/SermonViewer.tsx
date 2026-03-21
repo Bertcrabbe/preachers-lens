@@ -179,6 +179,7 @@ const SermonViewer = () => {
   const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
   const [playedCommentIds, setPlayedCommentIds] = useState<Set<string>>(new Set());
   const lastTimeRef = useRef<number>(0);
+  const isPlayingCommentRef = useRef<boolean>(false);
   const [wpmChartClockActive, setWpmChartClockActive] = useState(false);
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
