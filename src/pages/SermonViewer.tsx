@@ -298,10 +298,24 @@ const SermonViewer = () => {
     }
   }, [playbackRate]);
 
-  // Apply sermon volume to audio element
+  // Set up Web Audio API gain node for volume boost beyond 100%
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = sermonVolume;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (!audioContextRef.current) {
+      const ctx = new AudioContext();
+      const source = ctx.createMediaElementSource(audio);
+      const gain = ctx.createGain();
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      audioContextRef.current = ctx;
+      mediaSourceRef.current = source;
+      gainNodeRef.current = gain;
+    }
+
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = sermonVolume;
     }
   }, [sermonVolume]);
 
