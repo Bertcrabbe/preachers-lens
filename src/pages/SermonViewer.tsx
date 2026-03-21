@@ -4610,23 +4610,6 @@ const SermonViewer = () => {
         {/* Stationary sidebar panel */}
         <div className="sticky top-4 self-start shrink-0 w-44">
           <Card className="p-4 space-y-4">
-            {/* Play/Pause controls */}
-            <div className="flex flex-col items-center gap-2">
-              <Button
-                size="icon"
-                onClick={togglePlayPause}
-                disabled={previewingParagraph !== null || showAudioEditor}
-                className={`${playing ? 'pause-button' : 'play-button'} h-10 w-10 text-primary-foreground`}
-              >
-                {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-              </Button>
-              <span className="text-xs text-muted-foreground font-mono">
-                {Math.floor(currentTime / 1000 / 60)}:{String(Math.floor((currentTime / 1000) % 60)).padStart(2, "0")}
-              </span>
-            </div>
-
-            <div className="border-t border-border" />
-
             {/* Comment count */}
             <div className="text-center">
               <div className="text-3xl font-bold text-primary">{comments.length}</div>
