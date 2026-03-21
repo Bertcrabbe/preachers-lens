@@ -88,74 +88,74 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Stained Glass — Dark mode (default) */
-    --background: 200 35% 7%;
-    --foreground: 45 15% 90%;
+    /* Forest Chapel — Dark mode */
+    --background: 150 25% 7%;
+    --foreground: 40 15% 88%;
 
-    --card: 200 30% 11%;
-    --card-foreground: 45 15% 90%;
+    --card: 150 22% 11%;
+    --card-foreground: 40 15% 88%;
 
-    --popover: 200 30% 11%;
-    --popover-foreground: 45 15% 90%;
+    --popover: 150 22% 11%;
+    --popover-foreground: 40 15% 88%;
 
-    --primary: 174 60% 45%;
-    --primary-foreground: 200 35% 7%;
+    --primary: 155 50% 40%;
+    --primary-foreground: 150 25% 7%;
 
-    --secondary: 200 25% 15%;
-    --secondary-foreground: 45 12% 85%;
+    --secondary: 150 18% 15%;
+    --secondary-foreground: 40 12% 82%;
 
-    --muted: 200 25% 15%;
-    --muted-foreground: 200 10% 50%;
+    --muted: 150 18% 15%;
+    --muted-foreground: 150 10% 48%;
 
-    --accent: 348 68% 55%;
+    --accent: 18 60% 52%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 70% 52%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 200 20% 18%;
-    --input: 200 20% 18%;
-    --ring: 174 60% 45%;
+    --border: 150 15% 18%;
+    --input: 150 15% 18%;
+    --ring: 155 50% 40%;
 
-    --success: 155 60% 42%;
+    --success: 155 55% 40%;
     --success-foreground: 0 0% 100%;
 
     --warning: 40 85% 55%;
     --warning-foreground: 0 0% 100%;
 
-    --sidebar-background: 200 35% 8%;
-    --sidebar-foreground: 45 15% 90%;
-    --sidebar-primary: 174 60% 45%;
-    --sidebar-primary-foreground: 200 35% 7%;
-    --sidebar-accent: 348 68% 55%;
+    --sidebar-background: 150 25% 8%;
+    --sidebar-foreground: 40 15% 88%;
+    --sidebar-primary: 155 50% 40%;
+    --sidebar-primary-foreground: 150 25% 7%;
+    --sidebar-accent: 18 60% 52%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 200 20% 18%;
-    --sidebar-ring: 174 60% 45%;
+    --sidebar-border: 150 15% 18%;
+    --sidebar-ring: 155 50% 40%;
     
-    --chart-1: 174 60% 45%;
-    --chart-2: 348 68% 55%;
-    --chart-3: 45 80% 52%;
-    --chart-4: 260 50% 60%;
-    --chart-5: 200 60% 55%;
+    --chart-1: 155 50% 40%;
+    --chart-2: 18 60% 52%;
+    --chart-3: 40 75% 52%;
+    --chart-4: 260 45% 58%;
+    --chart-5: 200 55% 52%;
     
-    --sidebar: 200 35% 8%;
+    --sidebar: 150 25% 8%;
     --radius: 0.75rem;
     
-    --shadow-2xs: 0 1px 2px 0 hsla(200, 35%, 3%, 0.4);
-    --shadow-xs: 0 1px 3px 0 hsla(200, 35%, 3%, 0.5);
-    --shadow-sm: 0 2px 4px 0 hsla(200, 35%, 3%, 0.5);
-    --shadow: 0 4px 6px -1px hsla(200, 35%, 3%, 0.6);
-    --shadow-md: 0 6px 12px -2px hsla(200, 35%, 3%, 0.6);
-    --shadow-lg: 0 10px 24px -3px hsla(200, 35%, 3%, 0.7);
-    --shadow-xl: 0 20px 40px -4px hsla(200, 35%, 3%, 0.8);
-    --shadow-2xl: 0 25px 50px -12px hsla(200, 35%, 3%, 0.9);
+    --shadow-2xs: 0 1px 2px 0 hsla(150, 25%, 3%, 0.4);
+    --shadow-xs: 0 1px 3px 0 hsla(150, 25%, 3%, 0.5);
+    --shadow-sm: 0 2px 4px 0 hsla(150, 25%, 3%, 0.5);
+    --shadow: 0 4px 6px -1px hsla(150, 25%, 3%, 0.6);
+    --shadow-md: 0 6px 12px -2px hsla(150, 25%, 3%, 0.6);
+    --shadow-lg: 0 10px 24px -3px hsla(150, 25%, 3%, 0.7);
+    --shadow-xl: 0 20px 40px -4px hsla(150, 25%, 3%, 0.8);
+    --shadow-2xl: 0 25px 50px -12px hsla(150, 25%, 3%, 0.9);
     
     --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
     
-    --gradient-primary: linear-gradient(135deg, hsl(174, 60%, 45%) 0%, hsl(178, 50%, 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(348, 68%, 55%) 0%, hsl(340, 60%, 50%) 100%);
-    --gradient-warm: linear-gradient(135deg, hsl(348, 68%, 55%) 0%, hsl(25, 80%, 55%) 100%);
-    --gradient-surface: linear-gradient(180deg, hsl(200, 25%, 13%) 0%, hsl(200, 35%, 7%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(155, 50%, 40%) 0%, hsl(160, 45%, 46%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(18, 60%, 52%) 0%, hsl(12, 55%, 48%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(18, 60%, 52%) 0%, hsl(30, 65%, 54%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(150, 18%, 13%) 0%, hsl(150, 25%, 7%) 100%);
   }
 }
 
