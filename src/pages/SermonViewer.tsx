@@ -359,6 +359,10 @@ const SermonViewer = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    const clampedSermonVolume = Number.isFinite(sermonVolume)
+      ? Math.min(2, Math.max(0, sermonVolume))
+      : 1;
+
     if (!audioContextRef.current) {
       const ctx = new AudioContext({ sampleRate: 44100 });
       const source = ctx.createMediaElementSource(audio);
@@ -370,18 +374,44 @@ const SermonViewer = () => {
       gainNodeRef.current = gain;
     }
 
+    // Reconnect graph defensively in case browser interrupted/disconnected it
+    if (mediaSourceRef.current && gainNodeRef.current) {
+      try {
+        mediaSourceRef.current.disconnect();
+      } catch {}
+      try {
+        gainNodeRef.current.disconnect();
+      } catch {}
+      mediaSourceRef.current.connect(gainNodeRef.current);
+      gainNodeRef.current.connect(audioContextRef.current.destination);
+    }
+
     if (audioContextRef.current.state !== 'running') {
-      await audioContextRef.current.resume();
+      try {
+        await audioContextRef.current.resume();
+      } catch (err) {
+        console.error("AudioContext resume failed:", err);
+      }
     }
 
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = sermonVolume;
+      gainNodeRef.current.gain.value = clampedSermonVolume;
     }
   }, [sermonVolume]);
 
   const playSermonAudio = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    const clampedSermonVolume = Number.isFinite(sermonVolume)
+      ? Math.min(2, Math.max(0, sermonVolume))
+      : 1;
+
+    // Release pre-acquired mic stream before sermon playback to avoid output routing issues
+    if (preAcquiredStream?.active) {
+      preAcquiredStream.getTracks().forEach((t) => t.stop());
+      setPreAcquiredStream(undefined);
+    }
 
     await ensureAudioGain();
     audio.muted = false;
@@ -392,14 +422,20 @@ const SermonViewer = () => {
       setPlaying(true);
     } catch (err) {
       console.error("Failed to play sermon audio:", err);
+      // Fallback: native HTML5 volume path
+      audio.muted = false;
+      audio.volume = Math.min(1, clampedSermonVolume);
       setPlaying(false);
     }
-  }, [ensureAudioGain]);
+  }, [ensureAudioGain, sermonVolume, preAcquiredStream]);
 
   // Apply gain value when sermonVolume changes
   useEffect(() => {
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = sermonVolume;
+      const clampedSermonVolume = Number.isFinite(sermonVolume)
+        ? Math.min(2, Math.max(0, sermonVolume))
+        : 1;
+      gainNodeRef.current.gain.value = clampedSermonVolume;
     }
   }, [sermonVolume]);
 
@@ -2240,11 +2276,10 @@ const SermonViewer = () => {
     });
   };
 
-  // Handle main audio pause - stop comment audio too, and pre-acquire mic
+  // Handle main audio pause - stop comment audio too
   const handleAudioPause = () => {
     setPlaying(false);
     stopCommentAudio();
-    preAcquireStream();
   };
 
   const openCommentDialog = (start: number, end: number) => {
