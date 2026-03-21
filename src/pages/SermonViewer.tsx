@@ -5409,7 +5409,6 @@ const SermonViewer = () => {
                 className="rounded-full shadow-lg gap-2"
                 onClick={scrollToActiveParagraph}
               >
-                <ArrowLeft className="h-3 w-3 rotate-[-90deg]" />
                 Return to current paragraph
               </Button>
             </div>
