@@ -213,6 +213,7 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const [playerCollapsed, setPlayerCollapsed] = useState(false);
   const [highlights, setHighlights] = useState<Record<number, string>>({});
   const [highlightMode, setHighlightMode] = useState(false);
   const [activeHighlightColor, setActiveHighlightColor] = useState('#fbbf24');
