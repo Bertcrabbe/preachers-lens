@@ -355,48 +355,46 @@ const SermonViewer = () => {
   }, [playbackRate]);
 
   // Helper to ensure Web Audio gain node is set up and context is resumed
-  const ensureAudioGain = useCallback(async () => {
+  // Returns false when boost path cannot be used, so caller can fall back to native audio output.
+  const ensureAudioGain = useCallback(async (): Promise<boolean> => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio) return false;
 
     const clampedSermonVolume = Number.isFinite(sermonVolume)
       ? Math.min(2, Math.max(0, sermonVolume))
       : 1;
 
-    if (!audioContextRef.current) {
-      const ctx = new AudioContext({ sampleRate: 44100 });
-      const source = ctx.createMediaElementSource(audio);
-      const gain = ctx.createGain();
-      source.connect(gain);
-      gain.connect(ctx.destination);
-      audioContextRef.current = ctx;
-      mediaSourceRef.current = source;
-      gainNodeRef.current = gain;
+    if (!audioContextRef.current || !mediaSourceRef.current || !gainNodeRef.current) {
+      try {
+        const ctx = new AudioContext();
+        const source = ctx.createMediaElementSource(audio);
+        const gain = ctx.createGain();
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        audioContextRef.current = ctx;
+        mediaSourceRef.current = source;
+        gainNodeRef.current = gain;
+      } catch (err) {
+        console.warn("Web Audio boost unavailable, falling back to native audio output:", err);
+        return false;
+      }
     }
 
-    // Reconnect graph defensively in case browser interrupted/disconnected it
-    if (mediaSourceRef.current && gainNodeRef.current) {
-      try {
-        mediaSourceRef.current.disconnect();
-      } catch {}
-      try {
-        gainNodeRef.current.disconnect();
-      } catch {}
-      mediaSourceRef.current.connect(gainNodeRef.current);
-      gainNodeRef.current.connect(audioContextRef.current.destination);
+    if (!audioContextRef.current || !gainNodeRef.current) {
+      return false;
     }
 
-    if (audioContextRef.current.state !== 'running') {
+    if (audioContextRef.current.state !== "running") {
       try {
         await audioContextRef.current.resume();
       } catch (err) {
         console.error("AudioContext resume failed:", err);
+        return false;
       }
     }
 
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = clampedSermonVolume;
-    }
+    gainNodeRef.current.gain.value = clampedSermonVolume;
+    return true;
   }, [sermonVolume]);
 
   const playSermonAudio = useCallback(async () => {
@@ -413,9 +411,15 @@ const SermonViewer = () => {
       setPreAcquiredStream(undefined);
     }
 
-    await ensureAudioGain();
+    const wantsBoost = clampedSermonVolume > 1;
     audio.muted = false;
-    audio.volume = 1;
+
+    if (wantsBoost) {
+      const boostReady = await ensureAudioGain();
+      audio.volume = boostReady ? 1 : Math.min(1, clampedSermonVolume);
+    } else {
+      audio.volume = clampedSermonVolume;
+    }
 
     try {
       await audio.play();
@@ -431,11 +435,17 @@ const SermonViewer = () => {
 
   // Apply gain value when sermonVolume changes
   useEffect(() => {
+    const clampedSermonVolume = Number.isFinite(sermonVolume)
+      ? Math.min(2, Math.max(0, sermonVolume))
+      : 1;
+
     if (gainNodeRef.current) {
-      const clampedSermonVolume = Number.isFinite(sermonVolume)
-        ? Math.min(2, Math.max(0, sermonVolume))
-        : 1;
       gainNodeRef.current.gain.value = clampedSermonVolume;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.muted = false;
+      audioRef.current.volume = clampedSermonVolume > 1 ? 1 : clampedSermonVolume;
     }
   }, [sermonVolume]);
 
@@ -3292,11 +3302,11 @@ const SermonViewer = () => {
               <audio
                 ref={audioRef}
                 src={audioUrl}
+                crossOrigin="anonymous"
                 onTimeUpdate={handleTimeUpdate}
                 onSeeked={handleSeeked}
                 onPlay={() => {
                   setPlaying(true);
-                  void ensureAudioGain();
                 }}
                 onPause={handleAudioPause}
               />
