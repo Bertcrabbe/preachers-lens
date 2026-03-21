@@ -514,7 +514,7 @@ const SermonViewer = () => {
             if (playing) {
               sermonAudio.pause();
             } else {
-              sermonAudio.play().catch(() => {});
+              ensureAudioGain().then(() => sermonAudio.play().catch(() => {}));
             }
           }
           break;
