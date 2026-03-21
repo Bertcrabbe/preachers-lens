@@ -4600,7 +4600,7 @@ const SermonViewer = () => {
                   variant="outline"
                   className="h-7 w-7"
                   onClick={() => {
-                    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+                    const speeds = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1, 1.1, 1.15, 1.2, 1.25, 1.3, 1.4, 1.5, 1.75, 2, 2.5, 3];
                     const currentIdx = speeds.indexOf(playbackRate);
                     if (currentIdx > 0) setPlaybackRate(speeds[currentIdx - 1]);
                   }}
@@ -4616,11 +4616,11 @@ const SermonViewer = () => {
                   variant="outline"
                   className="h-7 w-7"
                   onClick={() => {
-                    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+                    const speeds = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1, 1.1, 1.15, 1.2, 1.25, 1.3, 1.4, 1.5, 1.75, 2, 2.5, 3];
                     const currentIdx = speeds.indexOf(playbackRate);
                     if (currentIdx < speeds.length - 1) setPlaybackRate(speeds[currentIdx + 1]);
                   }}
-                  disabled={playbackRate >= 2}
+                  disabled={playbackRate >= 3}
                 >
                   <span className="text-xs font-bold">+</span>
                 </Button>
