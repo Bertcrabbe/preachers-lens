@@ -160,6 +160,41 @@ export type Database = {
           },
         ]
       }
+      sermon_highlights: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          sentence_index: number
+          sermon_id: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          sentence_index: number
+          sermon_id: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          sentence_index?: number
+          sermon_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sermon_highlights_sermon_id_fkey"
+            columns: ["sermon_id"]
+            isOneToOne: false
+            referencedRelation: "sermons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sermon_metrics: {
         Row: {
           congregation_questions: number | null

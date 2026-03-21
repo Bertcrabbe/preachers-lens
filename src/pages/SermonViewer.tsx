@@ -31,6 +31,7 @@ import {
   Volume2,
   ZoomIn,
   ZoomOut,
+  Highlighter,
 } from "lucide-react";
 import { AudioEditor } from "@/components/AudioEditor";
 import { Input } from "@/components/ui/input";
@@ -209,7 +210,56 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const [highlights, setHighlights] = useState<Record<number, string>>({});
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [activeHighlightColor, setActiveHighlightColor] = useState('#fbbf24');
+
+  const HIGHLIGHT_COLORS = ['#fbbf24', '#34d399', '#60a5fa', '#f87171', '#c084fc', '#fb923c'];
   
+  const fetchHighlights = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from('sermon_highlights' as any)
+      .select('sentence_index, color')
+      .eq('sermon_id', id);
+    if (data) {
+      const map: Record<number, string> = {};
+      (data as any[]).forEach((h: any) => { map[h.sentence_index] = h.color; });
+      setHighlights(map);
+    }
+  };
+
+  const toggleHighlight = async (sentenceIndex: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !id) return;
+
+    if (highlights[sentenceIndex]) {
+      // Remove highlight
+      await supabase
+        .from('sermon_highlights' as any)
+        .delete()
+        .eq('sermon_id', id)
+        .eq('user_id', user.id)
+        .eq('sentence_index', sentenceIndex);
+      setHighlights(prev => {
+        const next = { ...prev };
+        delete next[sentenceIndex];
+        return next;
+      });
+    } else {
+      // Add highlight
+      await supabase
+        .from('sermon_highlights' as any)
+        .upsert({
+          sermon_id: id,
+          user_id: user.id,
+          sentence_index: sentenceIndex,
+          color: activeHighlightColor,
+        } as any);
+      setHighlights(prev => ({ ...prev, [sentenceIndex]: activeHighlightColor }));
+    }
+  };
+
   useEffect(() => {
     checkAuth();
     if (id) {
@@ -219,6 +269,7 @@ const SermonViewer = () => {
       fetchRules();
       fetchScriptureReferences();
       fetchCongregationQuestions();
+      fetchHighlights();
     }
   }, [id]);
 
@@ -2878,7 +2929,30 @@ const SermonViewer = () => {
                 <Scissors className="h-4 w-4 mr-2" />
                 {showAudioEditor ? "Close Editor" : "Edit Audio"}
               </Button>
-              
+
+              <Button
+                variant={highlightMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => setHighlightMode(!highlightMode)}
+                title="Toggle highlight mode"
+              >
+                <Highlighter className="h-4 w-4 mr-2" />
+                {highlightMode ? "Done" : "Highlight"}
+              </Button>
+
+              {highlightMode && (
+                <div className="flex items-center gap-1 border rounded-md px-2 py-1">
+                  {HIGHLIGHT_COLORS.map(color => (
+                    <button
+                      key={color}
+                      className={`w-5 h-5 rounded-full border-2 transition-transform ${activeHighlightColor === color ? 'scale-125 border-foreground' : 'border-transparent'}`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setActiveHighlightColor(color)}
+                    />
+                  ))}
+                </div>
+              )}
+
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -5072,7 +5146,22 @@ const SermonViewer = () => {
                               {Math.floor(firstSentence.start_time_ms / 1000 / 60)}:
                               {String(Math.floor((firstSentence.start_time_ms / 1000) % 60)).padStart(2, "0")}
                             </Badge>
-                            <p className="flex-1 leading-relaxed font-serif text-foreground/90">{paragraph.map((s) => s.sentence_text).join(" ")}</p>
+                            <p className="flex-1 leading-relaxed font-serif text-foreground/90">
+                              {paragraph.map((s) => {
+                                const sIdx = sentences.indexOf(s);
+                                const hlColor = highlights[sIdx];
+                                return (
+                                  <span
+                                    key={sIdx}
+                                    className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
+                                    style={hlColor ? { backgroundColor: hlColor + '60' } : undefined}
+                                    onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
+                                  >
+                                    {s.sentence_text}{' '}
+                                  </span>
+                                );
+                              })}
+                            </p>
                           </div>
                         );
                       }
@@ -5117,7 +5206,22 @@ const SermonViewer = () => {
                                     </Badge>
                                   )}
                                   {segIdx !== 0 && <div className="w-[52px] shrink-0" />}
-                                  <p className="flex-1 leading-relaxed font-serif text-foreground/90">{segment.sentences.map((s) => s.sentence_text).join(" ")}</p>
+                                  <p className="flex-1 leading-relaxed font-serif text-foreground/90">
+                                    {segment.sentences.map((s) => {
+                                      const sIdx = sentences.indexOf(s);
+                                      const hlColor = highlights[sIdx];
+                                      return (
+                                        <span
+                                          key={sIdx}
+                                          className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
+                                          style={hlColor ? { backgroundColor: hlColor + '60' } : undefined}
+                                          onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
+                                        >
+                                          {s.sentence_text}{' '}
+                                        </span>
+                                      );
+                                    })}
+                                  </p>
                                 </div>
                               );
                             } else {
