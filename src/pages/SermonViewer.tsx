@@ -5206,7 +5206,22 @@ const SermonViewer = () => {
                                     </Badge>
                                   )}
                                   {segIdx !== 0 && <div className="w-[52px] shrink-0" />}
-                                  <p className="flex-1 leading-relaxed font-serif text-foreground/90">{segment.sentences.map((s) => s.sentence_text).join(" ")}</p>
+                                  <p className="flex-1 leading-relaxed font-serif text-foreground/90">
+                                    {segment.sentences.map((s) => {
+                                      const sIdx = sentences.indexOf(s);
+                                      const hlColor = highlights[sIdx];
+                                      return (
+                                        <span
+                                          key={sIdx}
+                                          className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
+                                          style={hlColor ? { backgroundColor: hlColor + '60' } : undefined}
+                                          onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
+                                        >
+                                          {s.sentence_text}{' '}
+                                        </span>
+                                      );
+                                    })}
+                                  </p>
                                 </div>
                               );
                             } else {
