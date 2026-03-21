@@ -524,7 +524,7 @@ const SermonViewer = () => {
 
   // Keyboard shortcuts for audio player (works for both sermon and comment audio)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       // Ignore if user is typing in an input/textarea
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
