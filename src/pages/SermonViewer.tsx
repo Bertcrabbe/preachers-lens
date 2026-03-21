@@ -179,6 +179,7 @@ const SermonViewer = () => {
   const [commentSignedUrls, setCommentSignedUrls] = useState<Record<string, string>>({});
   const [playedCommentIds, setPlayedCommentIds] = useState<Set<string>>(new Set());
   const lastTimeRef = useRef<number>(0);
+  const isPlayingCommentRef = useRef<boolean>(false);
   const [wpmChartClockActive, setWpmChartClockActive] = useState(false);
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
@@ -1938,6 +1939,14 @@ const SermonViewer = () => {
     }
   };
 
+  // Keep ref in sync with playingCommentId state for use in event handlers
+  useEffect(() => {
+    isPlayingCommentRef.current = playingCommentId !== null;
+    // When a comment starts playing, ensure sermon audio is paused
+    if (playingCommentId && audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
+  }, [playingCommentId]);
 
 
   const fetchScriptureReferences = async () => {
@@ -2055,7 +2064,7 @@ const SermonViewer = () => {
       
       // Check if we should play an audio comment
       // Use DOM element's paused state directly to avoid stale React state closure issues
-      if (previewWithComments && !audioRef.current.paused && !playingCommentId) {
+      if (previewWithComments && !audioRef.current.paused && !isPlayingCommentRef.current) {
         const audioComments = comments.filter(c => c.audio_url);
         
         // Find comments whose start time we've crossed over since last update
