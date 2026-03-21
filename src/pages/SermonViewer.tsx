@@ -3202,28 +3202,6 @@ const SermonViewer = () => {
                 </DropdownMenu>
               </div>
 
-              <Button
-                variant={highlightMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setHighlightMode(!highlightMode)}
-                title="Toggle highlight mode"
-              >
-                <Highlighter className="h-4 w-4 mr-2" />
-                {highlightMode ? "Done" : "Highlight"}
-              </Button>
-
-              {highlightMode && (
-                <div className="flex items-center gap-1 border rounded-md px-2 py-1">
-                  {HIGHLIGHT_COLORS.map(color => (
-                    <button
-                      key={color}
-                      className={`w-5 h-5 rounded-full border-2 transition-transform ${activeHighlightColor === color ? 'scale-125 border-foreground' : 'border-transparent'}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setActiveHighlightColor(color)}
-                    />
-                  ))}
-                </div>
-              )}
 
               {comments.filter(c => c.audio_url).length > 0 && (
                 <div className="flex items-center gap-2 border-l pl-4">
