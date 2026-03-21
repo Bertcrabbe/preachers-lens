@@ -216,6 +216,7 @@ const SermonViewer = () => {
   const [highlights, setHighlights] = useState<Record<number, string>>({});
   const [highlightMode, setHighlightMode] = useState(false);
   const [activeHighlightColor, setActiveHighlightColor] = useState('#fbbf24');
+  const [transcriptFullscreen, setTranscriptFullscreen] = useState(false);
 
   const HIGHLIGHT_COLORS = ['#fbbf24', '#34d399', '#60a5fa', '#f87171', '#c084fc', '#fb923c'];
   
