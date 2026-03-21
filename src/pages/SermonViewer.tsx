@@ -1939,6 +1939,14 @@ const SermonViewer = () => {
     }
   };
 
+  // Keep ref in sync with playingCommentId state for use in event handlers
+  useEffect(() => {
+    isPlayingCommentRef.current = playingCommentId !== null;
+    // When a comment starts playing, ensure sermon audio is paused
+    if (playingCommentId && audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
+  }, [playingCommentId]);
 
 
   const fetchScriptureReferences = async () => {
