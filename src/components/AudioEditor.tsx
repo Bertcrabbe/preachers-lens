@@ -101,7 +101,7 @@ export const AudioEditor = ({
       console.log("Audio decoded, duration:", audioBuffer.duration);
 
       const rawData = audioBuffer.getChannelData(0);
-      const samples = 2000;
+      const samples = 4000;
       const blockSize = Math.floor(rawData.length / samples);
       const filteredData: number[] = [];
 
