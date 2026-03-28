@@ -879,6 +879,17 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-8">
         {!selectedCommunicator ? (
           <>
+            <div className="flex justify-center mb-10">
+              <Button
+                size="lg"
+                onClick={() => setUploadOpen(true)}
+                className="h-16 px-12 text-lg rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+              >
+                <Upload className="h-6 w-6 mr-3" />
+                Upload Sermon
+              </Button>
+            </div>
+
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-2xl font-bold">Communicators</h2>
@@ -892,10 +903,6 @@ const Dashboard = () => {
                 <Button onClick={() => navigate("/rules")} variant="outline">
                   <ListChecks className="mr-2 h-4 w-4" />
                   Evaluation Rules
-                </Button>
-                <Button onClick={() => setUploadOpen(true)}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Sermon
                 </Button>
               </div>
             </div>
