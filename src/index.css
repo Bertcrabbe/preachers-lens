@@ -215,6 +215,52 @@ All colors MUST be HSL.
     --gradient-warm: linear-gradient(135deg, hsl(205, 75%, 45%) 0%, hsl(190, 65%, 48%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(215, 20%, 98%) 0%, hsl(215, 25%, 95%) 100%);
   }
+
+  /* ===== NY KNICKS ===== */
+  [data-theme="ny-knicks"] {
+    --background: 215 55% 10%;
+    --foreground: 215 15% 92%;
+    --card: 215 40% 28%;
+    --card-foreground: 215 15% 96%;
+    --popover: 215 40% 30%;
+    --popover-foreground: 215 15% 96%;
+    --primary: 28 92% 55%;
+    --primary-foreground: 215 55% 8%;
+    --secondary: 215 30% 32%;
+    --secondary-foreground: 215 15% 90%;
+    --muted: 215 30% 32%;
+    --muted-foreground: 215 12% 65%;
+    --accent: 207 100% 36%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 30% 24%;
+    --input: 215 30% 24%;
+    --ring: 28 92% 55%;
+    --radius: 0.75rem;
+    --success: 155 55% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 40 85% 55%;
+    --warning-foreground: 215 55% 8%;
+    --sidebar-background: 215 58% 8%;
+    --sidebar-foreground: 215 15% 90%;
+    --sidebar-primary: 28 92% 55%;
+    --sidebar-primary-foreground: 215 55% 8%;
+    --sidebar-accent: 207 100% 36%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 215 35% 18%;
+    --sidebar-ring: 28 92% 55%;
+    --chart-1: 28 92% 55%;
+    --chart-2: 207 100% 36%;
+    --chart-3: 0 0% 75%;
+    --chart-4: 28 70% 70%;
+    --chart-5: 207 60% 55%;
+    --sidebar: 215 58% 8%;
+    --gradient-primary: linear-gradient(135deg, hsl(28, 92%, 55%) 0%, hsl(22, 88%, 48%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(207, 100%, 36%) 0%, hsl(212, 90%, 30%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(28, 92%, 55%) 0%, hsl(207, 100%, 36%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(215, 38%, 20%) 0%, hsl(215, 55%, 10%) 100%);
+  }
 }
 
 
