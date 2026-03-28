@@ -36,6 +36,7 @@ import {
   Highlighter,
 } from "lucide-react";
 import { AudioEditor } from "@/components/AudioEditor";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -2926,7 +2927,8 @@ const SermonViewer = () => {
               </Badge>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <ThemeSwitcher />
             <Button
               variant="outline"
               onClick={handleExportAudio}
