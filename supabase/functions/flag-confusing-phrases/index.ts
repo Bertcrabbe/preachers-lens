@@ -78,7 +78,7 @@ Special rule for biblical names:
 Severity guidelines:
 - "mild": standalone biblical names, simple church terms like "small groups"
 - "moderate": theological terms that can be briefly explained (e.g., "grace", "redemption")
-- "severe": dense theological language, loaded doctrinal phrases, or multi-concept constructs that require significant background knowledge (e.g., "royal priesthood", "holy nation", "washed in the blood", "justification by faith", "propitiation"). If a phrase packs multiple unfamiliar theological concepts together, it is severe.`
+- "severe": dense theological language, loaded doctrinal phrases, direct invocations or prayers to the Holy Spirit (e.g., "Holy Spirit, come and invade our hearts"), Trinitarian address patterns, or multi-concept constructs that require significant background knowledge (e.g., "royal priesthood", "holy nation", "washed in the blood", "justification by faith", "propitiation"). If a phrase packs multiple unfamiliar theological concepts together, or addresses a member of the Trinity directly in prayer/invocation, it is severe.`
           },
           {
             role: "user",
