@@ -308,36 +308,36 @@ All colors MUST be HSL.
   /* Stats card with glassmorphism */
   .stats-card {
     @apply relative overflow-hidden rounded-xl border transition-all duration-200;
-    background: hsla(225, 20%, 100%, 0.6);
+    background: hsla(225, 30%, 30%, 0.6);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-color: hsla(225, 15%, 85%, 0.5);
+    border-color: hsla(225, 20%, 38%, 0.5);
     box-shadow: 
-      0 4px 24px -4px hsla(222, 30%, 10%, 0.08),
-      inset 0 1px 0 hsla(225, 20%, 100%, 0.6);
+      0 4px 24px -4px hsla(225, 35%, 5%, 0.3),
+      inset 0 1px 0 hsla(225, 20%, 45%, 0.2);
   }
   
   .stats-card:hover {
     @apply shadow-lg -translate-y-1;
-    background: hsla(225, 20%, 100%, 0.75);
+    background: hsla(225, 30%, 34%, 0.75);
     box-shadow: 
-      0 8px 32px -4px hsla(222, 30%, 10%, 0.12),
-      inset 0 1px 0 hsla(225, 20%, 100%, 0.8);
+      0 8px 32px -4px hsla(225, 35%, 5%, 0.4),
+      inset 0 1px 0 hsla(225, 20%, 45%, 0.3);
   }
 
   .dark .stats-card {
-    background: hsla(200, 30%, 12%, 0.6);
-    border-color: hsla(200, 20%, 22%, 0.5);
+    background: hsla(228, 34%, 18%, 0.6);
+    border-color: hsla(228, 22%, 26%, 0.5);
     box-shadow: 
-      0 4px 24px -4px hsla(200, 35%, 3%, 0.4),
-      inset 0 1px 0 hsla(200, 20%, 22%, 0.3);
+      0 4px 24px -4px hsla(228, 38%, 3%, 0.5),
+      inset 0 1px 0 hsla(228, 22%, 26%, 0.3);
   }
 
   .dark .stats-card:hover {
-    background: hsla(200, 30%, 15%, 0.75);
+    background: hsla(228, 34%, 22%, 0.75);
     box-shadow: 
-      0 8px 32px -4px hsla(200, 35%, 3%, 0.5),
-      inset 0 1px 0 hsla(200, 20%, 22%, 0.5);
+      0 8px 32px -4px hsla(228, 38%, 3%, 0.6),
+      inset 0 1px 0 hsla(228, 22%, 26%, 0.4);
   }
   
   .stats-card::before {
