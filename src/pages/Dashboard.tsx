@@ -622,20 +622,20 @@ const Dashboard = () => {
 
   const renderFolderView = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {/* Unassigned sermons folder — always first */}
+      {/* Unassigned sermons folder — always first, spans full width */}
       {unassignedSermons.length > 0 && (
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow border-dashed"
+          className="cursor-pointer hover:shadow-lg transition-shadow border-dashed md:col-span-2 lg:col-span-3"
           onClick={() => setSelectedCommunicator({ id: "unassigned", name: "Unassigned", created_at: "" })}
         >
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                <FileText className="h-5 w-5 text-muted-foreground" />
+          <CardHeader className="py-10">
+            <div className="flex items-center justify-center gap-4">
+              <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center">
+                <FileText className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
-                <CardTitle className="text-lg text-muted-foreground">Unassigned</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-2xl text-muted-foreground">Recently Uploaded and Unassigned Sermons</CardTitle>
+                <CardDescription className="text-base mt-1">
                   {unassignedSermons.length} {unassignedSermons.length === 1 ? "sermon" : "sermons"}
                 </CardDescription>
               </div>
