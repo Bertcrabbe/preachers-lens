@@ -634,7 +634,7 @@ const Dashboard = () => {
                 <FileText className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
-                <CardTitle className="text-2xl text-muted-foreground">Recently Uploaded and Unassigned Sermons</CardTitle>
+                <CardTitle className="text-2xl text-white">Recently Uploaded and Unassigned Sermons</CardTitle>
                 <CardDescription className="text-base mt-1">
                   {unassignedSermons.length} {unassignedSermons.length === 1 ? "sermon" : "sermons"}
                 </CardDescription>
