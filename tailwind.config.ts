@@ -166,7 +166,7 @@ export default {
   			'2xl': 'var(--shadow-2xl)',
   			'glow-primary': '0 0 20px -5px hsl(var(--primary) / 0.4)',
   			'glow-accent': '0 0 20px -5px hsl(var(--accent) / 0.4)',
-  			'glow-warm': '0 0 24px -4px hsla(155, 50%, 40%, 0.25)'
+  			'glow-warm': '0 0 24px -4px hsla(215, 90%, 52%, 0.25)'
   		},
   		backgroundImage: {
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
