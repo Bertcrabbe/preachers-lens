@@ -33,6 +33,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "Cool grey-blue with icy cyan & silver",
     preview: { bg: "#f0f3f8", card: "#ffffff", primary: "#2880b8", accent: "#48a8c8" },
   },
+  {
+    id: "ny-knicks",
+    name: "NY Knicks",
+    description: "Madison Square Garden blue & orange",
+    preview: { bg: "#0a1628", card: "#1a3050", primary: "#F58426", accent: "#006BB6" },
+  },
 ];
 
 interface ThemeContextType {
