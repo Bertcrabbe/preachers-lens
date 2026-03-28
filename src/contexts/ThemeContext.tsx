@@ -33,6 +33,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "Cool grey-blue with icy cyan & silver",
     preview: { bg: "#f0f3f8", card: "#ffffff", primary: "#2880b8", accent: "#48a8c8" },
   },
+  {
+    id: "seahawks",
+    name: "Seahawks",
+    description: "College Navy with Action Green & Wolf Grey",
+    preview: { bg: "#152044", card: "#2e3f6e", primary: "#69be28", accent: "#7c8a96" },
+  },
 ];
 
 interface ThemeContextType {
