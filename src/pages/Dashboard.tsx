@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp, Users } from "lucide-react";
 import logo from "@/assets/preacherslens-logo.png";
 import { UploadDialog } from "@/components/UploadDialog";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
   Dialog,
   DialogContent,
@@ -861,6 +862,7 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeSwitcher />
             <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
