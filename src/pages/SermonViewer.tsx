@@ -703,7 +703,7 @@ const SermonViewer = () => {
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
       const rawData = audioBuffer.getChannelData(0);
-      const samples = 2000; // Number of bars in waveform - high detail
+      const samples = 4000; // Number of bars in waveform - high detail
       const blockSize = Math.floor(rawData.length / samples);
       const filteredData = [];
       
