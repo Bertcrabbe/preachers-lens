@@ -622,6 +622,28 @@ const Dashboard = () => {
 
   const renderFolderView = () => (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Unassigned sermons folder — always first */}
+      {unassignedSermons.length > 0 && (
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow border-dashed"
+          onClick={() => setSelectedCommunicator({ id: "unassigned", name: "Unassigned", created_at: "" })}
+        >
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <CardTitle className="text-lg text-muted-foreground">Unassigned</CardTitle>
+                <CardDescription>
+                  {unassignedSermons.length} {unassignedSermons.length === 1 ? "sermon" : "sermons"}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
       {communicators.map((communicator) => {
         const sermonCount = getSermonsForCommunicator(communicator.id).length;
         return (
@@ -658,44 +680,40 @@ const Dashboard = () => {
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 group/name">
-                        <CardTitle className="text-lg">{communicator.name}</CardTitle>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 opacity-0 group-hover/name:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingCommunicatorId(communicator.id);
-                            setEditingCommunicatorName(communicator.name);
-                          }}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      <CardTitle className="text-lg">{communicator.name}</CardTitle>
                     )}
                     <CardDescription>
                       {sermonCount} {sermonCount === 1 ? "sermon" : "sermons"}
-                      {communicatorWpm[communicator.id] && (
-                        <span className="ml-2 text-primary font-medium">
-                          · {communicatorWpm[communicator.id]} WPM avg
-                        </span>
-                      )}
+                      {communicatorWpm[communicator.id] ? ` · ${communicatorWpm[communicator.id]} wpm avg` : ""}
                     </CardDescription>
                   </div>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCommunicatorToDelete(communicator);
-                    setDeleteCommunicatorOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCommunicatorId(communicator.id);
+                      setEditingCommunicatorName(communicator.name);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCommunicatorToDelete(communicator);
+                      setDeleteCommunicatorOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
@@ -704,28 +722,6 @@ const Dashboard = () => {
           </Card>
         );
       })}
-
-      {/* Unassigned sermons folder */}
-      {unassignedSermons.length > 0 && (
-        <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow border-dashed"
-          onClick={() => setSelectedCommunicator({ id: "unassigned", name: "Unassigned", created_at: "" })}
-        >
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-lg text-muted-foreground">Unassigned</CardTitle>
-                <CardDescription>
-                  {unassignedSermons.length} {unassignedSermons.length === 1 ? "sermon" : "sermons"}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-      )}
 
       {/* Add new communicator card */}
       <Card
