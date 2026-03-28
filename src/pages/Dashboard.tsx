@@ -883,10 +883,10 @@ const Dashboard = () => {
               <Button
                 size="lg"
                 onClick={() => setUploadOpen(true)}
-                className="h-16 px-12 text-lg rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+                className="h-28 px-20 text-3xl rounded-2xl shadow-lg hover:shadow-xl transition-shadow"
               >
-                <Upload className="h-6 w-6 mr-3" />
-                Upload Sermon
+                <Upload className="h-10 w-10 mr-4" />
+                Upload a Sermon
               </Button>
             </div>
 
