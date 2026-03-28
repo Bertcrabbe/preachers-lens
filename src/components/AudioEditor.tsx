@@ -517,7 +517,7 @@ export const AudioEditor = ({
       <div
         ref={containerRef}
         className={cn(
-          "relative h-32 bg-secondary/30 rounded-lg overflow-x-auto border-2 transition-all",
+          "relative h-32 bg-secondary/60 rounded-lg overflow-x-auto border-2 transition-all",
           splitMode ? "border-primary cursor-crosshair" : "border-border cursor-pointer"
         )}
         onClick={handleTimelineClick}
