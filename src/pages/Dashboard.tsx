@@ -680,6 +680,48 @@ const Dashboard = () => {
                         </Button>
                       </div>
                     ) : (
+                      <CardTitle className="text-lg">{communicator.name}</CardTitle>
+                    )}
+                    <CardDescription>
+                      {sermonCount} {sermonCount === 1 ? "sermon" : "sermons"}
+                      {communicatorWpm[communicator.id] ? ` · ${communicatorWpm[communicator.id]} wpm avg` : ""}
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCommunicatorId(communicator.id);
+                      setEditingCommunicatorName(communicator.name);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCommunicatorToDelete(communicator);
+                      setDeleteCommunicatorOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CommunicatorLinks communicatorId={communicator.id} compact />
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Add new communicator card */}
       <Card
