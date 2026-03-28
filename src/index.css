@@ -223,7 +223,7 @@ All colors MUST be HSL.
   .waveform-bar {
     @apply rounded-full transition-all duration-150;
     background: hsl(0 0% 100%);
-    opacity: 0.35;
+    opacity: 0.1;
   }
   
   .waveform-bar-played {
