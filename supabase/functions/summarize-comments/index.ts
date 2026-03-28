@@ -33,7 +33,7 @@ serve(async (req) => {
     // Fetch all comments (both text and audio) for this sermon
     const { data: comments, error: commentsError } = await supabase
       .from('sermon_comments')
-      .select('*, evaluation_rules!inner(name, description)')
+      .select('*, evaluation_rules(name, description)')
       .eq('sermon_id', sermonId)
       .order('start_time_ms');
 
