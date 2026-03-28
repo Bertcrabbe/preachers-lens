@@ -222,13 +222,13 @@ All colors MUST be HSL.
   /* Waveform bar styling */
   .waveform-bar {
     @apply rounded-full transition-all duration-150;
-    background: hsl(var(--muted-foreground));
-    opacity: 0.4;
+    background: hsl(0 0% 100%);
+    opacity: 0.35;
   }
   
   .waveform-bar-played {
-    background: hsl(var(--primary));
-    opacity: 0.8;
+    background: hsl(0 0% 100%);
+    opacity: 0.85;
   }
 
   /* Comment marker pulse animation */
