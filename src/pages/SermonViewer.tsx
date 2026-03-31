@@ -113,6 +113,7 @@ const SermonViewer = () => {
   const [sermon, setSermon] = useState<Sermon | null>(null);
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
+  const audioUrlTimestampRef = useRef<number>(0);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -398,6 +399,46 @@ const SermonViewer = () => {
     return true;
   }, [sermonVolume]);
 
+  // Refresh the signed audio URL (expires after 1 hour)
+  const refreshAudioUrl = useCallback(async () => {
+    if (!sermon) return;
+    try {
+      const { data: urlData } = await supabase.storage
+        .from("sermons")
+        .createSignedUrl(sermon.file_url, 3600);
+      if (urlData) {
+        const currentTime = audioRef.current?.currentTime || 0;
+        const wasPlaying = !audioRef.current?.paused;
+        setAudioUrl(urlData.signedUrl);
+        audioUrlTimestampRef.current = Date.now();
+        // Restore position after src change
+        if (audioRef.current) {
+          audioRef.current.addEventListener('loadedmetadata', () => {
+            if (audioRef.current) {
+              audioRef.current.currentTime = currentTime;
+              if (wasPlaying) audioRef.current.play().catch(() => {});
+            }
+          }, { once: true });
+        }
+        console.log('Refreshed signed audio URL');
+      }
+    } catch (err) {
+      console.error('Failed to refresh audio URL:', err);
+    }
+  }, [sermon]);
+
+  // Auto-refresh signed URL every 50 minutes
+  useEffect(() => {
+    if (!audioUrl || !sermon) return;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - audioUrlTimestampRef.current;
+      if (elapsed > 50 * 60 * 1000) {
+        refreshAudioUrl();
+      }
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [audioUrl, sermon, refreshAudioUrl]);
+
   const playSermonAudio = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -425,14 +466,21 @@ const SermonViewer = () => {
     try {
       await audio.play();
       setPlaying(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to play sermon audio:", err);
+      // If the URL may have expired, refresh and retry once
+      const elapsed = Date.now() - audioUrlTimestampRef.current;
+      if (elapsed > 45 * 60 * 1000) {
+        console.log('Audio URL may have expired, refreshing...');
+        await refreshAudioUrl();
+        return;
+      }
       // Fallback: native HTML5 volume path
       audio.muted = false;
       audio.volume = Math.min(1, clampedSermonVolume);
       setPlaying(false);
     }
-  }, [ensureAudioGain, sermonVolume, preAcquiredStream]);
+  }, [ensureAudioGain, sermonVolume, preAcquiredStream, refreshAudioUrl]);
 
   // Apply gain value when sermonVolume changes
   useEffect(() => {
@@ -1864,6 +1912,7 @@ const SermonViewer = () => {
 
       if (urlData) {
         setAudioUrl(urlData.signedUrl);
+        audioUrlTimestampRef.current = Date.now();
       }
     } catch (error: any) {
       toast({
