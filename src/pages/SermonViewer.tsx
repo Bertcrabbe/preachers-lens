@@ -1865,6 +1865,7 @@ const SermonViewer = () => {
 
       if (urlData) {
         setAudioUrl(urlData.signedUrl);
+        audioUrlTimestampRef.current = Date.now();
       }
     } catch (error: any) {
       toast({
