@@ -113,6 +113,7 @@ const SermonViewer = () => {
   const [sermon, setSermon] = useState<Sermon | null>(null);
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
+  const audioUrlTimestampRef = useRef<number>(0);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [loading, setLoading] = useState(true);
