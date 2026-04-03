@@ -22,12 +22,6 @@ export const THEMES: ThemeDefinition[] = [
     preview: { bg: "#1a1418", card: "#3a2e34", primary: "#e87040", accent: "#c43030" },
   },
   {
-    id: "forest-cathedral",
-    name: "Forest Cathedral",
-    description: "Deep evergreen with mossy gold & sage",
-    preview: { bg: "#141e1a", card: "#2a3e32", primary: "#b8a848", accent: "#5a9a6a" },
-  },
-  {
     id: "arctic-steel",
     name: "Arctic Steel",
     description: "Cool grey-blue with icy cyan & silver",
