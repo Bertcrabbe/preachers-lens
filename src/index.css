@@ -265,48 +265,48 @@ All colors MUST be HSL.
 
   /* ===== GREEN BAY PACKERS (dark — Green + Gold + White) ===== */
   [data-theme="green-bay-packers"] {
-    --background: 160 28% 16%;
+    --background: 160 28% 10%;
     --foreground: 45 20% 92%;
-    --card: 160 22% 28%;
+    --card: 160 22% 22%;
     --card-foreground: 45 20% 95%;
-    --popover: 160 22% 30%;
+    --popover: 160 22% 24%;
     --popover-foreground: 45 20% 95%;
     --primary: 42 100% 54%;
     --primary-foreground: 160 28% 10%;
-    --secondary: 160 18% 32%;
+    --secondary: 160 18% 26%;
     --secondary-foreground: 45 20% 88%;
-    --muted: 160 18% 32%;
+    --muted: 160 18% 26%;
     --muted-foreground: 45 10% 62%;
     --accent: 0 0% 95%;
     --accent-foreground: 160 28% 12%;
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 160 20% 24%;
-    --input: 160 20% 24%;
+    --border: 160 20% 18%;
+    --input: 160 20% 18%;
     --ring: 42 100% 54%;
     --radius: 0.75rem;
     --success: 142 60% 42%;
     --success-foreground: 0 0% 100%;
     --warning: 42 100% 54%;
     --warning-foreground: 160 28% 10%;
-    --sidebar-background: 160 32% 12%;
+    --sidebar-background: 160 32% 8%;
     --sidebar-foreground: 45 20% 88%;
     --sidebar-primary: 42 100% 54%;
     --sidebar-primary-foreground: 160 28% 10%;
     --sidebar-accent: 0 0% 95%;
     --sidebar-accent-foreground: 160 28% 12%;
-    --sidebar-border: 160 24% 20%;
+    --sidebar-border: 160 24% 14%;
     --sidebar-ring: 42 100% 54%;
     --chart-1: 42 100% 54%;
     --chart-2: 0 0% 95%;
     --chart-3: 160 40% 45%;
     --chart-4: 22 70% 55%;
     --chart-5: 195 50% 50%;
-    --sidebar: 160 32% 12%;
+    --sidebar: 160 32% 8%;
     --gradient-primary: linear-gradient(135deg, hsl(42, 100%, 54%) 0%, hsl(38, 90%, 46%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(0, 0%, 95%) 0%, hsl(0, 0%, 82%) 100%);
     --gradient-warm: linear-gradient(135deg, hsl(42, 100%, 54%) 0%, hsl(160, 28%, 35%) 100%);
-    --gradient-surface: linear-gradient(180deg, hsl(160, 20%, 24%) 0%, hsl(160, 28%, 16%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(160, 20%, 18%) 0%, hsl(160, 28%, 10%) 100%);
   }
 }
 
