@@ -376,6 +376,16 @@ All colors MUST be HSL.
     opacity: 0.85;
   }
 
+  [data-theme="arctic-steel"] .waveform-bar {
+    background: hsl(215 30% 20%);
+    opacity: 0.35;
+  }
+
+  [data-theme="arctic-steel"] .waveform-bar-played {
+    background: hsl(215 30% 20%);
+    opacity: 0.85;
+  }
+
   /* Comment marker pulse animation */
   .comment-marker {
     @apply relative;
