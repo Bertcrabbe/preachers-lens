@@ -39,6 +39,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "College Navy with Action Green & Wolf Grey",
     preview: { bg: "#152044", card: "#2e3f6e", primary: "#69be28", accent: "#7c8a96" },
   },
+  {
+    id: "ny-giants",
+    name: "NY Giants",
+    description: "Royal blue with classic red & platinum white",
+    preview: { bg: "#0b2265", card: "#1b3a8a", primary: "#a71930", accent: "#a5acaf" },
+  },
 ];
 
 interface ThemeContextType {

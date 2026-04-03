@@ -261,6 +261,52 @@ All colors MUST be HSL.
     --gradient-warm: linear-gradient(135deg, hsl(100, 85%, 42%) 0%, hsl(210, 18%, 58%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(220, 40%, 20%) 0%, hsl(220, 55%, 12%) 100%);
   }
+
+  /* ===== NY GIANTS (dark — Royal Blue + Red + Platinum) ===== */
+  [data-theme="ny-giants"] {
+    --background: 224 75% 22%;
+    --foreground: 210 15% 92%;
+    --card: 224 55% 32%;
+    --card-foreground: 210 15% 95%;
+    --popover: 224 55% 34%;
+    --popover-foreground: 210 15% 95%;
+    --primary: 350 75% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 224 35% 36%;
+    --secondary-foreground: 210 15% 90%;
+    --muted: 224 35% 36%;
+    --muted-foreground: 210 10% 65%;
+    --accent: 200 8% 67%;
+    --accent-foreground: 224 75% 15%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 224 35% 28%;
+    --input: 224 35% 28%;
+    --ring: 350 75% 38%;
+    --radius: 0.75rem;
+    --success: 155 55% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 90% 55%;
+    --warning-foreground: 224 75% 12%;
+    --sidebar-background: 224 78% 18%;
+    --sidebar-foreground: 210 15% 90%;
+    --sidebar-primary: 350 75% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 8% 67%;
+    --sidebar-accent-foreground: 224 75% 15%;
+    --sidebar-border: 224 40% 24%;
+    --sidebar-ring: 350 75% 38%;
+    --chart-1: 350 75% 38%;
+    --chart-2: 200 8% 67%;
+    --chart-3: 224 60% 55%;
+    --chart-4: 45 90% 55%;
+    --chart-5: 155 55% 42%;
+    --sidebar: 224 78% 18%;
+    --gradient-primary: linear-gradient(135deg, hsl(350, 75%, 38%) 0%, hsl(345, 70%, 32%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(200, 8%, 67%) 0%, hsl(200, 12%, 58%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(350, 75%, 38%) 0%, hsl(200, 8%, 67%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(224, 50%, 28%) 0%, hsl(224, 75%, 22%) 100%);
+  }
 }
 
 
