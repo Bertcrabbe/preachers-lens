@@ -45,6 +45,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "Royal blue with classic red & platinum white",
     preview: { bg: "#0b2265", card: "#1b3a8a", primary: "#a71930", accent: "#a5acaf" },
   },
+  {
+    id: "green-bay-packers",
+    name: "Green Bay Packers",
+    description: "Dark green with gold & white",
+    preview: { bg: "#203731", card: "#2e4f45", primary: "#ffb612", accent: "#ffffff" },
+  },
 ];
 
 interface ThemeContextType {
