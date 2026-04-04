@@ -824,7 +824,7 @@ const SermonViewer = () => {
       ctx.roundRect(x, y, Math.max(barWidth - gap, 1), barH, radius);
       ctx.fill();
     }
-  }, [waveformData, currentTime, sermon?.duration_seconds]);
+  }, [waveformData, currentTime, sermon?.duration_seconds, zoomLevel]);
 
   const paragraphHasPeak = (paragraph: Sentence[]): boolean => {
     if (!sermon?.duration_seconds || waveformData.length === 0) return false;
