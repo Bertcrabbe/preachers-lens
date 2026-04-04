@@ -852,13 +852,13 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <img src={logo} alt="The Preacher's Lens" className="h-16 w-16 drop-shadow-xl" />
+       <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <img src={logo} alt="The Preacher's Lens" className="h-20 w-20 drop-shadow-2xl" />
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent drop-shadow-sm">The Preacher's Lens</h1>
-              <p className="text-sm text-muted-foreground font-semibold tracking-widest uppercase mt-0.5">Sermon Evaluation Agent</p>
+              <h1 className="text-5xl font-black tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent drop-shadow-sm">The Preacher's Lens</h1>
+              <p className="text-base text-muted-foreground font-semibold tracking-widest uppercase mt-1">Sermon Evaluation Agent</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
