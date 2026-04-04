@@ -86,12 +86,9 @@ export function ThemeSwitcher() {
                   <span className="font-medium text-sm">{theme.name}</span>
                   <button
                     onClick={(e) => startEditing(e, theme.id, theme.name)}
-                    className="opacity-0 group-hover:opacity-100 hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity p-0.5 rounded"
-                    style={{ opacity: undefined }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "")}
+                    className="text-muted-foreground hover:text-primary transition-colors p-1 rounded hover:bg-primary/10"
                   >
-                    <Pencil className="h-3 w-3" />
+                    <Pencil className="h-3.5 w-3.5" />
                   </button>
                 </div>
               )}
