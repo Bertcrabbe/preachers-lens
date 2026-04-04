@@ -353,6 +353,51 @@ All colors MUST be HSL.
     --gradient-warm: linear-gradient(135deg, hsl(0, 0%, 100%) 0%, hsl(212, 80%, 35%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(212, 70%, 18%) 0%, hsl(212, 100%, 12%) 100%);
   }
+
+  [data-theme="denver-broncos"] {
+    --background: 215 70% 14%;
+    --foreground: 0 0% 96%;
+    --card: 215 55% 22%;
+    --card-foreground: 0 0% 98%;
+    --popover: 215 55% 24%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 18 97% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 45% 28%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 215 40% 28%;
+    --muted-foreground: 210 10% 62%;
+    --accent: 0 0% 100%;
+    --accent-foreground: 215 70% 12%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 50% 22%;
+    --input: 215 50% 22%;
+    --ring: 18 97% 53%;
+    --radius: 0.75rem;
+    --success: 142 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 42 90% 54%;
+    --warning-foreground: 215 70% 10%;
+    --sidebar-background: 215 70% 10%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 18 97% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 100%;
+    --sidebar-accent-foreground: 215 70% 12%;
+    --sidebar-border: 215 60% 18%;
+    --sidebar-ring: 18 97% 53%;
+    --chart-1: 18 97% 53%;
+    --chart-2: 0 0% 100%;
+    --chart-3: 215 50% 50%;
+    --chart-4: 35 80% 55%;
+    --chart-5: 180 50% 50%;
+    --sidebar: 215 70% 10%;
+    --gradient-primary: linear-gradient(135deg, hsl(18, 97%, 53%) 0%, hsl(24, 90%, 42%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(0, 0%, 100%) 0%, hsl(0, 0%, 85%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(18, 97%, 53%) 0%, hsl(215, 55%, 35%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(215, 55%, 20%) 0%, hsl(215, 70%, 14%) 100%);
+  }
 }
 
 
