@@ -187,6 +187,7 @@ const SermonViewer = () => {
   const [wpmChartClockActive, setWpmChartClockActive] = useState(false);
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
   const [volumeChartClockActive, setVolumeChartClockActive] = useState(false);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [userScrolledAway, setUserScrolledAway] = useState(false);
