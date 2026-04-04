@@ -51,12 +51,16 @@ interface ThemeContextType {
   currentTheme: string;
   setTheme: (themeId: string) => void;
   themes: ThemeDefinition[];
+  renameTheme: (themeId: string, newName: string) => void;
+  customNames: Record<string, string>;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   currentTheme: "berts-badness",
   setTheme: () => {},
   themes: THEMES,
+  renameTheme: () => {},
+  customNames: {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -66,16 +70,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem("app-theme") || "berts-badness";
   });
 
+  const [customNames, setCustomNames] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("theme-custom-names") || "{}");
+    } catch {
+      return {};
+    }
+  });
+
   const applyTheme = useCallback((themeId: string) => {
     document.documentElement.setAttribute("data-theme", themeId);
   }, []);
 
-  // Apply theme on mount and change
   useEffect(() => {
     applyTheme(currentTheme);
   }, [currentTheme, applyTheme]);
 
-  // Load from DB on auth
   useEffect(() => {
     const loadTheme = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -106,8 +116,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     );
   }, [applyTheme]);
 
+  const renameTheme = useCallback((themeId: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    setCustomNames((prev) => {
+      const updated = { ...prev, [themeId]: trimmed };
+      localStorage.setItem("theme-custom-names", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const themedList = THEMES.map((t) => ({
+    ...t,
+    name: customNames[t.id] || t.name,
+  }));
+
   return (
-    <ThemeContext.Provider value={{ currentTheme, setTheme, themes: THEMES }}>
+    <ThemeContext.Provider value={{ currentTheme, setTheme, themes: themedList, renameTheme, customNames }}>
       {children}
     </ThemeContext.Provider>
   );
