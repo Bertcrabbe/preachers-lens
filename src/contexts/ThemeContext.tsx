@@ -51,6 +51,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "Royal blue with white & anvil grey",
     preview: { bg: "#002c5f", card: "#0a3d7a", primary: "#ffffff", accent: "#a2aaad" },
   },
+  {
+    id: "denver-broncos",
+    name: "Denver Broncos",
+    description: "Broncos Navy with orange & white",
+    preview: { bg: "#0a2343", card: "#14355e", primary: "#fb4f14", accent: "#ffffff" },
+  },
 ];
 
 interface ThemeContextType {
