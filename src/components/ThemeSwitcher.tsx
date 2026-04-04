@@ -54,53 +54,56 @@ export function ThemeSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
-        {themes.map((theme) => (
-          <DropdownMenuItem
-            key={theme.id}
-            onClick={() => { if (!editingId) setTheme(theme.id); }}
-            className="flex items-center gap-3 cursor-pointer py-3"
-            onSelect={(e) => { if (editingId) e.preventDefault(); }}
-          >
-            <div className="flex gap-1 shrink-0">
-              {Object.values(theme.preview).map((color, i) => (
-                <div
-                  key={i}
-                  className="w-4 h-4 rounded-full border border-foreground/20"
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-            <div className="flex-1 min-w-0">
-              {editingId === theme.id ? (
-                <Input
-                  ref={inputRef}
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onBlur={commitEdit}
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-7 text-sm px-2 py-0"
-                />
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-sm">{theme.name}</span>
-                  <button
-                    onClick={(e) => startEditing(e, theme.id, theme.name)}
-                    className="text-muted-foreground hover:text-primary transition-colors p-1 rounded hover:bg-primary/10"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+        {themes.map((theme) => {
+          const isEditing = editingId === theme.id;
+          return (
+            <div
+              key={theme.id}
+              role="menuitem"
+              onClick={() => { if (!editingId) setTheme(theme.id); }}
+              className="flex items-center gap-3 cursor-pointer py-3 px-2 rounded-sm hover:bg-accent/50 text-sm outline-none"
+            >
+              <div className="flex gap-1 shrink-0">
+                {Object.values(theme.preview).map((color, i) => (
+                  <div
+                    key={i}
+                    className="w-4 h-4 rounded-full border border-foreground/20"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+              <div className="flex-1 min-w-0">
+                {isEditing ? (
+                  <Input
+                    ref={inputRef}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={commitEdit}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-7 text-sm px-2 py-0"
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-sm">{theme.name}</span>
+                    <button
+                      onClick={(e) => startEditing(e, theme.id, theme.name)}
+                      className="text-muted-foreground hover:text-primary transition-colors p-1 rounded hover:bg-primary/10"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {!isEditing && (
+                  <div className="text-xs text-muted-foreground truncate">{theme.description}</div>
+                )}
+              </div>
+              {currentTheme === theme.id && (
+                <Check className="h-4 w-4 text-primary shrink-0" />
               )}
-              {editingId !== theme.id && (
-                <div className="text-xs text-muted-foreground truncate">{theme.description}</div>
-              )}
             </div>
-            {currentTheme === theme.id && (
-              <Check className="h-4 w-4 text-primary shrink-0" />
-            )}
-          </DropdownMenuItem>
-        ))}
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
