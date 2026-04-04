@@ -324,11 +324,91 @@ export const AudioEditor = ({
         .update({ duration_seconds: Math.floor(newDuration) })
         .eq("id", sermonId);
 
+      // --- Recalibrate transcript timestamps ---
+      // Build a mapping: for each kept segment, calculate its new offset
+      const sortedKept = [...keptSegments].sort((a, b) => a.startMs - b.startMs);
+      let cumulativeMs = 0;
+      const timeMap = sortedKept.map((seg) => {
+        const entry = { oldStart: seg.startMs, oldEnd: seg.endMs, newStart: cumulativeMs };
+        cumulativeMs += seg.endMs - seg.startMs;
+        return entry;
+      });
+
+      // Helper: convert old time to new time, returns null if in a deleted region
+      const remapTime = (oldMs: number): number | null => {
+        for (const m of timeMap) {
+          if (oldMs >= m.oldStart && oldMs <= m.oldEnd) {
+            return m.newStart + (oldMs - m.oldStart);
+          }
+        }
+        return null; // falls in a deleted segment
+      };
+
+      // Fetch all sentences for this sermon
+      const { data: sentences, error: fetchErr } = await supabase
+        .from("sermon_sentences")
+        .select("id, start_time_ms, end_time_ms, order_index")
+        .eq("sermon_id", sermonId)
+        .order("order_index", { ascending: true });
+
+      if (fetchErr) throw fetchErr;
+
+      if (sentences && sentences.length > 0) {
+        const toDelete: string[] = [];
+        const toUpdate: { id: string; start_time_ms: number; end_time_ms: number; order_index: number }[] = [];
+        let newIndex = 0;
+
+        for (const sent of sentences) {
+          const newStart = remapTime(sent.start_time_ms);
+          const newEnd = remapTime(sent.end_time_ms);
+
+          if (newStart === null && newEnd === null) {
+            // Entire sentence is in a deleted region
+            toDelete.push(sent.id);
+          } else {
+            // Clamp to valid range
+            const clampedStart = newStart !== null ? newStart : 0;
+            const clampedEnd = newEnd !== null ? newEnd : Math.round(newDuration * 1000);
+            toUpdate.push({
+              id: sent.id,
+              start_time_ms: Math.round(clampedStart),
+              end_time_ms: Math.round(clampedEnd),
+              order_index: newIndex,
+            });
+            newIndex++;
+          }
+        }
+
+        // Delete sentences in deleted regions
+        if (toDelete.length > 0) {
+          const { error: delErr } = await supabase
+            .from("sermon_sentences")
+            .delete()
+            .in("id", toDelete);
+          if (delErr) console.error("Error deleting sentences:", delErr);
+        }
+
+        // Update remaining sentences with new timestamps
+        for (const upd of toUpdate) {
+          const { error: updErr } = await supabase
+            .from("sermon_sentences")
+            .update({
+              start_time_ms: upd.start_time_ms,
+              end_time_ms: upd.end_time_ms,
+              order_index: upd.order_index,
+            })
+            .eq("id", upd.id);
+          if (updErr) console.error("Error updating sentence:", updErr);
+        }
+
+        console.log(`Recalibrated ${toUpdate.length} sentences, removed ${toDelete.length}`);
+      }
+
       await audioContext.close();
 
       toast({
         title: "Audio saved",
-        description: `Removed ${segments.filter((s) => s.deleted).length} segment(s). New duration: ${formatTime(newDuration * 1000)}`,
+        description: `Removed ${segments.filter((s) => s.deleted).length} segment(s). New duration: ${formatTime(newDuration * 1000)}. Transcript timestamps recalibrated.`,
       });
 
       onSave();
