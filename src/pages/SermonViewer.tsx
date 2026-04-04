@@ -2174,10 +2174,23 @@ const SermonViewer = () => {
   };
 
   const groupIntoParagraphs = (sentences: Sentence[]) => {
-    const paragraphs = [];
-    for (let i = 0; i < sentences.length; i += 5) {
-      paragraphs.push(sentences.slice(i, i + 5));
+    const paragraphs: Sentence[][] = [];
+    let current: Sentence[] = [];
+    let wordCount = 0;
+    const MAX_WORDS = 60;
+
+    for (const s of sentences) {
+      const words = s.sentence_text.trim().split(/\s+/).length;
+      if (current.length > 0 && wordCount + words > MAX_WORDS) {
+        paragraphs.push(current);
+        current = [s];
+        wordCount = words;
+      } else {
+        current.push(s);
+        wordCount += words;
+      }
     }
+    if (current.length > 0) paragraphs.push(current);
     return paragraphs;
   };
 
