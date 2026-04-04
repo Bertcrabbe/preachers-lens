@@ -308,6 +308,51 @@ All colors MUST be HSL.
     --gradient-warm: linear-gradient(135deg, hsl(42, 100%, 54%) 0%, hsl(160, 28%, 35%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(160, 20%, 24%) 0%, hsl(160, 28%, 16%) 100%);
   }
+
+  [data-theme="indianapolis-colts"] {
+    --background: 212 100% 12%;
+    --foreground: 0 0% 96%;
+    --card: 212 80% 20%;
+    --card-foreground: 0 0% 98%;
+    --popover: 212 80% 22%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 212 100% 14%;
+    --secondary: 212 60% 26%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 212 50% 26%;
+    --muted-foreground: 210 10% 62%;
+    --accent: 200 8% 65%;
+    --accent-foreground: 212 100% 10%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 212 60% 22%;
+    --input: 212 60% 22%;
+    --ring: 0 0% 100%;
+    --radius: 0.75rem;
+    --success: 142 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 42 90% 54%;
+    --warning-foreground: 212 100% 10%;
+    --sidebar-background: 212 100% 10%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 212 100% 14%;
+    --sidebar-accent: 200 8% 65%;
+    --sidebar-accent-foreground: 212 100% 10%;
+    --sidebar-border: 212 70% 18%;
+    --sidebar-ring: 0 0% 100%;
+    --chart-1: 0 0% 100%;
+    --chart-2: 200 8% 65%;
+    --chart-3: 212 60% 50%;
+    --chart-4: 30 70% 55%;
+    --chart-5: 180 50% 50%;
+    --sidebar: 212 100% 10%;
+    --gradient-primary: linear-gradient(135deg, hsl(0, 0%, 100%) 0%, hsl(200, 8%, 78%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(200, 8%, 65%) 0%, hsl(200, 8%, 50%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(0, 0%, 100%) 0%, hsl(212, 80%, 35%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(212, 70%, 18%) 0%, hsl(212, 100%, 12%) 100%);
+  }
 }
 
 

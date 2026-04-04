@@ -45,6 +45,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "Dark green with gold & white",
     preview: { bg: "#203731", card: "#2e4f45", primary: "#ffb612", accent: "#ffffff" },
   },
+  {
+    id: "indianapolis-colts",
+    name: "Indianapolis Colts",
+    description: "Royal blue with white & anvil grey",
+    preview: { bg: "#002c5f", card: "#0a3d7a", primary: "#ffffff", accent: "#a2aaad" },
+  },
 ];
 
 interface ThemeContextType {
