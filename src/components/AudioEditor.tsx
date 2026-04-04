@@ -193,8 +193,8 @@ export const AudioEditor = ({
   };
 
   const handleSegmentClick = (segmentId: string, e: React.MouseEvent) => {
+    if (splitMode) return; // Let click bubble up to handleTimelineClick
     e.stopPropagation();
-    if (splitMode) return;
     setSelectedSegmentId(selectedSegmentId === segmentId ? null : segmentId);
   };
 
