@@ -222,7 +222,7 @@ const SermonViewer = () => {
   const [activeHighlightColor, setActiveHighlightColor] = useState('#ffff00');
   const [transcriptFullscreen, setTranscriptFullscreen] = useState(false);
 
-  const HIGHLIGHT_COLORS = ['#ffff00', '#39ff14', '#ff5f15'];
+  const HIGHLIGHT_COLORS = ['#ffff00', '#39ff14', '#ff8c00'];
   
   const fetchHighlights = async () => {
     if (!id) return;
