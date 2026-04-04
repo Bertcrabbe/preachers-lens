@@ -854,11 +854,11 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="The Preacher's Lens" className="h-12 w-12 drop-shadow-md" />
+          <div className="flex items-center gap-4">
+            <img src={logo} alt="The Preacher's Lens" className="h-14 w-14 drop-shadow-lg" />
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">The Preacher's Lens</h1>
-              <p className="text-xs text-muted-foreground font-medium tracking-wide uppercase">Sermon Evaluation Agent</p>
+              <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">The Preacher's Lens</h1>
+              <p className="text-sm text-muted-foreground font-semibold tracking-widest uppercase">Sermon Evaluation Agent</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
