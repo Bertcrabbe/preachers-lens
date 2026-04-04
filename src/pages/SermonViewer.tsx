@@ -4000,18 +4000,24 @@ const SermonViewer = () => {
                   height={28} 
                 />
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-center border-t pt-3">
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-center border-t pt-3">
                 <div>
-                  <div className="font-semibold text-primary">{Math.round(getSpeedVariance().min)}</div>
-                  <div className="text-muted-foreground">Min</div>
-                </div>
-                <div>
-                  <div className="font-semibold text-primary">{Math.round(getSpeedVariance().max)}</div>
-                  <div className="text-muted-foreground">Max</div>
+                  <div className="font-semibold text-primary">{sentences.reduce((sum, s) => sum + s.sentence_text.trim().split(/\s+/).length, 0).toLocaleString()}</div>
+                  <div className="text-muted-foreground">Total Words</div>
                 </div>
                 <div>
                   <div className="font-semibold text-primary">±{Math.round(getSpeedVariance().stdDev)}</div>
                   <div className="text-muted-foreground">Std Dev</div>
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-center border-t pt-2">
+                <div>
+                  <div className="font-semibold text-primary">{Math.round(getSpeedVariance().min)}</div>
+                  <div className="text-muted-foreground">Min WPM</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-primary">{Math.round(getSpeedVariance().max)}</div>
+                  <div className="text-muted-foreground">Max WPM</div>
                 </div>
               </div>
             </Card>
