@@ -5433,7 +5433,7 @@ const SermonViewer = () => {
                                         <span
                                           key={sIdx}
                                           className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
-                                          style={hlColor ? { backgroundColor: hlColor + '99' } : undefined}
+                                          style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
                                           onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
                                         >
                                           {s.sentence_text}{' '}
