@@ -100,9 +100,10 @@ export function ThemeSwitcher() {
               </div>
               {currentTheme === theme.id && (
                 <Check className="h-4 w-4 text-primary shrink-0" />
-            )}
-          </DropdownMenuItem>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
