@@ -3500,28 +3500,13 @@ const SermonViewer = () => {
                         }}
                       />
                     )}
-                    {/* Waveform visualization */}
+                    {/* Waveform visualization - canvas */}
                     {waveformData.length > 0 && (
-                      <div className="absolute inset-0 flex items-center">
-                        {waveformData.map((amplitude, idx) => {
-                          const barPosition = (idx / waveformData.length) * 100;
-                          const isPlayed = sermon.duration_seconds && 
-                            (barPosition / 100) * sermon.duration_seconds * 1000 < currentTime;
-                          
-                          return (
-                            <div
-                              key={idx}
-                              className={`waveform-bar absolute ${isPlayed ? 'waveform-bar-played' : ''}`}
-                              style={{
-                                width: '3px',
-                                height: `${Math.max(amplitude * 100, 8)}%`,
-                                left: `${barPosition}%`,
-                                transform: 'translateX(-50%)',
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
+                      <canvas
+                        ref={waveformCanvasRef}
+                        className="absolute inset-0 w-full h-full"
+                        style={{ pointerEvents: 'none' }}
+                      />
                     )}
 
                   {/* Sermon segments (green) and comment segments (red) */}
