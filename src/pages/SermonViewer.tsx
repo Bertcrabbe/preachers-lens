@@ -776,6 +776,56 @@ const SermonViewer = () => {
     }
   };
 
+  // Draw waveform on canvas
+  useEffect(() => {
+    const canvas = waveformCanvasRef.current;
+    if (!canvas || waveformData.length === 0 || !sermon?.duration_seconds) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    const w = rect.width;
+    const h = rect.height;
+    const barCount = waveformData.length;
+    const playedFraction = currentTime / (sermon.duration_seconds * 1000);
+
+    // Get theme-aware colors
+    const theme = document.documentElement.getAttribute('data-theme');
+    let unplayedColor: string;
+    let playedColor: string;
+
+    if (theme === 'arctic-steel') {
+      unplayedColor = 'hsla(215, 30%, 20%, 0.35)';
+      playedColor = 'hsla(215, 30%, 20%, 0.85)';
+    } else {
+      unplayedColor = 'hsla(0, 0%, 100%, 0.35)';
+      playedColor = 'hsla(0, 0%, 100%, 0.85)';
+    }
+
+    const barWidth = Math.max(w / barCount, 1.5);
+    const gap = barWidth * 0.3;
+
+    for (let i = 0; i < barCount; i++) {
+      const x = (i / barCount) * w;
+      const amplitude = waveformData[i];
+      const barH = Math.max(amplitude * h, h * 0.08);
+      const y = (h - barH) / 2;
+      const isPlayed = (i / barCount) < playedFraction;
+
+      ctx.fillStyle = isPlayed ? playedColor : unplayedColor;
+      ctx.beginPath();
+      const radius = Math.min((barWidth - gap) / 2, barH / 2);
+      ctx.roundRect(x, y, Math.max(barWidth - gap, 1), barH, radius);
+      ctx.fill();
+    }
+  }, [waveformData, currentTime, sermon?.duration_seconds]);
+
   const paragraphHasPeak = (paragraph: Sentence[]): boolean => {
     if (!sermon?.duration_seconds || waveformData.length === 0) return false;
     
