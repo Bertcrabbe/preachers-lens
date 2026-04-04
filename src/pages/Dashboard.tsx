@@ -874,7 +874,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 pt-12 pb-8">
         {!selectedCommunicator ? (
           <>
             <div className="flex justify-center mb-10">
