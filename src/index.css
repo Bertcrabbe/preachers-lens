@@ -515,10 +515,10 @@ All colors MUST be HSL.
   /* Stats card with glassmorphism */
   .stats-card {
     @apply relative overflow-hidden rounded-xl border transition-all duration-200;
-    background: hsl(var(--card) / 0.85);
+    background: hsl(var(--accent));
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-color: hsl(var(--border) / 0.6);
+    border-color: hsl(var(--border));
     box-shadow: 
       0 4px 24px -4px hsl(var(--foreground) / 0.1),
       inset 0 1px 0 hsl(var(--card-foreground) / 0.05);
