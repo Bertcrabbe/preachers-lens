@@ -187,6 +187,7 @@ const SermonViewer = () => {
   const [wpmChartClockActive, setWpmChartClockActive] = useState(false);
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
   const dragStartRef = useRef<{ x: number; scrollLeft: number } | null>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement>(null);
   const [volumeChartClockActive, setVolumeChartClockActive] = useState(false);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [userScrolledAway, setUserScrolledAway] = useState(false);
@@ -774,6 +775,56 @@ const SermonViewer = () => {
       console.error("Error generating waveform:", error);
     }
   };
+
+  // Draw waveform on canvas
+  useEffect(() => {
+    const canvas = waveformCanvasRef.current;
+    if (!canvas || waveformData.length === 0 || !sermon?.duration_seconds) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    const w = rect.width;
+    const h = rect.height;
+    const barCount = waveformData.length;
+    const playedFraction = currentTime / (sermon.duration_seconds * 1000);
+
+    // Get theme-aware colors
+    const theme = document.documentElement.getAttribute('data-theme');
+    let unplayedColor: string;
+    let playedColor: string;
+
+    if (theme === 'arctic-steel') {
+      unplayedColor = 'hsla(215, 30%, 20%, 0.35)';
+      playedColor = 'hsla(215, 30%, 20%, 0.85)';
+    } else {
+      unplayedColor = 'hsla(0, 0%, 100%, 0.35)';
+      playedColor = 'hsla(0, 0%, 100%, 0.85)';
+    }
+
+    const barWidth = Math.max(w / barCount, 1.5);
+    const gap = barWidth * 0.3;
+
+    for (let i = 0; i < barCount; i++) {
+      const x = (i / barCount) * w;
+      const amplitude = waveformData[i];
+      const barH = Math.max(amplitude * h, h * 0.08);
+      const y = (h - barH) / 2;
+      const isPlayed = (i / barCount) < playedFraction;
+
+      ctx.fillStyle = isPlayed ? playedColor : unplayedColor;
+      ctx.beginPath();
+      const radius = Math.min((barWidth - gap) / 2, barH / 2);
+      ctx.roundRect(x, y, Math.max(barWidth - gap, 1), barH, radius);
+      ctx.fill();
+    }
+  }, [waveformData, currentTime, sermon?.duration_seconds, zoomLevel]);
 
   const paragraphHasPeak = (paragraph: Sentence[]): boolean => {
     if (!sermon?.duration_seconds || waveformData.length === 0) return false;
@@ -3449,28 +3500,13 @@ const SermonViewer = () => {
                         }}
                       />
                     )}
-                    {/* Waveform visualization */}
+                    {/* Waveform visualization - canvas */}
                     {waveformData.length > 0 && (
-                      <div className="absolute inset-0 flex items-center">
-                        {waveformData.map((amplitude, idx) => {
-                          const barPosition = (idx / waveformData.length) * 100;
-                          const isPlayed = sermon.duration_seconds && 
-                            (barPosition / 100) * sermon.duration_seconds * 1000 < currentTime;
-                          
-                          return (
-                            <div
-                              key={idx}
-                              className={`waveform-bar absolute ${isPlayed ? 'waveform-bar-played' : ''}`}
-                              style={{
-                                width: '3px',
-                                height: `${Math.max(amplitude * 100, 8)}%`,
-                                left: `${barPosition}%`,
-                                transform: 'translateX(-50%)',
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
+                      <canvas
+                        ref={waveformCanvasRef}
+                        className="absolute inset-0 w-full h-full"
+                        style={{ pointerEvents: 'none' }}
+                      />
                     )}
 
                   {/* Sermon segments (green) and comment segments (red) */}
