@@ -295,21 +295,34 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     }
 
     const hostname = parsedUrl.hostname;
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter an HTTP or HTTPS URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Subsplash URLs have DNS-invalid hostnames (leading hyphens) that Edge Functions
+    // can't fetch directly, but Firecrawl can handle them — route straight to scraper
+    if (isSubsplashUrl(url)) {
+      toast({
+        title: "Scanning Subsplash page for audio...",
+        description: "Looking for downloadable audio links on this page.",
+      });
+      await scrapeForAudioLinks(url);
+      return;
+    }
+
+    // Block other DNS-invalid hostnames that aren't Subsplash
     const labels = hostname.split('.');
     const hasInvalidLabel = labels.some(label => label.startsWith('-') || label.endsWith('-'));
     if (hasInvalidLabel) {
       toast({
         title: "Invalid URL",
         description: "This link contains an invalid domain name. Please check the URL or try copying a different share link.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      toast({
-        title: "Invalid URL",
-        description: "Please enter an HTTP or HTTPS URL",
         variant: "destructive",
       });
       return;
@@ -322,15 +335,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       toast({
         title: "YouTube links not supported",
         description: "Please download the audio using a YouTube to MP3 converter tool (e.g. y2mate.com), then upload the file directly.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isSubsplashUrl(url)) {
-      toast({
-        title: "Subsplash links not supported",
-        description: "Subsplash share links can't be downloaded directly. Please find the sermon's podcast RSS feed or Apple Podcasts link, or download the audio file and upload it here.",
         variant: "destructive",
       });
       return;
