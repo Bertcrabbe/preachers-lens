@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    let { url } = await req.json();
 
     if (!url) {
       throw new Error("URL is required");
@@ -21,6 +21,17 @@ serve(async (req) => {
     if (!apiKey) {
       throw new Error("Firecrawl connector not configured");
     }
+
+    // Subsplash short links use DNS-invalid subdomains (leading hyphens).
+    // Strip the subdomain — the path alone resolves on subspla.sh.
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.endsWith("subspla.sh") && parsed.hostname !== "subspla.sh") {
+        const fixedUrl = `https://subspla.sh${parsed.pathname}${parsed.search}${parsed.hash}`;
+        console.log("Rewrote Subsplash URL:", url, "→", fixedUrl);
+        url = fixedUrl;
+      }
+    } catch { /* keep original url */ }
 
     console.log("Scraping page for audio links:", url);
 
