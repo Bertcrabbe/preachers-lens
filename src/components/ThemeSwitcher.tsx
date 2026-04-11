@@ -53,7 +53,7 @@ export function ThemeSwitcher() {
           <Palette className="h-5 w-5" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
+      <DropdownMenuContent align="end" className="w-72 max-h-80 overflow-y-auto">
         {themes.map((theme) => {
           const isEditing = editingId === theme.id;
           return (
