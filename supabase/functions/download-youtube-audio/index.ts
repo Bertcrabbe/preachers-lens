@@ -51,38 +51,80 @@ async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
   }
 }
 
-async function extractAudioViaRapidAPI(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
-  // Step 1: Get download link from Vevioz API
-  const apiUrl = `https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`;
-  
-  console.log('Calling RapidAPI Vevioz for video:', videoId);
-  
-  const response = await fetch(apiUrl, {
+async function extractAudioViaRapidAPI(
+  videoId: string,
+  rapidApiKey: string
+): Promise<{ downloadUrl: string; title?: string } | { error: string }> {
+  const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+  // Step 1: Request conversion
+  console.log('Requesting conversion for video:', videoId);
+  const convResponse = await fetch('https://youtube-to-mp315.p.rapidapi.com/download', {
+    method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       'X-RapidAPI-Key': rapidApiKey,
-      'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
+      'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
     },
+    body: JSON.stringify({ url: youtubeUrl, format: 'mp3', quality: 0 }),
   });
 
-  if (!response.ok) {
-    const text = await response.text();
-    console.error('RapidAPI error:', response.status, text);
-    return { error: `RapidAPI returned ${response.status}` };
+  if (!convResponse.ok) {
+    const text = await convResponse.text();
+    console.error('RapidAPI conversion error:', convResponse.status, text);
+    return { error: `RapidAPI returned ${convResponse.status}` };
   }
 
-  const data = await response.json();
-  console.log('RapidAPI response status:', data.status);
+  const convData = await convResponse.json();
+  console.log('Conversion response status:', convData.status, 'id:', convData.id);
 
-  if (data.status === 'ok' && data.link) {
-    return { downloadUrl: data.link };
+  // If already available, return immediately
+  if (convData.status === 'AVAILABLE' && convData.downloadUrl) {
+    return { downloadUrl: convData.downloadUrl, title: convData.title };
   }
 
-  // Some APIs return a processing status - poll if needed
-  if (data.status === 'processing' || data.status === 'fail') {
-    return { error: data.msg || 'Conversion failed or is still processing. Please try again.' };
+  if (convData.status === 'CONVERSION_ERROR') {
+    return { error: 'Conversion failed. The video may be restricted or too long.' };
   }
 
-  return { error: data.msg || 'Unexpected API response' };
+  // Step 2: Poll for status if CONVERTING
+  if (convData.status === 'CONVERTING' && convData.id) {
+    const maxAttempts = 30; // ~60 seconds max
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+
+      console.log(`Polling status attempt ${i + 1}/${maxAttempts}...`);
+      const statusResponse = await fetch(
+        `https://youtube-to-mp315.p.rapidapi.com/status/${convData.id}`,
+        {
+          headers: {
+            'X-RapidAPI-Key': rapidApiKey,
+            'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
+          },
+        }
+      );
+
+      if (!statusResponse.ok) {
+        console.error('Status poll error:', statusResponse.status);
+        continue;
+      }
+
+      const statusData = await statusResponse.json();
+      console.log('Poll status:', statusData.status);
+
+      if (statusData.status === 'AVAILABLE' && statusData.downloadUrl) {
+        return { downloadUrl: statusData.downloadUrl, title: statusData.title };
+      }
+
+      if (statusData.status === 'CONVERSION_ERROR' || statusData.status === 'EXPIRED') {
+        return { error: `Conversion ${statusData.status.toLowerCase()}. Please try again.` };
+      }
+    }
+
+    return { error: 'Conversion timed out. Please try again.' };
+  }
+
+  return { error: convData.msg || 'Unexpected API response' };
 }
 
 Deno.serve(async (req) => {
@@ -145,7 +187,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Download the MP3 from the conversion link
+    // Download the MP3
     console.log('Downloading converted audio...');
     const audioResponse = await fetch(result.downloadUrl);
     if (!audioResponse.ok) {
@@ -162,7 +204,10 @@ Deno.serve(async (req) => {
     const audioBytes = new Uint8Array(audioBlob);
     console.log('Downloaded audio size:', audioBytes.length, 'bytes');
 
-    // Upload to Supabase storage using service role
+    // Use API-returned title if available
+    const finalTitle = result.title || resolvedTitle;
+
+    // Upload to storage
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
     const filePath = `${user.id}/${crypto.randomUUID()}.mp3`;
 
@@ -184,7 +229,7 @@ Deno.serve(async (req) => {
       .from('sermons')
       .insert({
         user_id: user.id,
-        title: resolvedTitle,
+        title: finalTitle,
         file_url: filePath,
         file_type: 'audio/mpeg',
         transcription_status: 'pending',
@@ -213,7 +258,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       success: true,
-      title: resolvedTitle,
+      title: finalTitle,
       sermonId: sermon.id,
     });
   } catch (error) {
