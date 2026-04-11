@@ -339,6 +339,16 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
         });
 
         if (error) throw error;
+
+        if (data?.fallback) {
+          toast({
+            title: "YouTube import unavailable",
+            description: data.error || "Please download the audio manually and upload the file directly.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         if (!data?.success) throw new Error(data?.error || "Failed to extract YouTube audio");
 
         toast({
