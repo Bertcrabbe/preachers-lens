@@ -59,14 +59,14 @@ async function extractAudioViaRapidAPI(
 
   // Step 1: Request conversion
   console.log('Requesting conversion for video:', videoId);
-  const convResponse = await fetch('https://youtube-to-mp315.p.rapidapi.com/download', {
+  const params = new URLSearchParams({ url: youtubeUrl, format: 'mp3', quality: '0' });
+  const convResponse = await fetch(`https://youtube-to-mp315.p.rapidapi.com/download?${params}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-RapidAPI-Key': rapidApiKey,
       'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
     },
-    body: JSON.stringify({ url: youtubeUrl, format: 'mp3', quality: 0 }),
   });
 
   if (!convResponse.ok) {
