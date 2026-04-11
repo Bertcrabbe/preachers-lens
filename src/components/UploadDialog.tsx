@@ -332,11 +332,33 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
     
     const isYouTube = isYouTubeUrl(url);
     if (isYouTube) {
-      toast({
-        title: "YouTube links not supported",
-        description: "Please download the audio using a YouTube to MP3 converter tool (e.g. y2mate.com), then upload the file directly.",
-        variant: "destructive",
-      });
+      setUploading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('download-youtube-audio', {
+          body: { url, title: title || undefined, communicatorId: communicatorId || undefined }
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || "Failed to extract YouTube audio");
+
+        toast({
+          title: "Upload successful",
+          description: `"${data.title || 'YouTube Audio'}" is being transcribed`,
+        });
+
+        onUploadComplete();
+        onOpenChange(false);
+        setUrl("");
+        setTitle("");
+      } catch (error: any) {
+        toast({
+          title: "YouTube import failed",
+          description: error.message || "Could not extract audio. Try downloading the audio manually and uploading the file.",
+          variant: "destructive",
+        });
+      } finally {
+        setUploading(false);
+      }
       return;
     }
 
