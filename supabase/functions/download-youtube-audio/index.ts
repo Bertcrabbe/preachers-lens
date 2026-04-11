@@ -63,15 +63,14 @@ Deno.serve(async (req) => {
     });
 
     // Get user ID
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     let audioUrl: string | null = null;
     let videoTitle = title || 'YouTube Audio';
