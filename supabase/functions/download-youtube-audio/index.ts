@@ -14,13 +14,7 @@ type YoutubeResponse = {
   diagnostics?: {
     provider: 'youtube';
     videoId?: string;
-    errorStage:
-      | 'missing_url'
-      | 'invalid_url'
-      | 'auth_required'
-      | 'invalid_auth'
-      | 'metadata_lookup_failed'
-      | 'audio_extraction_unavailable';
+    errorStage: string;
   };
 };
 
@@ -37,12 +31,10 @@ function extractVideoId(url: string): string | null {
     /youtube\.com\/watch\?.*v=([^&?\s]+)/,
     /youtube\.com\/shorts\/([^&?\s]+)/,
   ];
-
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match?.[1]) return match[1];
   }
-
   return null;
 }
 
@@ -50,24 +42,47 @@ async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
   try {
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`;
-
-    const response = await fetch(oembedUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-      },
-    });
-
-    if (!response.ok) {
-      console.error('YouTube oEmbed lookup failed:', response.status);
-      return null;
-    }
-
+    const response = await fetch(oembedUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!response.ok) return null;
     const data = await response.json();
     return typeof data?.title === 'string' ? data.title : null;
-  } catch (error) {
-    console.error('YouTube oEmbed request failed:', error);
+  } catch {
     return null;
   }
+}
+
+async function extractAudioViaRapidAPI(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
+  // Step 1: Get download link from Vevioz API
+  const apiUrl = `https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`;
+  
+  console.log('Calling RapidAPI Vevioz for video:', videoId);
+  
+  const response = await fetch(apiUrl, {
+    headers: {
+      'X-RapidAPI-Key': rapidApiKey,
+      'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error('RapidAPI error:', response.status, text);
+    return { error: `RapidAPI returned ${response.status}` };
+  }
+
+  const data = await response.json();
+  console.log('RapidAPI response status:', data.status);
+
+  if (data.status === 'ok' && data.link) {
+    return { downloadUrl: data.link };
+  }
+
+  // Some APIs return a processing status - poll if needed
+  if (data.status === 'processing' || data.status === 'fail') {
+    return { error: data.msg || 'Conversion failed or is still processing. Please try again.' };
+  }
+
+  return { error: data.msg || 'Unexpected API response' };
 }
 
 Deno.serve(async (req) => {
@@ -76,93 +91,138 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { url, title: userTitle } = await req.json();
+    const { url, title: userTitle, communicatorId } = await req.json();
 
     if (!url) {
-      return jsonResponse({
-        success: false,
-        error: 'URL is required',
-        diagnostics: {
-          provider: 'youtube',
-          errorStage: 'missing_url',
-        },
-      }, 400);
+      return jsonResponse({ success: false, error: 'URL is required', diagnostics: { provider: 'youtube', errorStage: 'missing_url' } }, 400);
     }
 
     const videoId = extractVideoId(url);
     if (!videoId) {
-      return jsonResponse({
-        success: false,
-        error: 'Invalid YouTube URL',
-        diagnostics: {
-          provider: 'youtube',
-          errorStage: 'invalid_url',
-        },
-      }, 400);
+      return jsonResponse({ success: false, error: 'Invalid YouTube URL', diagnostics: { provider: 'youtube', errorStage: 'invalid_url' } }, 400);
     }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return jsonResponse({
-        success: false,
-        error: 'Authorization required',
-        diagnostics: {
-          provider: 'youtube',
-          videoId,
-          errorStage: 'auth_required',
-        },
-      }, 401);
+      return jsonResponse({ success: false, error: 'Authorization required', diagnostics: { provider: 'youtube', videoId, errorStage: 'auth_required' } }, 401);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const rapidApiKey = Deno.env.get('RAPIDAPI_KEY');
+
+    if (!rapidApiKey) {
+      return jsonResponse({
+        success: false,
+        fallback: true,
+        error: 'YouTube extraction is not configured. Please add your RapidAPI key.',
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'missing_api_key' },
+      });
+    }
+
+    // Auth check
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return jsonResponse({
-        success: false,
-        error: 'Invalid authentication',
-        diagnostics: {
-          provider: 'youtube',
-          videoId,
-          errorStage: 'invalid_auth',
-        },
-      }, 401);
+      return jsonResponse({ success: false, error: 'Invalid authentication', diagnostics: { provider: 'youtube', videoId, errorStage: 'invalid_auth' } }, 401);
     }
 
+    // Get title
     const resolvedTitle = userTitle || (await fetchYouTubeTitle(videoId)) || 'YouTube Audio';
 
+    // Extract audio via RapidAPI
+    const result = await extractAudioViaRapidAPI(videoId, rapidApiKey);
+    if ('error' in result) {
+      return jsonResponse({
+        success: false,
+        fallback: true,
+        title: resolvedTitle,
+        error: result.error,
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'extraction_failed' },
+      });
+    }
+
+    // Download the MP3 from the conversion link
+    console.log('Downloading converted audio...');
+    const audioResponse = await fetch(result.downloadUrl);
+    if (!audioResponse.ok) {
+      return jsonResponse({
+        success: false,
+        fallback: true,
+        title: resolvedTitle,
+        error: 'Failed to download converted audio file.',
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'download_failed' },
+      });
+    }
+
+    const audioBlob = await audioResponse.arrayBuffer();
+    const audioBytes = new Uint8Array(audioBlob);
+    console.log('Downloaded audio size:', audioBytes.length, 'bytes');
+
+    // Upload to Supabase storage using service role
+    const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
+    const filePath = `${user.id}/${crypto.randomUUID()}.mp3`;
+
+    const { error: uploadError } = await adminSupabase.storage
+      .from('sermons')
+      .upload(filePath, audioBytes, { contentType: 'audio/mpeg', upsert: false });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      return jsonResponse({
+        success: false,
+        error: 'Failed to upload audio to storage: ' + uploadError.message,
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'upload_failed' },
+      });
+    }
+
+    // Create sermon record
+    const { data: sermon, error: sermonError } = await adminSupabase
+      .from('sermons')
+      .insert({
+        user_id: user.id,
+        title: resolvedTitle,
+        file_url: filePath,
+        file_type: 'audio/mpeg',
+        transcription_status: 'pending',
+        communicator_id: communicatorId || null,
+      })
+      .select('id')
+      .single();
+
+    if (sermonError) {
+      console.error('Sermon insert error:', sermonError);
+      return jsonResponse({
+        success: false,
+        error: 'Failed to create sermon record: ' + sermonError.message,
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'db_insert_failed' },
+      });
+    }
+
+    // Trigger transcription
+    try {
+      await adminSupabase.functions.invoke('transcribe-sermon', {
+        body: { sermonId: sermon.id },
+      });
+    } catch (e) {
+      console.error('Transcription trigger failed (non-blocking):', e);
+    }
+
     return jsonResponse({
-      success: false,
-      fallback: true,
+      success: true,
       title: resolvedTitle,
-      error:
-        'YouTube audio extraction is not available from this backend right now. YouTube now protects audio streams behind signed requests, so please download the audio manually and upload the file directly.',
-      diagnostics: {
-        provider: 'youtube',
-        videoId,
-        errorStage: 'audio_extraction_unavailable',
-      },
+      sermonId: sermon.id,
     });
   } catch (error) {
     console.error('Error processing YouTube URL:', error);
-
     return jsonResponse({
       success: false,
       fallback: true,
-      error:
-        'YouTube audio extraction is not available from this backend right now. Please download the audio manually and upload the file directly.',
-      diagnostics: {
-        provider: 'youtube',
-        errorStage: 'audio_extraction_unavailable',
-      },
+      error: 'An unexpected error occurred. Please try again or upload the audio manually.',
+      diagnostics: { provider: 'youtube', errorStage: 'unexpected_error' },
     });
   }
 });
