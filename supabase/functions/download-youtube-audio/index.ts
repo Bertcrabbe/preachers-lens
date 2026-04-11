@@ -15,6 +15,7 @@ type YoutubeResponse = {
     provider: 'youtube';
     videoId?: string;
     errorStage: string;
+    detail?: string;
   };
 };
 
@@ -51,80 +52,114 @@ async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
   }
 }
 
+// Try multiple RapidAPI YouTube-to-MP3 providers in order
 async function extractAudioViaRapidAPI(
   videoId: string,
   rapidApiKey: string
-): Promise<{ downloadUrl: string; title?: string } | { error: string }> {
-  const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+): Promise<{ downloadUrl: string } | { error: string }> {
+  // Provider 1: youtube-mp36 (Vevioz)
+  const provider1 = await tryVevioz(videoId, rapidApiKey);
+  if (provider1 && 'downloadUrl' in provider1) return provider1;
 
-  // Step 1: Request conversion
-  console.log('Requesting conversion for video:', videoId);
-  const params = new URLSearchParams({ url: youtubeUrl, format: 'mp3', quality: '0' });
-  const convResponse = await fetch(`https://youtube-to-mp315.p.rapidapi.com/download?${params}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-RapidAPI-Key': rapidApiKey,
-      'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
-    },
-  });
+  // Provider 2: youtube-to-mp315
+  const provider2 = await tryMp315(videoId, rapidApiKey);
+  if (provider2 && 'downloadUrl' in provider2) return provider2;
 
-  if (!convResponse.ok) {
-    const text = await convResponse.text();
-    console.error('RapidAPI conversion error:', convResponse.status, text);
-    return { error: `RapidAPI returned ${convResponse.status}` };
-  }
+  const errors = [provider1?.error, provider2?.error].filter(Boolean).join('; ');
+  return { error: errors || 'All providers failed' };
+}
 
-  const convData = await convResponse.json();
-  console.log('Conversion response status:', convData.status, 'id:', convData.id);
+async function tryVevioz(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
+  try {
+    console.log('[vevioz] Trying video:', videoId);
+    const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`, {
+      headers: {
+        'X-RapidAPI-Key': rapidApiKey,
+        'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
+      },
+    });
 
-  // If already available, return immediately
-  if (convData.status === 'AVAILABLE' && convData.downloadUrl) {
-    return { downloadUrl: convData.downloadUrl, title: convData.title };
-  }
-
-  if (convData.status === 'CONVERSION_ERROR') {
-    return { error: 'Conversion failed. The video may be restricted or too long.' };
-  }
-
-  // Step 2: Poll for status if CONVERTING
-  if (convData.status === 'CONVERTING' && convData.id) {
-    const maxAttempts = 30; // ~60 seconds max
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 2000));
-
-      console.log(`Polling status attempt ${i + 1}/${maxAttempts}...`);
-      const statusResponse = await fetch(
-        `https://youtube-to-mp315.p.rapidapi.com/status/${convData.id}`,
-        {
-          headers: {
-            'X-RapidAPI-Key': rapidApiKey,
-            'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
-          },
-        }
-      );
-
-      if (!statusResponse.ok) {
-        console.error('Status poll error:', statusResponse.status);
-        continue;
-      }
-
-      const statusData = await statusResponse.json();
-      console.log('Poll status:', statusData.status);
-
-      if (statusData.status === 'AVAILABLE' && statusData.downloadUrl) {
-        return { downloadUrl: statusData.downloadUrl, title: statusData.title };
-      }
-
-      if (statusData.status === 'CONVERSION_ERROR' || statusData.status === 'EXPIRED') {
-        return { error: `Conversion ${statusData.status.toLowerCase()}. Please try again.` };
-      }
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('[vevioz] Error:', response.status, text);
+      return { error: `vevioz: ${response.status}` };
     }
 
-    return { error: 'Conversion timed out. Please try again.' };
-  }
+    const data = await response.json();
+    console.log('[vevioz] Response:', JSON.stringify(data).slice(0, 200));
 
-  return { error: convData.msg || 'Unexpected API response' };
+    if (data.status === 'ok' && data.link) {
+      return { downloadUrl: data.link };
+    }
+    return { error: data.msg || `vevioz: status=${data.status}` };
+  } catch (e) {
+    console.error('[vevioz] Exception:', e);
+    return { error: `vevioz: ${e.message}` };
+  }
+}
+
+async function tryMp315(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
+  try {
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    console.log('[mp315] Trying video:', videoId);
+
+    const params = new URLSearchParams({ url: youtubeUrl, format: 'mp3', quality: '0' });
+    const convResponse = await fetch(`https://youtube-to-mp315.p.rapidapi.com/download?${params}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-RapidAPI-Key': rapidApiKey,
+        'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
+      },
+    });
+
+    if (!convResponse.ok) {
+      const text = await convResponse.text();
+      console.error('[mp315] Error:', convResponse.status, text);
+      return { error: `mp315: ${convResponse.status}` };
+    }
+
+    const convData = await convResponse.json();
+    console.log('[mp315] Response:', JSON.stringify(convData).slice(0, 200));
+
+    if (convData.status === 'AVAILABLE' && convData.downloadUrl) {
+      return { downloadUrl: convData.downloadUrl };
+    }
+
+    if (convData.status === 'CONVERSION_ERROR') {
+      return { error: 'mp315: conversion error' };
+    }
+
+    // Poll if converting
+    if (convData.status === 'CONVERTING' && convData.id) {
+      for (let i = 0; i < 30; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const statusResponse = await fetch(
+          `https://youtube-to-mp315.p.rapidapi.com/status/${convData.id}`,
+          {
+            headers: {
+              'X-RapidAPI-Key': rapidApiKey,
+              'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
+            },
+          }
+        );
+        if (!statusResponse.ok) continue;
+        const statusData = await statusResponse.json();
+        if (statusData.status === 'AVAILABLE' && statusData.downloadUrl) {
+          return { downloadUrl: statusData.downloadUrl };
+        }
+        if (statusData.status === 'CONVERSION_ERROR' || statusData.status === 'EXPIRED') {
+          return { error: `mp315: ${statusData.status.toLowerCase()}` };
+        }
+      }
+      return { error: 'mp315: conversion timed out' };
+    }
+
+    return { error: convData.msg || 'mp315: unexpected response' };
+  } catch (e) {
+    console.error('[mp315] Exception:', e);
+    return { error: `mp315: ${e.message}` };
+  }
 }
 
 Deno.serve(async (req) => {
@@ -175,7 +210,7 @@ Deno.serve(async (req) => {
     // Get title
     const resolvedTitle = userTitle || (await fetchYouTubeTitle(videoId)) || 'YouTube Audio';
 
-    // Extract audio via RapidAPI
+    // Extract audio via RapidAPI (tries multiple providers)
     const result = await extractAudioViaRapidAPI(videoId, rapidApiKey);
     if ('error' in result) {
       return jsonResponse({
@@ -183,7 +218,7 @@ Deno.serve(async (req) => {
         fallback: true,
         title: resolvedTitle,
         error: result.error,
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'extraction_failed' },
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'extraction_failed', detail: result.error },
       });
     }
 
@@ -203,9 +238,6 @@ Deno.serve(async (req) => {
     const audioBlob = await audioResponse.arrayBuffer();
     const audioBytes = new Uint8Array(audioBlob);
     console.log('Downloaded audio size:', audioBytes.length, 'bytes');
-
-    // Use API-returned title if available
-    const finalTitle = result.title || resolvedTitle;
 
     // Upload to storage
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
@@ -229,7 +261,7 @@ Deno.serve(async (req) => {
       .from('sermons')
       .insert({
         user_id: user.id,
-        title: finalTitle,
+        title: resolvedTitle,
         file_url: filePath,
         file_type: 'audio/mpeg',
         transcription_status: 'pending',
@@ -258,7 +290,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       success: true,
-      title: finalTitle,
+      title: resolvedTitle,
       sermonId: sermon.id,
     });
   } catch (error) {
