@@ -57,6 +57,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "Broncos Navy with orange & white",
     preview: { bg: "#0a2343", card: "#14355e", primary: "#fb4f14", accent: "#ffffff" },
   },
+  {
+    id: "ny-yankees",
+    name: "NY Yankees",
+    description: "Classic navy with white pinstripe & steel blue",
+    preview: { bg: "#1a2540", card: "#2e3a55", primary: "#ffffff", accent: "#4a74c4" },
+  },
 ];
 
 interface ThemeContextType {
