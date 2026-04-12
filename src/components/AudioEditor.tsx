@@ -604,17 +604,40 @@ export const AudioEditor = ({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setZoom((z) => Math.max(0.5, z - 0.5))}
+            onClick={() => zoomTo(Math.max(0.5, zoom / 2))}
+            title="Zoom out (Ctrl+-)"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <span className="text-sm w-12 text-center">{zoom}x</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="range"
+              min={0}
+              max={zoomLevels.length - 1}
+              step={1}
+              value={zoomLevels.findIndex((z) => z >= zoom) === -1 ? zoomLevels.length - 1 : zoomLevels.findIndex((z) => z >= zoom)}
+              onChange={(e) => zoomTo(zoomLevels[parseInt(e.target.value)])}
+              className="w-20 h-2 accent-primary"
+              title="Zoom level"
+            />
+            <span className="text-sm w-12 text-center font-mono">{zoom}x</span>
+          </div>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setZoom((z) => Math.min(4, z + 0.5))}
+            onClick={() => zoomTo(Math.min(64, zoom * 2))}
+            title="Zoom in (Ctrl++)"
           >
             <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => zoomTo(1)}
+            className="text-xs"
+            title="Reset zoom (Ctrl+0)"
+          >
+            Reset
           </Button>
         </div>
 
