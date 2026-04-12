@@ -101,10 +101,10 @@ export const AudioEditor = ({
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if ((e.key === '=' || e.key === '+') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        zoomTo(Math.min(64, zoom * 2));
+        zoomTo(Math.min(10, zoom * 2));
       } else if (e.key === '-' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        zoomTo(Math.max(0.5, zoom / 2));
+        zoomTo(Math.max(1, zoom / 2));
       } else if (e.key === '0' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         zoomTo(1);
@@ -121,7 +121,7 @@ export const AudioEditor = ({
     const container = containerRef.current;
     if (!container) return;
     const direction = e.deltaY < 0 ? 1 : -1;
-    const newZoom = Math.min(64, Math.max(0.5, zoom * (direction > 0 ? 1.5 : 1 / 1.5)));
+    const newZoom = Math.min(10, Math.max(1, zoom * (direction > 0 ? 1.5 : 1 / 1.5)));
     // Zoom toward cursor
     const rect = container.getBoundingClientRect();
     const cursorX = e.clientX - rect.left;
