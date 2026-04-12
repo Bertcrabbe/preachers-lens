@@ -72,26 +72,48 @@ async function extractAudioViaRapidAPI(
 async function tryVevioz(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
   try {
     console.log('[vevioz] Trying video:', videoId);
-    const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`, {
-      headers: {
-        'X-RapidAPI-Key': rapidApiKey,
-        'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
-      },
-    });
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('[vevioz] Error:', response.status, text);
-      return { error: `vevioz: ${response.status}` };
+    // Initial request
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`, {
+        headers: {
+          'X-RapidAPI-Key': rapidApiKey,
+          'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
+        },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[vevioz] Error:', response.status, text);
+        return { error: `vevioz: ${response.status}` };
+      }
+
+      const data = await response.json();
+      console.log('[vevioz] Response (attempt', attempt + 1, '):', JSON.stringify(data).slice(0, 200));
+
+      if (data.status === 'ok' && data.link) {
+        return { downloadUrl: data.link };
+      }
+
+      if (data.status === 'fail') {
+        return { error: data.msg || 'vevioz: conversion failed' };
+      }
+
+      // Still processing (status = 'processing' or pc < 100)
+      if (data.status === 'processing' || (typeof data.pc === 'number' && data.pc < 100)) {
+        console.log('[vevioz] Converting... pc:', data.pc, '%. Waiting 3s...');
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+
+      // Unknown status with link - try it
+      if (data.link) {
+        return { downloadUrl: data.link };
+      }
+
+      return { error: data.msg || `vevioz: status=${data.status}` };
     }
-
-    const data = await response.json();
-    console.log('[vevioz] Response:', JSON.stringify(data).slice(0, 200));
-
-    if (data.status === 'ok' && data.link) {
-      return { downloadUrl: data.link };
-    }
-    return { error: data.msg || `vevioz: status=${data.status}` };
+    return { error: 'vevioz: conversion timed out' };
   } catch (e) {
     console.error('[vevioz] Exception:', e);
     return { error: `vevioz: ${e.message}` };
@@ -222,22 +244,52 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Download the MP3
-    console.log('Downloading converted audio...');
-    const audioResponse = await fetch(result.downloadUrl);
-    if (!audioResponse.ok) {
+    // Download the MP3 with retries
+    console.log('Downloading converted audio from:', result.downloadUrl.slice(0, 100));
+    let audioBytes: Uint8Array | null = null;
+    
+    for (let dlAttempt = 0; dlAttempt < 3; dlAttempt++) {
+      if (dlAttempt > 0) {
+        console.log(`Download retry ${dlAttempt + 1}... waiting 5s`);
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+      
+      try {
+        const audioResponse = await fetch(result.downloadUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'audio/mpeg, audio/*, */*',
+            'Referer': 'https://youtube-mp36.p.rapidapi.com/',
+          },
+          redirect: 'follow',
+        });
+        console.log('Download response status:', audioResponse.status);
+        
+        if (audioResponse.ok) {
+          const blob = await audioResponse.arrayBuffer();
+          audioBytes = new Uint8Array(blob);
+          console.log('Downloaded audio size:', audioBytes.length, 'bytes');
+          if (audioBytes.length > 1000) break; // Minimum viable file size
+          console.log('File too small, retrying...');
+          audioBytes = null;
+        } else {
+          const errText = await audioResponse.text();
+          console.error('Download failed:', audioResponse.status, errText.slice(0, 200));
+        }
+      } catch (dlErr) {
+        console.error('Download exception:', dlErr);
+      }
+    }
+    
+    if (!audioBytes) {
       return jsonResponse({
         success: false,
         fallback: true,
         title: resolvedTitle,
-        error: 'Failed to download converted audio file.',
+        error: 'Failed to download converted audio file after retries.',
         diagnostics: { provider: 'youtube', videoId, errorStage: 'download_failed' },
       });
     }
-
-    const audioBlob = await audioResponse.arrayBuffer();
-    const audioBytes = new Uint8Array(audioBlob);
-    console.log('Downloaded audio size:', audioBytes.length, 'bytes');
 
     // Upload to storage
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
