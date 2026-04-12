@@ -426,21 +426,38 @@ export const AudioEditor = ({
       const { audioBufferToMp3 } = await import("@/utils/audioCombiner");
       const mp3Blob = await audioBufferToMp3(renderedBuffer);
 
-      // Replace existing file in storage
-      const { error: removeError } = await supabase.storage
-        .from("sermons")
-        .remove([fileUrl]);
-
-      if (removeError) throw removeError;
+      // Upload to a temp path first, then swap — so the original is never lost
+      const tempPath = fileUrl.replace(/(\.[^.]+)$/, `_edit_${Date.now()}$1`);
 
       const { error: uploadError } = await supabase.storage
         .from("sermons")
-        .upload(fileUrl, mp3Blob, {
+        .upload(tempPath, mp3Blob, {
           contentType: "audio/mpeg",
-          upsert: false,
         });
 
       if (uploadError) throw uploadError;
+
+      // Now safe to remove old file and rename temp → original
+      await supabase.storage.from("sermons").remove([fileUrl]);
+
+      // Supabase Storage has no rename — copy by downloading and re-uploading
+      const { data: tempUrlData } = await supabase.storage
+        .from("sermons")
+        .createSignedUrl(tempPath, 60);
+
+      if (!tempUrlData?.signedUrl) throw new Error("Failed to get temp file URL");
+
+      const tempBlob = await (await fetch(tempUrlData.signedUrl)).blob();
+      const { error: finalUploadError } = await supabase.storage
+        .from("sermons")
+        .upload(fileUrl, tempBlob, {
+          contentType: "audio/mpeg",
+        });
+
+      if (finalUploadError) throw finalUploadError;
+
+      // Clean up temp file
+      await supabase.storage.from("sermons").remove([tempPath]);
 
       // Update sermon duration
       await supabase
