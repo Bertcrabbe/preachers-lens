@@ -715,6 +715,7 @@ export const AudioEditor = ({
           splitMode ? "border-primary cursor-crosshair" : "border-border cursor-pointer"
         )}
         onClick={handleTimelineClick}
+        onMouseDown={handleTimelineMouseDown}
         onMouseMove={handleTimelineMouseMove}
         onMouseLeave={() => setHoverTime(null)}
         onWheel={handleWheel}
