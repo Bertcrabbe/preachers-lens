@@ -244,31 +244,52 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Download the MP3
+    // Download the MP3 with retries
     console.log('Downloading converted audio from:', result.downloadUrl.slice(0, 100));
-    const audioResponse = await fetch(result.downloadUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-      },
-      redirect: 'follow',
-    });
-    console.log('Download response status:', audioResponse.status, 'type:', audioResponse.type, 'url:', audioResponse.url?.slice(0, 80));
-    if (!audioResponse.ok) {
-      const errText = await audioResponse.text();
-      console.error('Download failed body:', errText.slice(0, 300));
+    let audioBytes: Uint8Array | null = null;
+    
+    for (let dlAttempt = 0; dlAttempt < 3; dlAttempt++) {
+      if (dlAttempt > 0) {
+        console.log(`Download retry ${dlAttempt + 1}... waiting 5s`);
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+      
+      try {
+        const audioResponse = await fetch(result.downloadUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'audio/mpeg, audio/*, */*',
+            'Referer': 'https://youtube-mp36.p.rapidapi.com/',
+          },
+          redirect: 'follow',
+        });
+        console.log('Download response status:', audioResponse.status);
+        
+        if (audioResponse.ok) {
+          const blob = await audioResponse.arrayBuffer();
+          audioBytes = new Uint8Array(blob);
+          console.log('Downloaded audio size:', audioBytes.length, 'bytes');
+          if (audioBytes.length > 1000) break; // Minimum viable file size
+          console.log('File too small, retrying...');
+          audioBytes = null;
+        } else {
+          const errText = await audioResponse.text();
+          console.error('Download failed:', audioResponse.status, errText.slice(0, 200));
+        }
+      } catch (dlErr) {
+        console.error('Download exception:', dlErr);
+      }
+    }
+    
+    if (!audioBytes) {
       return jsonResponse({
         success: false,
         fallback: true,
         title: resolvedTitle,
-        error: 'Failed to download converted audio file.',
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'download_failed', detail: `status=${audioResponse.status}` },
+        error: 'Failed to download converted audio file after retries.',
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'download_failed' },
       });
     }
-
-    const audioBlob = await audioResponse.arrayBuffer();
-    const audioBytes = new Uint8Array(audioBlob);
-    console.log('Downloaded audio size:', audioBytes.length, 'bytes');
 
     // Upload to storage
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
