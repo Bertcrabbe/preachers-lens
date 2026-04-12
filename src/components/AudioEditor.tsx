@@ -604,7 +604,7 @@ export const AudioEditor = ({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => zoomTo(Math.max(0.5, zoom / 2))}
+            onClick={() => zoomTo(Math.max(1, zoom / 2))}
             title="Zoom out (Ctrl+-)"
           >
             <ZoomOut className="h-4 w-4" />
@@ -625,7 +625,7 @@ export const AudioEditor = ({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => zoomTo(Math.min(64, zoom * 2))}
+            onClick={() => zoomTo(Math.min(10, zoom * 2))}
             title="Zoom in (Ctrl++)"
           >
             <ZoomIn className="h-4 w-4" />
