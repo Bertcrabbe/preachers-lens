@@ -267,14 +267,38 @@ export const AudioEditor = ({
 
   useEffect(() => {
     if (!isDragging) return;
+    let animationId: number | null = null;
+    let lastMouseX = 0;
+
+    const autoScroll = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const edgeZone = 60; // px from edge to trigger scroll
+      const scrollSpeed = 12;
+
+      if (lastMouseX < rect.left + edgeZone) {
+        const intensity = 1 - Math.max(0, lastMouseX - rect.left) / edgeZone;
+        container.scrollLeft -= scrollSpeed * intensity;
+      } else if (lastMouseX > rect.right - edgeZone) {
+        const intensity = 1 - Math.max(0, rect.right - lastMouseX) / edgeZone;
+        container.scrollLeft += scrollSpeed * intensity;
+      }
+      animationId = requestAnimationFrame(autoScroll);
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
+      lastMouseX = e.clientX;
       const timeMs = getTimeFromMouseEvent(e);
       if (timeMs !== null) seekToTime(timeMs);
     };
     const handleMouseUp = () => setIsDragging(false);
+
+    animationId = requestAnimationFrame(autoScroll);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
+      if (animationId) cancelAnimationFrame(animationId);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
