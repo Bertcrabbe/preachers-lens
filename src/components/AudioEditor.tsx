@@ -76,6 +76,63 @@ export const AudioEditor = ({
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const zoomLevels = [0.5, 1, 2, 4, 8, 16, 32, 64];
+
+  // Zoom to cursor position
+  const zoomTo = useCallback((newZoom: number) => {
+    const container = containerRef.current;
+    if (!container) {
+      setZoom(newZoom);
+      return;
+    }
+    const oldZoom = zoom;
+    const scrollCenter = container.scrollLeft + container.clientWidth / 2;
+    const scrollRatio = scrollCenter / (container.clientWidth * oldZoom);
+    setZoom(newZoom);
+    requestAnimationFrame(() => {
+      const newScrollCenter = scrollRatio * container.clientWidth * newZoom;
+      container.scrollLeft = newScrollCenter - container.clientWidth / 2;
+    });
+  }, [zoom]);
+
+  // Keyboard zoom shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.key === '=' || e.key === '+') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        zoomTo(Math.min(64, zoom * 2));
+      } else if (e.key === '-' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        zoomTo(Math.max(0.5, zoom / 2));
+      } else if (e.key === '0' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        zoomTo(1);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [zoom, zoomTo]);
+
+  // Mouse wheel zoom
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const container = containerRef.current;
+    if (!container) return;
+    const direction = e.deltaY < 0 ? 1 : -1;
+    const newZoom = Math.min(64, Math.max(0.5, zoom * (direction > 0 ? 1.5 : 1 / 1.5)));
+    // Zoom toward cursor
+    const rect = container.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const scrollPos = container.scrollLeft + cursorX;
+    const scrollRatio = scrollPos / (container.clientWidth * zoom);
+    setZoom(newZoom);
+    requestAnimationFrame(() => {
+      const newScrollPos = scrollRatio * container.clientWidth * newZoom;
+      container.scrollLeft = newScrollPos - cursorX;
+    });
+  }, [zoom]);
   // Generate waveform on mount
   useEffect(() => {
     generateWaveform();
@@ -547,17 +604,40 @@ export const AudioEditor = ({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setZoom((z) => Math.max(0.5, z - 0.5))}
+            onClick={() => zoomTo(Math.max(0.5, zoom / 2))}
+            title="Zoom out (Ctrl+-)"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <span className="text-sm w-12 text-center">{zoom}x</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="range"
+              min={0}
+              max={zoomLevels.length - 1}
+              step={1}
+              value={zoomLevels.findIndex((z) => z >= zoom) === -1 ? zoomLevels.length - 1 : zoomLevels.findIndex((z) => z >= zoom)}
+              onChange={(e) => zoomTo(zoomLevels[parseInt(e.target.value)])}
+              className="w-20 h-2 accent-primary"
+              title="Zoom level"
+            />
+            <span className="text-sm w-12 text-center font-mono">{zoom}x</span>
+          </div>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setZoom((z) => Math.min(4, z + 0.5))}
+            onClick={() => zoomTo(Math.min(64, zoom * 2))}
+            title="Zoom in (Ctrl++)"
           >
             <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => zoomTo(1)}
+            className="text-xs"
+            title="Reset zoom (Ctrl+0)"
+          >
+            Reset
           </Button>
         </div>
 
@@ -603,6 +683,7 @@ export const AudioEditor = ({
         onClick={handleTimelineClick}
         onMouseMove={handleTimelineMouseMove}
         onMouseLeave={() => setHoverTime(null)}
+        onWheel={handleWheel}
         style={{ width: "100%" }}
       >
         <div
