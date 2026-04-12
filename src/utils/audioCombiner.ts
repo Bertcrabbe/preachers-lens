@@ -122,7 +122,7 @@ export async function combineAudioFiles(
     const renderedBuffer = await offlineContext.startRendering();
     
     onProgress?.(90, "Encoding to MP3 (this may take a moment)...");
-    const mp3Blob = await audioBufferToMp3Worker(renderedBuffer, (encodePercent) => {
+    const mp3Blob = await audioBufferToMp3(renderedBuffer, (encodePercent) => {
       // Map encoding progress from 90% to 99%
       const overall = 90 + (encodePercent / 100) * 9;
       onProgress?.(Math.round(overall), `Encoding to MP3... ${encodePercent}%`);
@@ -144,7 +144,7 @@ function convertFloat32ToInt16(float32: Float32Array): Int16Array {
   return int16;
 }
 
-async function audioBufferToMp3Worker(
+export async function audioBufferToMp3(
   buffer: AudioBuffer,
   onEncodeProgress?: (percent: number) => void
 ): Promise<Blob> {
@@ -174,7 +174,6 @@ async function audioBufferToMp3Worker(
       reject(new Error(`MP3 encoding worker failed: ${err.message}`));
     };
 
-    // Transfer the buffers to avoid copying
     worker.postMessage(
       {
         leftChannel: left,

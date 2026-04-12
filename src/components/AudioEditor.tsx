@@ -422,8 +422,9 @@ export const AudioEditor = ({
       // Render
       const renderedBuffer = await offlineContext.startRendering();
 
-      // Encode to WAV
-      const wavBlob = audioBufferToWav(renderedBuffer);
+      // Encode to MP3 in a worker to avoid freezing the UI on long files
+      const { audioBufferToMp3 } = await import("@/utils/audioCombiner");
+      const mp3Blob = await audioBufferToMp3(renderedBuffer);
 
       // Replace existing file in storage
       const { error: removeError } = await supabase.storage
@@ -434,8 +435,8 @@ export const AudioEditor = ({
 
       const { error: uploadError } = await supabase.storage
         .from("sermons")
-        .upload(fileUrl, wavBlob, {
-          contentType: "audio/wav",
+        .upload(fileUrl, mp3Blob, {
+          contentType: "audio/mpeg",
           upsert: false,
         });
 
