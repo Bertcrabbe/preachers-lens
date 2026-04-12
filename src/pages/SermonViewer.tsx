@@ -1251,23 +1251,37 @@ const SermonViewer = () => {
   };
 
   const countSilentPauses = (minGapMs: number = 3000): number => {
-    if (sentences.length < 2) return 0;
-    let count = 0;
-    for (let i = 1; i < sentences.length; i++) {
-      const gap = sentences[i].start_time_ms - sentences[i - 1].end_time_ms;
-      if (gap >= minGapMs) count++;
-    }
-    return count;
+    return getSilentPauseTimestamps(minGapMs).length;
   };
 
   const getSilentPauseTimestamps = (minGapMs: number = 3000): { start: number; end: number; durationMs: number }[] => {
+    // Use actual waveform amplitude data to detect true silence
+    if (waveformData.length === 0 || !sermon?.duration_seconds) return [];
+    
+    const totalDurationMs = sermon.duration_seconds * 1000;
+    const msPerSample = totalDurationMs / waveformData.length;
+    const silenceThreshold = 0.05; // Amplitude below this is considered silence
+    
     const pauses: { start: number; end: number; durationMs: number }[] = [];
-    for (let i = 1; i < sentences.length; i++) {
-      const gap = sentences[i].start_time_ms - sentences[i - 1].end_time_ms;
-      if (gap >= minGapMs) {
-        pauses.push({ start: sentences[i - 1].end_time_ms, end: sentences[i].start_time_ms, durationMs: gap });
+    let silenceStart: number | null = null;
+    
+    for (let i = 0; i < waveformData.length; i++) {
+      const isSilent = waveformData[i] < silenceThreshold;
+      
+      if (isSilent && silenceStart === null) {
+        silenceStart = i * msPerSample;
+      } else if (!isSilent && silenceStart !== null) {
+        const silenceEnd = i * msPerSample;
+        const duration = silenceEnd - silenceStart;
+        if (duration >= minGapMs) {
+          pauses.push({ start: silenceStart, end: silenceEnd, durationMs: duration });
+        }
+        silenceStart = null;
       }
     }
+    
+    // Handle silence that extends to the end (but skip — likely just trailing silence)
+    
     return pauses;
   };
 
