@@ -425,12 +425,18 @@ export const AudioEditor = ({
       // Encode to WAV
       const wavBlob = audioBufferToWav(renderedBuffer);
 
-      // Upload to storage (replace existing file)
+      // Replace existing file in storage
+      const { error: removeError } = await supabase.storage
+        .from("sermons")
+        .remove([fileUrl]);
+
+      if (removeError) throw removeError;
+
       const { error: uploadError } = await supabase.storage
         .from("sermons")
-        .update(fileUrl, wavBlob, {
+        .upload(fileUrl, wavBlob, {
           contentType: "audio/wav",
-          upsert: true,
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;
