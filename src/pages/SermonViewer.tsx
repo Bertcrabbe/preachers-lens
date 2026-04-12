@@ -749,7 +749,14 @@ const SermonViewer = () => {
     try {
       const response = await fetch(url);
       const arrayBuffer = await response.arrayBuffer();
+      
+      // Decode on main thread (Web Audio API not available in workers)
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const rawData = audioBuffer.getChannelData(0);
+      await audioContext.close();
 
+      // Offload the sampling/normalization to a worker
       const worker = new Worker(
         new URL('../utils/waveformWorker.ts', import.meta.url),
         { type: 'module' }
@@ -758,8 +765,6 @@ const SermonViewer = () => {
       worker.onmessage = (e) => {
         if (e.data.type === 'done') {
           setWaveformData(e.data.data);
-        } else if (e.data.type === 'error') {
-          console.error("Waveform worker error:", e.data.message);
         }
         worker.terminate();
       };
@@ -769,8 +774,11 @@ const SermonViewer = () => {
         worker.terminate();
       };
 
-      // Transfer the buffer to avoid copying
-      worker.postMessage(arrayBuffer, [arrayBuffer]);
+      // Transfer the raw PCM buffer to the worker
+      worker.postMessage(
+        { rawData, samples: 2000 },
+        [rawData.buffer]
+      );
     } catch (error) {
       console.error("Error generating waveform:", error);
     }
