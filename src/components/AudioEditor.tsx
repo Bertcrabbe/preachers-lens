@@ -321,11 +321,6 @@ export const AudioEditor = ({
     setSelectedSegmentId(null);
   };
 
-  const seekToTime = (timeMs: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = timeMs / 1000;
-    }
-  };
 
   const togglePlayPause = () => {
     if (!audioRef.current) return;
