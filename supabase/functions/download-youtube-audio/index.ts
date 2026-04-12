@@ -72,26 +72,48 @@ async function extractAudioViaRapidAPI(
 async function tryVevioz(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
   try {
     console.log('[vevioz] Trying video:', videoId);
-    const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`, {
-      headers: {
-        'X-RapidAPI-Key': rapidApiKey,
-        'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
-      },
-    });
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('[vevioz] Error:', response.status, text);
-      return { error: `vevioz: ${response.status}` };
+    // Initial request
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`, {
+        headers: {
+          'X-RapidAPI-Key': rapidApiKey,
+          'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
+        },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[vevioz] Error:', response.status, text);
+        return { error: `vevioz: ${response.status}` };
+      }
+
+      const data = await response.json();
+      console.log('[vevioz] Response (attempt', attempt + 1, '):', JSON.stringify(data).slice(0, 200));
+
+      if (data.status === 'ok' && data.link) {
+        return { downloadUrl: data.link };
+      }
+
+      if (data.status === 'fail') {
+        return { error: data.msg || 'vevioz: conversion failed' };
+      }
+
+      // Still processing (status = 'processing' or pc < 100)
+      if (data.status === 'processing' || (typeof data.pc === 'number' && data.pc < 100)) {
+        console.log('[vevioz] Converting... pc:', data.pc, '%. Waiting 3s...');
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+
+      // Unknown status with link - try it
+      if (data.link) {
+        return { downloadUrl: data.link };
+      }
+
+      return { error: data.msg || `vevioz: status=${data.status}` };
     }
-
-    const data = await response.json();
-    console.log('[vevioz] Response:', JSON.stringify(data).slice(0, 200));
-
-    if (data.status === 'ok' && data.link) {
-      return { downloadUrl: data.link };
-    }
-    return { error: data.msg || `vevioz: status=${data.status}` };
+    return { error: 'vevioz: conversion timed out' };
   } catch (e) {
     console.error('[vevioz] Exception:', e);
     return { error: `vevioz: ${e.message}` };
