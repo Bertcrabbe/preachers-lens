@@ -3091,7 +3091,9 @@ const SermonViewer = () => {
             onClose={() => setShowAudioEditor(false)}
             onSave={() => {
               setShowAudioEditor(false);
-              // Refresh sermon data
+              // Clear current audio URL to force full reload
+              setAudioUrl("");
+              // Refresh sermon data (will get a fresh signed URL)
               fetchSermon();
             }}
           />

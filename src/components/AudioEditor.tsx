@@ -381,22 +381,29 @@ export const AudioEditor = ({
 
     try {
       // Fetch and decode audio
+      console.log("[AudioEditor] Starting save...");
       const audioContext = new AudioContext({ sampleRate: 44100 });
       const response = await fetch(audioUrl);
       const arrayBuffer = await response.arrayBuffer();
       const sourceBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      console.log("[AudioEditor] Source audio decoded:", sourceBuffer.duration, "seconds");
 
       // Get kept segments
       const keptSegments = segments.filter((s) => !s.deleted);
+      const deletedSegments = segments.filter((s) => s.deleted);
       if (keptSegments.length === 0) {
         throw new Error("Cannot delete entire audio file");
       }
+      console.log("[AudioEditor] Keeping", keptSegments.length, "segments, deleting", deletedSegments.length);
+      console.log("[AudioEditor] Kept segments:", keptSegments.map(s => `${s.startMs}-${s.endMs}ms`));
+      console.log("[AudioEditor] Deleted segments:", deletedSegments.map(s => `${s.startMs}-${s.endMs}ms`));
 
       // Calculate new duration
       const newDuration = keptSegments.reduce(
         (sum, seg) => sum + (seg.endMs - seg.startMs) / 1000,
         0
       );
+      console.log("[AudioEditor] New duration:", newDuration, "seconds (was", sourceBuffer.duration, ")");
 
       // Create offline context
       const offlineContext = new OfflineAudioContext(
@@ -420,13 +427,18 @@ export const AudioEditor = ({
       }
 
       // Render
+      console.log("[AudioEditor] Rendering offline context...");
       const renderedBuffer = await offlineContext.startRendering();
+      console.log("[AudioEditor] Rendered buffer duration:", renderedBuffer.duration, "seconds");
 
       // Encode to MP3 in a worker to avoid freezing the UI on long files
+      console.log("[AudioEditor] Encoding to MP3...");
       const { audioBufferToMp3 } = await import("@/utils/audioCombiner");
       const mp3Blob = await audioBufferToMp3(renderedBuffer);
+      console.log("[AudioEditor] MP3 blob size:", mp3Blob.size, "bytes");
 
       // Upload edited file, overwriting the original (upsert)
+      console.log("[AudioEditor] Uploading to storage path:", fileUrl);
       const { error: uploadError } = await supabase.storage
         .from("sermons")
         .upload(fileUrl, mp3Blob, {
@@ -434,7 +446,11 @@ export const AudioEditor = ({
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("[AudioEditor] Upload error:", uploadError);
+        throw uploadError;
+      }
+      console.log("[AudioEditor] Upload successful!");
 
       // Update sermon duration
       await supabase
