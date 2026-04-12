@@ -77,6 +77,7 @@ export const AudioEditor = ({
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const zoomLevels = [1, 2, 4, 6, 8, 10];
 
   // Zoom to cursor position
