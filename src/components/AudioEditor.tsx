@@ -610,16 +610,14 @@ export const AudioEditor = ({
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-1">
-            <input
-              type="range"
+          <div className="flex items-center gap-2">
+            <Slider
               min={0}
               max={zoomLevels.length - 1}
               step={1}
-              value={zoomLevels.findIndex((z) => z >= zoom) === -1 ? zoomLevels.length - 1 : zoomLevels.findIndex((z) => z >= zoom)}
-              onChange={(e) => zoomTo(zoomLevels[parseInt(e.target.value)])}
-              className="w-20 h-2 accent-primary"
-              title="Zoom level"
+              value={[zoomLevels.findIndex((z) => z >= zoom) === -1 ? zoomLevels.length - 1 : zoomLevels.findIndex((z) => z >= zoom)]}
+              onValueChange={(val) => zoomTo(zoomLevels[val[0]])}
+              className="w-24"
             />
             <span className="text-sm w-12 text-center font-mono">{zoom}x</span>
           </div>
