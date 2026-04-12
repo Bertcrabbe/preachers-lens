@@ -683,6 +683,7 @@ export const AudioEditor = ({
         onClick={handleTimelineClick}
         onMouseMove={handleTimelineMouseMove}
         onMouseLeave={() => setHoverTime(null)}
+        onWheel={handleWheel}
         style={{ width: "100%" }}
       >
         <div
