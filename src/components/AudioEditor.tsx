@@ -240,9 +240,48 @@ export const AudioEditor = ({
     setSplitMode(false);
   };
 
+  const getTimeFromMouseEvent = useCallback((e: MouseEvent | React.MouseEvent) => {
+    if (!containerRef.current) return null;
+    const rect = containerRef.current.getBoundingClientRect();
+    const scrollLeft = containerRef.current.scrollLeft;
+    const x = e.clientX - rect.left + scrollLeft;
+    const totalWidth = containerRef.current.scrollWidth;
+    const percent = Math.max(0, Math.min(1, x / totalWidth));
+    return percent * durationMs;
+  }, [durationMs]);
+
+  const seekToTime = useCallback((timeMs: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = timeMs / 1000;
+      setCurrentTime(timeMs);
+    }
+  }, []);
+
+  const handleTimelineMouseDown = (e: React.MouseEvent) => {
+    if (splitMode) return;
+    e.preventDefault();
+    setIsDragging(true);
+    const timeMs = getTimeFromMouseEvent(e);
+    if (timeMs !== null) seekToTime(timeMs);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const timeMs = getTimeFromMouseEvent(e);
+      if (timeMs !== null) seekToTime(timeMs);
+    };
+    const handleMouseUp = () => setIsDragging(false);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, getTimeFromMouseEvent, seekToTime]);
+
   const handleTimelineMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
-
     const rect = containerRef.current.getBoundingClientRect();
     const scrollLeft = containerRef.current.scrollLeft;
     const hoverX = e.clientX - rect.left + scrollLeft;
