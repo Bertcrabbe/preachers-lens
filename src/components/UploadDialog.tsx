@@ -351,11 +351,75 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
 
         if (!data?.success) throw new Error(data?.error || "Failed to extract YouTube audio");
 
+        // If conversion completed immediately (short video)
+        if (data.status === 'completed') {
+          toast({
+            title: "Upload successful",
+            description: `"${data.title || 'YouTube Audio'}" is being transcribed`,
+          });
+          onUploadComplete();
+          onOpenChange(false);
+          setUrl("");
+          setTitle("");
+          return;
+        }
+
+        // Long video - poll for completion
+        if (data.status === 'converting' && data.sermonId) {
+          toast({
+            title: "Converting YouTube video",
+            description: "This may take a few minutes for longer videos. You can close this dialog — it will continue in the background.",
+          });
+          onUploadComplete(); // Refresh list to show "downloading" status
+          onOpenChange(false);
+          setUrl("");
+          setTitle("");
+
+          // Poll in background
+          const pollForCompletion = async (sermonId: string) => {
+            for (let i = 0; i < 60; i++) { // Up to ~10 minutes
+              await new Promise((r) => setTimeout(r, 10000)); // Wait 10s between polls
+              try {
+                const { data: pollData } = await supabase.functions.invoke('youtube-audio-poll', {
+                  body: { sermonId }
+                });
+                if (pollData?.status === 'completed') {
+                  toast({
+                    title: "YouTube import complete",
+                    description: "Your sermon is now being transcribed.",
+                  });
+                  onUploadComplete();
+                  return;
+                }
+                if (pollData?.status === 'failed') {
+                  toast({
+                    title: "YouTube import failed",
+                    description: pollData.error || "Conversion failed. Try uploading the audio manually.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                // status === 'converting' - keep polling
+              } catch (e) {
+                console.error('Poll error:', e);
+              }
+            }
+            toast({
+              title: "YouTube import timed out",
+              description: "The video is taking too long to convert. Try a shorter video or upload the audio manually.",
+              variant: "destructive",
+            });
+          };
+
+          pollForCompletion(data.sermonId);
+          return;
+        }
+
+        // Fallback for unexpected status
         toast({
           title: "Upload successful",
           description: `"${data.title || 'YouTube Audio'}" is being transcribed`,
         });
-
         onUploadComplete();
         onOpenChange(false);
         setUrl("");
