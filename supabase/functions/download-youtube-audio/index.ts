@@ -223,8 +223,14 @@ Deno.serve(async (req) => {
     }
 
     // Download the MP3
-    console.log('Downloading converted audio...');
-    const audioResponse = await fetch(result.downloadUrl);
+    console.log('Downloading converted audio from:', result.downloadUrl.slice(0, 80));
+    const audioResponse = await fetch(result.downloadUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Referer': 'https://www.youtube.com/',
+      },
+    });
     if (!audioResponse.ok) {
       return jsonResponse({
         success: false,
