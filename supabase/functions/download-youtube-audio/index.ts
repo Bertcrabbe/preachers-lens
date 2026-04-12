@@ -7,16 +7,11 @@ const corsHeaders = {
 
 type YoutubeResponse = {
   success: boolean;
+  status?: 'completed' | 'converting';
   fallback?: boolean;
   error?: string;
   title?: string;
   sermonId?: string;
-  diagnostics?: {
-    provider: 'youtube';
-    videoId?: string;
-    errorStage: string;
-    detail?: string;
-  };
 };
 
 function jsonResponse(body: YoutubeResponse, status = 200) {
@@ -52,136 +47,75 @@ async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
   }
 }
 
-// Try multiple RapidAPI YouTube-to-MP3 providers in order
-async function extractAudioViaRapidAPI(
+// Quick attempt at vevioz - returns download URL or null after limited attempts
+async function quickVeviozAttempt(
   videoId: string,
-  rapidApiKey: string
-): Promise<{ downloadUrl: string } | { error: string }> {
-  // Provider 1: youtube-mp36 (Vevioz)
-  const provider1 = await tryVevioz(videoId, rapidApiKey);
-  if (provider1 && 'downloadUrl' in provider1) return provider1;
-
-  // Provider 2: youtube-to-mp315
-  const provider2 = await tryMp315(videoId, rapidApiKey);
-  if (provider2 && 'downloadUrl' in provider2) return provider2;
-
-  const errors = [provider1?.error, provider2?.error].filter(Boolean).join('; ');
-  return { error: errors || 'All providers failed' };
-}
-
-async function tryVevioz(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
-  try {
-    console.log('[vevioz] Trying video:', videoId);
-
-    // Initial request
-    for (let attempt = 0; attempt < 15; attempt++) {
+  rapidApiKey: string,
+  maxAttempts = 8
+): Promise<{ downloadUrl: string } | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
       const response = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`, {
         headers: {
           'X-RapidAPI-Key': rapidApiKey,
           'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
         },
       });
-
       if (!response.ok) {
-        const text = await response.text();
-        console.error('[vevioz] Error:', response.status, text);
-        return { error: `vevioz: ${response.status}` };
+        await response.text();
+        return null;
       }
-
       const data = await response.json();
-      console.log('[vevioz] Response (attempt', attempt + 1, '):', JSON.stringify(data).slice(0, 200));
+      console.log(`[vevioz] attempt ${attempt + 1}: status=${data.status} pc=${data.pc}`);
 
       if (data.status === 'ok' && data.link) {
         return { downloadUrl: data.link };
       }
-
       if (data.status === 'fail') {
-        return { error: data.msg || 'vevioz: conversion failed' };
+        return null;
       }
-
-      // Still processing (status = 'processing' or pc < 100)
-      if (data.status === 'processing' || (typeof data.pc === 'number' && data.pc < 100)) {
-        console.log('[vevioz] Converting... pc:', data.pc, '%. Waiting 3s...');
-        await new Promise((r) => setTimeout(r, 3000));
-        continue;
-      }
-
-      // Unknown status with link - try it
-      if (data.link) {
+      if (data.link && data.status !== 'processing') {
         return { downloadUrl: data.link };
       }
-
-      return { error: data.msg || `vevioz: status=${data.status}` };
+      // Still processing - wait and retry
+      await new Promise((r) => setTimeout(r, 3000));
+    } catch (e) {
+      console.error('[vevioz] error:', e);
+      return null;
     }
-    return { error: 'vevioz: conversion timed out' };
-  } catch (e) {
-    console.error('[vevioz] Exception:', e);
-    return { error: `vevioz: ${e.message}` };
   }
+  return null; // Still processing after max attempts
 }
 
-async function tryMp315(videoId: string, rapidApiKey: string): Promise<{ downloadUrl: string } | { error: string }> {
-  try {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    console.log('[mp315] Trying video:', videoId);
-
-    const params = new URLSearchParams({ url: youtubeUrl, format: 'mp3', quality: '0' });
-    const convResponse = await fetch(`https://youtube-to-mp315.p.rapidapi.com/download?${params}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-RapidAPI-Key': rapidApiKey,
-        'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
-      },
-    });
-
-    if (!convResponse.ok) {
-      const text = await convResponse.text();
-      console.error('[mp315] Error:', convResponse.status, text);
-      return { error: `mp315: ${convResponse.status}` };
+// Download MP3 with retries
+async function downloadAudio(downloadUrl: string): Promise<Uint8Array | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      console.log(`Download retry ${attempt + 1}...`);
+      await new Promise((r) => setTimeout(r, 5000));
     }
-
-    const convData = await convResponse.json();
-    console.log('[mp315] Response:', JSON.stringify(convData).slice(0, 200));
-
-    if (convData.status === 'AVAILABLE' && convData.downloadUrl) {
-      return { downloadUrl: convData.downloadUrl };
-    }
-
-    if (convData.status === 'CONVERSION_ERROR') {
-      return { error: 'mp315: conversion error' };
-    }
-
-    // Poll if converting
-    if (convData.status === 'CONVERTING' && convData.id) {
-      for (let i = 0; i < 30; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const statusResponse = await fetch(
-          `https://youtube-to-mp315.p.rapidapi.com/status/${convData.id}`,
-          {
-            headers: {
-              'X-RapidAPI-Key': rapidApiKey,
-              'X-RapidAPI-Host': 'youtube-to-mp315.p.rapidapi.com',
-            },
-          }
-        );
-        if (!statusResponse.ok) continue;
-        const statusData = await statusResponse.json();
-        if (statusData.status === 'AVAILABLE' && statusData.downloadUrl) {
-          return { downloadUrl: statusData.downloadUrl };
-        }
-        if (statusData.status === 'CONVERSION_ERROR' || statusData.status === 'EXPIRED') {
-          return { error: `mp315: ${statusData.status.toLowerCase()}` };
-        }
+    try {
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'audio/mpeg, audio/*, */*',
+          'Referer': 'https://youtube-mp36.p.rapidapi.com/',
+        },
+        redirect: 'follow',
+      });
+      if (response.ok) {
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (bytes.length > 1000) return bytes;
+        console.log('File too small:', bytes.length);
+      } else {
+        const text = await response.text();
+        console.error('Download failed:', response.status, text.slice(0, 200));
       }
-      return { error: 'mp315: conversion timed out' };
+    } catch (e) {
+      console.error('Download error:', e);
     }
-
-    return { error: convData.msg || 'mp315: unexpected response' };
-  } catch (e) {
-    console.error('[mp315] Exception:', e);
-    return { error: `mp315: ${e.message}` };
   }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -193,17 +127,17 @@ Deno.serve(async (req) => {
     const { url, title: userTitle, communicatorId } = await req.json();
 
     if (!url) {
-      return jsonResponse({ success: false, error: 'URL is required', diagnostics: { provider: 'youtube', errorStage: 'missing_url' } }, 400);
+      return jsonResponse({ success: false, error: 'URL is required' }, 400);
     }
 
     const videoId = extractVideoId(url);
     if (!videoId) {
-      return jsonResponse({ success: false, error: 'Invalid YouTube URL', diagnostics: { provider: 'youtube', errorStage: 'invalid_url' } }, 400);
+      return jsonResponse({ success: false, error: 'Invalid YouTube URL' }, 400);
     }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return jsonResponse({ success: false, error: 'Authorization required', diagnostics: { provider: 'youtube', videoId, errorStage: 'auth_required' } }, 401);
+      return jsonResponse({ success: false, error: 'Authorization required' }, 401);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -216,7 +150,6 @@ Deno.serve(async (req) => {
         success: false,
         fallback: true,
         error: 'YouTube extraction is not configured. Please add your RapidAPI key.',
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'missing_api_key' },
       });
     }
 
@@ -226,132 +159,62 @@ Deno.serve(async (req) => {
     });
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return jsonResponse({ success: false, error: 'Invalid authentication', diagnostics: { provider: 'youtube', videoId, errorStage: 'invalid_auth' } }, 401);
+      return jsonResponse({ success: false, error: 'Invalid authentication' }, 401);
     }
 
-    // Get title
     const resolvedTitle = userTitle || (await fetchYouTubeTitle(videoId)) || 'YouTube Audio';
-
-    // Extract audio via RapidAPI (tries multiple providers)
-    const result = await extractAudioViaRapidAPI(videoId, rapidApiKey);
-    if ('error' in result) {
-      return jsonResponse({
-        success: false,
-        fallback: true,
-        title: resolvedTitle,
-        error: result.error,
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'extraction_failed', detail: result.error },
-      });
-    }
-
-    // Download the MP3 with retries
-    console.log('Downloading converted audio from:', result.downloadUrl.slice(0, 100));
-    let audioBytes: Uint8Array | null = null;
-    
-    for (let dlAttempt = 0; dlAttempt < 3; dlAttempt++) {
-      if (dlAttempt > 0) {
-        console.log(`Download retry ${dlAttempt + 1}... waiting 5s`);
-        await new Promise((r) => setTimeout(r, 5000));
-      }
-      
-      try {
-        const audioResponse = await fetch(result.downloadUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'audio/mpeg, audio/*, */*',
-            'Referer': 'https://youtube-mp36.p.rapidapi.com/',
-          },
-          redirect: 'follow',
-        });
-        console.log('Download response status:', audioResponse.status);
-        
-        if (audioResponse.ok) {
-          const blob = await audioResponse.arrayBuffer();
-          audioBytes = new Uint8Array(blob);
-          console.log('Downloaded audio size:', audioBytes.length, 'bytes');
-          if (audioBytes.length > 1000) break; // Minimum viable file size
-          console.log('File too small, retrying...');
-          audioBytes = null;
-        } else {
-          const errText = await audioResponse.text();
-          console.error('Download failed:', audioResponse.status, errText.slice(0, 200));
-        }
-      } catch (dlErr) {
-        console.error('Download exception:', dlErr);
-      }
-    }
-    
-    if (!audioBytes) {
-      return jsonResponse({
-        success: false,
-        fallback: true,
-        title: resolvedTitle,
-        error: 'Failed to download converted audio file after retries.',
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'download_failed' },
-      });
-    }
-
-    // Upload to storage
     const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
-    const filePath = `${user.id}/${crypto.randomUUID()}.mp3`;
 
-    const { error: uploadError } = await adminSupabase.storage
-      .from('sermons')
-      .upload(filePath, audioBytes, { contentType: 'audio/mpeg', upsert: false });
+    // Try quick conversion (~24s max: 8 attempts × 3s)
+    const quickResult = await quickVeviozAttempt(videoId, rapidApiKey, 8);
 
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      return jsonResponse({
-        success: false,
-        error: 'Failed to upload audio to storage: ' + uploadError.message,
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'upload_failed' },
-      });
+    if (quickResult) {
+      // Short video - completed quickly. Download and upload now.
+      console.log('Quick conversion succeeded, downloading...');
+      const audioBytes = await downloadAudio(quickResult.downloadUrl);
+      if (!audioBytes) {
+        return jsonResponse({ success: false, fallback: true, title: resolvedTitle, error: 'Failed to download converted audio.' });
+      }
+
+      const filePath = `${user.id}/${crypto.randomUUID()}.mp3`;
+      const { error: uploadError } = await adminSupabase.storage.from('sermons').upload(filePath, audioBytes, { contentType: 'audio/mpeg', upsert: false });
+      if (uploadError) {
+        return jsonResponse({ success: false, error: 'Storage upload failed: ' + uploadError.message });
+      }
+
+      const { data: sermon, error: sermonError } = await adminSupabase.from('sermons').insert({
+        user_id: user.id, title: resolvedTitle, file_url: filePath,
+        file_type: 'audio/mpeg', transcription_status: 'pending',
+        communicator_id: communicatorId || null,
+      }).select('id').single();
+
+      if (sermonError) {
+        return jsonResponse({ success: false, error: 'Failed to create sermon: ' + sermonError.message });
+      }
+
+      // Fire-and-forget transcription
+      adminSupabase.functions.invoke('transcribe-sermon', { body: { sermonId: sermon.id } }).catch(console.error);
+
+      return jsonResponse({ success: true, status: 'completed', title: resolvedTitle, sermonId: sermon.id });
     }
 
-    // Create sermon record
-    const { data: sermon, error: sermonError } = await adminSupabase
-      .from('sermons')
-      .insert({
-        user_id: user.id,
-        title: resolvedTitle,
-        file_url: filePath,
-        file_type: 'audio/mpeg',
-        transcription_status: 'pending',
-        communicator_id: communicatorId || null,
-      })
-      .select('id')
-      .single();
+    // Long video - conversion still in progress. Create a placeholder sermon and return immediately.
+    console.log('Conversion still processing, creating async job...');
+    const { data: sermon, error: sermonError } = await adminSupabase.from('sermons').insert({
+      user_id: user.id, title: resolvedTitle, file_url: `youtube:${videoId}`,
+      file_type: 'audio/mpeg', transcription_status: 'downloading',
+      communicator_id: communicatorId || null,
+      error_message: JSON.stringify({ videoId, provider: 'vevioz' }),
+    }).select('id').single();
 
     if (sermonError) {
-      console.error('Sermon insert error:', sermonError);
-      return jsonResponse({
-        success: false,
-        error: 'Failed to create sermon record: ' + sermonError.message,
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'db_insert_failed' },
-      });
+      return jsonResponse({ success: false, error: 'Failed to create sermon: ' + sermonError.message });
     }
 
-    // Trigger transcription
-    try {
-      await adminSupabase.functions.invoke('transcribe-sermon', {
-        body: { sermonId: sermon.id },
-      });
-    } catch (e) {
-      console.error('Transcription trigger failed (non-blocking):', e);
-    }
+    return jsonResponse({ success: true, status: 'converting', title: resolvedTitle, sermonId: sermon.id });
 
-    return jsonResponse({
-      success: true,
-      title: resolvedTitle,
-      sermonId: sermon.id,
-    });
   } catch (error) {
-    console.error('Error processing YouTube URL:', error);
-    return jsonResponse({
-      success: false,
-      fallback: true,
-      error: 'An unexpected error occurred. Please try again or upload the audio manually.',
-      diagnostics: { provider: 'youtube', errorStage: 'unexpected_error' },
-    });
+    console.error('Error:', error);
+    return jsonResponse({ success: false, fallback: true, error: 'An unexpected error occurred.' });
   }
 });
