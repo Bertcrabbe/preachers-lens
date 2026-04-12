@@ -426,18 +426,12 @@ export const AudioEditor = ({
       const { audioBufferToMp3 } = await import("@/utils/audioCombiner");
       const mp3Blob = await audioBufferToMp3(renderedBuffer);
 
-      // Replace existing file in storage
-      const { error: removeError } = await supabase.storage
-        .from("sermons")
-        .remove([fileUrl]);
-
-      if (removeError) throw removeError;
-
+      // Upload edited file, overwriting the original (upsert)
       const { error: uploadError } = await supabase.storage
         .from("sermons")
         .upload(fileUrl, mp3Blob, {
           contentType: "audio/mpeg",
-          upsert: false,
+          upsert: true,
         });
 
       if (uploadError) throw uploadError;
