@@ -223,21 +223,24 @@ Deno.serve(async (req) => {
     }
 
     // Download the MP3
-    console.log('Downloading converted audio from:', result.downloadUrl.slice(0, 80));
+    console.log('Downloading converted audio from:', result.downloadUrl.slice(0, 100));
     const audioResponse = await fetch(result.downloadUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': '*/*',
-        'Referer': 'https://www.youtube.com/',
       },
+      redirect: 'follow',
     });
+    console.log('Download response status:', audioResponse.status, 'type:', audioResponse.type, 'url:', audioResponse.url?.slice(0, 80));
     if (!audioResponse.ok) {
+      const errText = await audioResponse.text();
+      console.error('Download failed body:', errText.slice(0, 300));
       return jsonResponse({
         success: false,
         fallback: true,
         title: resolvedTitle,
         error: 'Failed to download converted audio file.',
-        diagnostics: { provider: 'youtube', videoId, errorStage: 'download_failed' },
+        diagnostics: { provider: 'youtube', videoId, errorStage: 'download_failed', detail: `status=${audioResponse.status}` },
       });
     }
 
