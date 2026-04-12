@@ -747,30 +747,30 @@ const SermonViewer = () => {
 
   const generateWaveform = async (url: string) => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const response = await fetch(url);
       const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
-      const rawData = audioBuffer.getChannelData(0);
-      const samples = 8000; // Number of bars in waveform - ultra high detail
-      const blockSize = Math.floor(rawData.length / samples);
-      const filteredData = [];
-      
-      for (let i = 0; i < samples; i++) {
-        let blockStart = blockSize * i;
-        let sum = 0;
-        for (let j = 0; j < blockSize; j++) {
-          sum += Math.abs(rawData[blockStart + j]);
+
+      const worker = new Worker(
+        new URL('../utils/waveformWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+
+      worker.onmessage = (e) => {
+        if (e.data.type === 'done') {
+          setWaveformData(e.data.data);
+        } else if (e.data.type === 'error') {
+          console.error("Waveform worker error:", e.data.message);
         }
-        filteredData.push(sum / blockSize);
-      }
-      
-      // Normalize the data
-      const max = Math.max(...filteredData);
-      const normalizedData = filteredData.map(n => n / max);
-      
-      setWaveformData(normalizedData);
+        worker.terminate();
+      };
+
+      worker.onerror = (err) => {
+        console.error("Waveform worker failed:", err);
+        worker.terminate();
+      };
+
+      // Transfer the buffer to avoid copying
+      worker.postMessage(arrayBuffer, [arrayBuffer]);
     } catch (error) {
       console.error("Error generating waveform:", error);
     }
