@@ -2937,6 +2937,8 @@ const SermonViewer = () => {
       if (c.start_time_ms === 0 && c.end_time_ms === 0) return false;
       // Hide AI-generated (rule-based) comments when the master toggle is on
       if (hideAIEvalComments && c.rule_id) return false;
+      // Hide individually-deselected AI rule categories
+      if (c.rule_id && hiddenRuleIds.has(c.rule_id)) return false;
       // Check if comment falls within or just after the range (covers gaps between sentences)
       return c.start_time_ms >= start && c.start_time_ms < end;
     });
