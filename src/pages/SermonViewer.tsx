@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { useMicrophoneSelector } from "@/hooks/useMicrophoneSelector";
 import {
@@ -217,6 +218,7 @@ const SermonViewer = () => {
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
+  const [hiddenRuleIds, setHiddenRuleIds] = useState<Set<string>>(new Set());
 
   // Registry of all AI-driven overlay toggles. Add future AI categories here
   // so the master "Hide AI Highlights" control automatically clears them.
@@ -2936,6 +2938,8 @@ const SermonViewer = () => {
       if (c.start_time_ms === 0 && c.end_time_ms === 0) return false;
       // Hide AI-generated (rule-based) comments when the master toggle is on
       if (hideAIEvalComments && c.rule_id) return false;
+      // Hide individually-deselected AI rule categories
+      if (c.rule_id && hiddenRuleIds.has(c.rule_id)) return false;
       // Check if comment falls within or just after the range (covers gaps between sentences)
       return c.start_time_ms >= start && c.start_time_ms < end;
     });
@@ -3955,10 +3959,61 @@ const SermonViewer = () => {
               <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
             </button>
             {!dashboardCollapsed && (
+              <div className="flex items-center gap-2 ml-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    AI Categories
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-64 p-3 bg-background border shadow-lg z-50"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className="text-xs font-medium mb-2 text-muted-foreground">Show AI comment categories:</p>
+                  {rules.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No AI rules loaded yet.</p>
+                  )}
+                  <div className="space-y-2">
+                    {rules.map((rule) => {
+                      const checked = !hiddenRuleIds.has(rule.id);
+                      return (
+                        <label key={rule.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              setHiddenRuleIds((prev) => {
+                                const next = new Set(prev);
+                                if (v === true) next.delete(rule.id);
+                                else next.add(rule.id);
+                                return next;
+                              });
+                              // If user enables a category, make sure master hide is off
+                              if (v === true) setHideAIEvalComments(false);
+                            }}
+                          />
+                          <span
+                            className="inline-block w-2 h-2 rounded-full"
+                            style={{ backgroundColor: rule.color }}
+                          />
+                          <span className="flex-1 truncate">{rule.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button
                 size="sm"
                 variant="outline"
-                className="ml-3 h-8 text-xs"
+                className="h-8 text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (anyAIOverlayActive) {
@@ -3966,11 +4021,13 @@ const SermonViewer = () => {
                   } else {
                     // Re-show AI eval comments if they were hidden
                     setHideAIEvalComments(false);
+                    setHiddenRuleIds(new Set());
                   }
                 }}
               >
                 {anyAIOverlayActive ? "Hide AI Highlights" : "Show AI Comments"}
               </Button>
+              </div>
             )}
           </div>
           <div
