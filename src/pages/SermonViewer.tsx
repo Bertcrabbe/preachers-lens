@@ -3933,13 +3933,28 @@ const SermonViewer = () => {
 
         {/* Sermon Dashboard */}
         <Card className={`mb-6 shadow-lg animate-slide-up transition-all duration-300 ${dashboardCollapsed ? 'py-2 px-4' : 'p-6'}`}>
-          <button
-            className="w-full flex items-center justify-between cursor-pointer"
-            onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
-          >
-            <h2 className={`font-semibold text-gradient-primary transition-all duration-300 ${dashboardCollapsed ? 'text-sm' : 'text-xl'}`}>Sermon Analytics</h2>
-            <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
-          </button>
+          <div className="w-full flex items-center justify-between">
+            <button
+              className="flex-1 flex items-center justify-between cursor-pointer"
+              onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
+            >
+              <h2 className={`font-semibold text-gradient-primary transition-all duration-300 ${dashboardCollapsed ? 'text-sm' : 'text-xl'}`}>Sermon Analytics</h2>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
+            </button>
+            {anyAIOverlayActive && !dashboardCollapsed && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-3 h-8 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearAllAIOverlays();
+                }}
+              >
+                Hide AI Highlights
+              </Button>
+            )}
+          </div>
           <div
             className={`overflow-hidden transition-all duration-300 ${dashboardCollapsed ? 'max-h-0 opacity-0 mt-0' : 'mt-4'}`}
           >
