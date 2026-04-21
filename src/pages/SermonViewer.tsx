@@ -3909,16 +3909,12 @@ const SermonViewer = () => {
                   <span>Questions</span>
                 </div>
               )}
-              {(showScriptureRefs || showConfusingPhrases || showQuestions) && (
+              {anyAIOverlayActive && (
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-7 px-2 text-xs ml-auto"
-                  onClick={() => {
-                    setShowScriptureRefs(false);
-                    setShowConfusingPhrases(false);
-                    setShowQuestions(false);
-                  }}
+                  onClick={clearAllAIOverlays}
                 >
                   Hide AI Highlights
                 </Button>
