@@ -216,6 +216,16 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+
+  // Registry of all AI-driven overlay toggles. Add future AI categories here
+  // so the master "Hide AI Highlights" control automatically clears them.
+  const aiOverlayToggles = [
+    { active: showScriptureRefs, clear: () => setShowScriptureRefs(false) },
+    { active: showConfusingPhrases, clear: () => setShowConfusingPhrases(false) },
+    { active: showQuestions, clear: () => setShowQuestions(false) },
+  ];
+  const anyAIOverlayActive = aiOverlayToggles.some(t => t.active);
+  const clearAllAIOverlays = () => aiOverlayToggles.forEach(t => t.clear());
   const [playerCollapsed, setPlayerCollapsed] = useState(false);
   const [highlights, setHighlights] = useState<Record<number, string>>({});
   const [highlightMode, setHighlightMode] = useState(false);
