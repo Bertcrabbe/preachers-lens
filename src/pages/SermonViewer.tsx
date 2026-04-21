@@ -3403,7 +3403,7 @@ const SermonViewer = () => {
                 )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Comments:</span>
-                  <span className="text-sm font-medium">{comments.length}</span>
+                  <span className="text-sm font-medium">{comments.filter(c => !c.rule_id).length}</span>
                 </div>
               </div>
               
@@ -4901,7 +4901,7 @@ const SermonViewer = () => {
           <Card className="p-4 space-y-4">
             {/* Comment count */}
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">{comments.length}</div>
+              <div className="text-3xl font-bold text-primary">{comments.filter(c => !c.rule_id).length}</div>
               <div className="text-xs text-muted-foreground">Comments</div>
             </div>
             
