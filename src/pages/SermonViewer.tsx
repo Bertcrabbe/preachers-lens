@@ -3941,10 +3941,11 @@ const SermonViewer = () => {
               <h2 className={`font-semibold text-gradient-primary transition-all duration-300 ${dashboardCollapsed ? 'text-sm' : 'text-xl'}`}>Sermon Analytics</h2>
               <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${dashboardCollapsed ? '-rotate-90' : ''}`} />
             </button>
-            {anyAIOverlayActive && !dashboardCollapsed && (
+            {!dashboardCollapsed && (
               <Button
                 size="sm"
                 variant="outline"
+                disabled={!anyAIOverlayActive}
                 className="ml-3 h-8 text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
