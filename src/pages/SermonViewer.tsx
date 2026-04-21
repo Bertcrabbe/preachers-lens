@@ -3899,6 +3899,20 @@ const SermonViewer = () => {
                   <span>Questions</span>
                 </div>
               )}
+              {(showScriptureRefs || showConfusingPhrases || showQuestions) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs ml-auto"
+                  onClick={() => {
+                    setShowScriptureRefs(false);
+                    setShowConfusingPhrases(false);
+                    setShowQuestions(false);
+                  }}
+                >
+                  Hide AI Highlights
+                </Button>
+              )}
             </div>
           </div>
 
