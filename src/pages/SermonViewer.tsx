@@ -224,7 +224,10 @@ const SermonViewer = () => {
     { active: showScriptureRefs, clear: () => setShowScriptureRefs(false) },
     { active: showConfusingPhrases, clear: () => setShowConfusingPhrases(false) },
     { active: showQuestions, clear: () => setShowQuestions(false) },
-    { active: !hideAIEvalComments, clear: () => setHideAIEvalComments(true) },
+    {
+      active: !hideAIEvalComments && comments.some(c => !!c.rule_id),
+      clear: () => setHideAIEvalComments(true),
+    },
   ];
   const anyAIOverlayActive = aiOverlayToggles.some(t => t.active);
   const clearAllAIOverlays = () => aiOverlayToggles.forEach(t => t.clear());
