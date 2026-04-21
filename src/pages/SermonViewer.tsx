@@ -216,6 +216,7 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
 
   // Registry of all AI-driven overlay toggles. Add future AI categories here
   // so the master "Hide AI Highlights" control automatically clears them.
@@ -223,6 +224,10 @@ const SermonViewer = () => {
     { active: showScriptureRefs, clear: () => setShowScriptureRefs(false) },
     { active: showConfusingPhrases, clear: () => setShowConfusingPhrases(false) },
     { active: showQuestions, clear: () => setShowQuestions(false) },
+    {
+      active: !hideAIEvalComments && comments.some(c => !!c.rule_id),
+      clear: () => setHideAIEvalComments(true),
+    },
   ];
   const anyAIOverlayActive = aiOverlayToggles.some(t => t.active);
   const clearAllAIOverlays = () => aiOverlayToggles.forEach(t => t.clear());
@@ -2927,6 +2932,8 @@ const SermonViewer = () => {
     return comments.filter((c) => {
       // Exclude intro comments (start=0, end=0)
       if (c.start_time_ms === 0 && c.end_time_ms === 0) return false;
+      // Hide AI-generated (rule-based) comments when the master toggle is on
+      if (hideAIEvalComments && c.rule_id) return false;
       // Check if comment falls within or just after the range (covers gaps between sentences)
       return c.start_time_ms >= start && c.start_time_ms < end;
     });
@@ -3909,16 +3916,20 @@ const SermonViewer = () => {
                   <span>Questions</span>
                 </div>
               )}
-              {anyAIOverlayActive && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-xs ml-auto"
-                  onClick={clearAllAIOverlays}
-                >
-                  Hide AI Highlights
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs ml-auto"
+                onClick={() => {
+                  if (anyAIOverlayActive) {
+                    clearAllAIOverlays();
+                  } else {
+                    setHideAIEvalComments(false);
+                  }
+                }}
+              >
+                {anyAIOverlayActive ? "Hide AI Highlights" : "Show AI Comments"}
+              </Button>
             </div>
           </div>
 
@@ -3945,14 +3956,18 @@ const SermonViewer = () => {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!anyAIOverlayActive}
                 className="ml-3 h-8 text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
-                  clearAllAIOverlays();
+                  if (anyAIOverlayActive) {
+                    clearAllAIOverlays();
+                  } else {
+                    // Re-show AI eval comments if they were hidden
+                    setHideAIEvalComments(false);
+                  }
                 }}
               >
-                Hide AI Highlights
+                {anyAIOverlayActive ? "Hide AI Highlights" : "Show AI Comments"}
               </Button>
             )}
           </div>
