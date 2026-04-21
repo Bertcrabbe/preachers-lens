@@ -3952,14 +3952,18 @@ const SermonViewer = () => {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!anyAIOverlayActive}
                 className="ml-3 h-8 text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
-                  clearAllAIOverlays();
+                  if (anyAIOverlayActive) {
+                    clearAllAIOverlays();
+                  } else {
+                    // Re-show AI eval comments if they were hidden
+                    setHideAIEvalComments(false);
+                  }
                 }}
               >
-                Hide AI Highlights
+                {anyAIOverlayActive ? "Hide AI Highlights" : "Show AI Comments"}
               </Button>
             )}
           </div>
