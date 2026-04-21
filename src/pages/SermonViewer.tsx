@@ -3916,16 +3916,20 @@ const SermonViewer = () => {
                   <span>Questions</span>
                 </div>
               )}
-              {anyAIOverlayActive && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-xs ml-auto"
-                  onClick={clearAllAIOverlays}
-                >
-                  Hide AI Highlights
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs ml-auto"
+                onClick={() => {
+                  if (anyAIOverlayActive) {
+                    clearAllAIOverlays();
+                  } else {
+                    setHideAIEvalComments(false);
+                  }
+                }}
+              >
+                {anyAIOverlayActive ? "Hide AI Highlights" : "Show AI Comments"}
+              </Button>
             </div>
           </div>
 
