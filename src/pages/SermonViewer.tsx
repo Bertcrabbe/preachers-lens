@@ -741,13 +741,15 @@ const SermonViewer = () => {
 
   // Calculate time since last comment in audio timeline
   const timeSinceLastCommentInAudio = (() => {
-    if (comments.length === 0) return null;
-    
+    // Only count the user's own comments — exclude AI-generated evaluation-rule comments
+    const userComments = comments.filter(c => !c.rule_id);
+    if (userComments.length === 0) return null;
+
     // currentTime is already in milliseconds
     const currentTimeMs = currentTime;
-    
-    // Find comments that have started before or at the current playback position
-    const pastComments = comments.filter(c => c.start_time_ms <= currentTimeMs);
+
+    // Find user comments that have started before or at the current playback position
+    const pastComments = userComments.filter(c => c.start_time_ms <= currentTimeMs);
     
     if (pastComments.length === 0) return null;
     
