@@ -217,6 +217,7 @@ const SermonViewer = () => {
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
+  const [hiddenRuleIds, setHiddenRuleIds] = useState<Set<string>>(new Set());
 
   // Registry of all AI-driven overlay toggles. Add future AI categories here
   // so the master "Hide AI Highlights" control automatically clears them.
