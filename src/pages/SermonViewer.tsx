@@ -216,6 +216,7 @@ const SermonViewer = () => {
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
 
   // Registry of all AI-driven overlay toggles. Add future AI categories here
   // so the master "Hide AI Highlights" control automatically clears them.
@@ -223,6 +224,7 @@ const SermonViewer = () => {
     { active: showScriptureRefs, clear: () => setShowScriptureRefs(false) },
     { active: showConfusingPhrases, clear: () => setShowConfusingPhrases(false) },
     { active: showQuestions, clear: () => setShowQuestions(false) },
+    { active: !hideAIEvalComments, clear: () => setHideAIEvalComments(true) },
   ];
   const anyAIOverlayActive = aiOverlayToggles.some(t => t.active);
   const clearAllAIOverlays = () => aiOverlayToggles.forEach(t => t.clear());
