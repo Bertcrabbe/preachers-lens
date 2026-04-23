@@ -3226,7 +3226,7 @@ const SermonViewer = () => {
               Export Combined Audio
             </Button>
             <Button
-              variant="default"
+              variant="outline"
               onClick={handleExportClientPdf}
               disabled={exporting || sentences.length === 0}
             >
