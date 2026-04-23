@@ -145,11 +145,21 @@ export const UploadDialog = ({ open, onOpenChange, onUploadComplete, communicato
       if (dbError) throw dbError;
 
       if (sermon) {
-        supabase.functions.invoke('transcribe-sermon', {
+        const { error: triggerError } = await supabase.functions.invoke('transcribe-sermon', {
           body: { sermonId: sermon.id }
-        }).catch((err) => {
-          console.error('Transcription trigger failed:', err);
         });
+        if (triggerError) {
+          console.error('Transcription trigger failed:', triggerError);
+          // Mark as failed so it doesn't sit in "pending" forever
+          await supabase
+            .from('sermons')
+            .update({
+              transcription_status: 'failed',
+              error_message: `Failed to start transcription: ${triggerError.message}`,
+            })
+            .eq('id', sermon.id);
+          throw new Error(`Could not start transcription: ${triggerError.message}`);
+        }
       }
 
       toast({
