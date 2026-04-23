@@ -58,6 +58,7 @@ import { FloatingRecordingIndicator } from "@/components/FloatingRecordingIndica
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
 import { generateClientReportPdf, type ClientReportData } from "@/utils/clientReportPdf";
+import { toPng } from "html-to-image";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
@@ -3021,6 +3022,24 @@ const SermonViewer = () => {
     }
   };
 
+  const captureChartElement = async (key: "wpm" | "volume"): Promise<string | null> => {
+    const el = document.querySelector<HTMLElement>(`[data-export-chart="${key}"]`);
+    if (!el) return null;
+    try {
+      const dataUrl = await toPng(el, {
+        pixelRatio: 2,
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--background")
+          ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue("--background").trim()})`
+          : "#ffffff",
+        cacheBust: true,
+      });
+      return dataUrl;
+    } catch (err) {
+      console.warn(`Chart capture failed for ${key}`, err);
+      return null;
+    }
+  };
+
   const handleExportClientPdf = async () => {
     if (!sermon) return;
     setExporting(true);
@@ -3092,6 +3111,8 @@ const SermonViewer = () => {
         wpmSeries: getWpmTimelineData().map((d) => ({ timeMs: d.time, value: d.wpm })),
         volumeSeries: getVolumeTimelineData().map((d) => ({ timeMs: d.time, value: d.volume })),
         averageWPM: Math.round(getAverageSpeechRate()),
+        wpmChartImage: await captureChartElement('wpm'),
+        volumeChartImage: await captureChartElement('volume'),
         visitorConfusion: (confusingPhrases?.phrases || []).map((p) => ({
           severity: (p.severity as "mild" | "moderate" | "severe") || "mild",
           phrase: p.phrase,
@@ -4759,8 +4780,8 @@ const SermonViewer = () => {
 
           {/* WPM Timeline Chart */}
           {getWpmTimelineData().length > 0 && (
-            <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4">
-              <h3 className="text-base font-semibold mb-3">Speaking Pace Over Time</h3>
+              <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="wpm">
+                <h3 className="text-base font-semibold mb-3">Speaking Pace Over Time</h3>
               <div className="h-48 w-full cursor-pointer">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart 
@@ -4858,7 +4879,7 @@ const SermonViewer = () => {
 
           {/* Volume Timeline Chart */}
           {getVolumeTimelineData().length > 0 && (
-            <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4">
+            <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="volume">
               <h3 className="text-base font-semibold mb-3">Speaking Volume Over Time</h3>
               <div className="h-48 w-full cursor-pointer">
                 <ResponsiveContainer width="100%" height="100%">
