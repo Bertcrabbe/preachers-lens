@@ -3088,7 +3088,7 @@ const SermonViewer = () => {
         aiComments: grouped,
       };
 
-      const blob = generateClientReportPdf(data);
+      const blob = await generateClientReportPdf(data);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const safeTitle = (sermon.title || "sermon").replace(/[^\w\d-]+/g, "-").slice(0, 60);
