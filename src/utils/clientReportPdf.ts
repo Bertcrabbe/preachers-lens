@@ -109,11 +109,11 @@ const drawFooter = (doc: jsPDF, pageNum: number, totalPages: number, sermonTitle
 const drawWatermark = (doc: jsPDF, logoDataUrl: string | null) => {
   if (!logoDataUrl) return;
   try {
-    const size = 120;
+    const size = 480;
     const x = (PAGE_W - size) / 2;
     const y = (PAGE_H - size) / 2;
     doc.saveGraphicsState();
-    doc.setGState(new (doc as any).GState({ opacity: 0.06 }));
+    doc.setGState(new (doc as any).GState({ opacity: 0.05 }));
     doc.addImage(logoDataUrl, "PNG", x, y, size, size);
     doc.restoreGraphicsState();
   } catch {
