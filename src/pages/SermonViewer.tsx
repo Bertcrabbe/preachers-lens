@@ -1728,7 +1728,11 @@ const SermonViewer = () => {
     return emotionalData.overall_score;
   };
 
-  const getEngagementScore = (): { total: number; subscores: { label: string; score: number; icon: string }[] } => {
+  const getEngagementScore = (): {
+    total: number;
+    hasPendingAiMetrics: boolean;
+    subscores: { label: string; score: number; icon: string; loaded: boolean }[];
+  } => {
     const paceDynamics = getPaceDynamicsScore();
     const volumeDynamics = getVolumeDynamicsScore();
     const useOfSilence = getUseOfSilenceScore();
@@ -1736,27 +1740,26 @@ const SermonViewer = () => {
     const emotionalScore = getEmotionalResonanceScore();
 
     const subscores = [
-      { label: "Pace Dynamics", score: paceDynamics, icon: "🎯" },
-      { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊" },
-      { label: "Use of Silence", score: useOfSilence, icon: "🤫" },
-      { label: "Illustrations & Stories", score: illustrationScore, icon: "🎭" },
-      { label: "Emotional Resonance", score: emotionalScore, icon: "❤️" },
+      { label: "Pace Dynamics", score: paceDynamics, icon: "🎯", loaded: true },
+      { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊", loaded: true },
+      { label: "Use of Silence", score: useOfSilence, icon: "🤫", loaded: true },
+      { label: "Illustrations & Stories", score: illustrationScore, icon: "🎭", loaded: illustrationData !== null },
+      { label: "Emotional Resonance", score: emotionalScore, icon: "❤️", loaded: emotionalData !== null },
     ];
 
     // Only exclude AI-derived scores when their data hasn't loaded yet.
     // Once loaded, the score counts even if it's low — a 0 emotional resonance
     // score should drag the overall score down, not be silently dropped.
-    const scoresToAvg = subscores.filter(s => {
-      if (s.label === "Illustrations & Stories") return illustrationData !== null;
-      if (s.label === "Emotional Resonance") return emotionalData !== null;
-      return true;
-    });
+    const scoresToAvg = subscores.filter((s) => s.loaded);
+    const hasPendingAiMetrics = subscores.some(
+      (s) => (s.label === "Illustrations & Stories" || s.label === "Emotional Resonance") && !s.loaded,
+    );
 
     const total = scoresToAvg.length > 0
       ? Math.round(scoresToAvg.reduce((sum, s) => sum + s.score, 0) / scoresToAvg.length)
       : 5;
 
-    return { total, subscores };
+    return { total, hasPendingAiMetrics, subscores };
   };
 
   const fetchIllustrations = async () => {
@@ -4260,8 +4263,7 @@ const SermonViewer = () => {
               </div>
               <div className="text-sm text-muted-foreground mt-1">
                 Overall Engagement
-                {!illustrationData && !emotionalData && " (loading AI metrics)"}
-                {((illustrationData && !emotionalData) || (!illustrationData && emotionalData)) && " (some AI metrics loaded)"}
+                {getEngagementScore().hasPendingAiMetrics && " (provisional while AI metrics load)"}
               </div>
             </div>
             {engagementExpanded && (
@@ -4271,7 +4273,7 @@ const SermonViewer = () => {
                     <span className="flex items-center gap-1.5">
                       <span>{sub.icon}</span>
                       <span>{sub.label}</span>
-                      {(sub.label === "Illustrations & Stories" || sub.label === "Emotional Resonance") && sub.score === 0 && (
+                      {!sub.loaded && (
                         <span className="text-xs text-muted-foreground italic">(not loaded)</span>
                       )}
                     </span>
@@ -4279,14 +4281,14 @@ const SermonViewer = () => {
                       <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${
-                            sub.score >= 7 ? 'bg-emerald-500' : sub.score >= 4 ? 'bg-amber-500' : 'bg-red-500'
+                            !sub.loaded ? 'bg-muted-foreground/40' : sub.score >= 7 ? 'bg-emerald-500' : sub.score >= 4 ? 'bg-amber-500' : 'bg-red-500'
                           }`}
-                          style={{ width: `${(sub.score / 10) * 100}%` }}
+                          style={{ width: `${sub.loaded ? (sub.score / 10) * 100 : 0}%` }}
                         />
                       </div>
                       <span className={`font-semibold w-6 text-right ${
-                        sub.score >= 7 ? 'text-emerald-600' : sub.score >= 4 ? 'text-amber-600' : 'text-red-600'
-                      }`}>{sub.score}</span>
+                        !sub.loaded ? 'text-muted-foreground' : sub.score >= 7 ? 'text-emerald-600' : sub.score >= 4 ? 'text-amber-600' : 'text-red-600'
+                      }`}>{sub.loaded ? sub.score : '—'}</span>
                     </div>
                   </div>
                 ))}
