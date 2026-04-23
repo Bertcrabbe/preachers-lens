@@ -24,6 +24,7 @@ export interface ClientReportData {
     insiderLanguageCount: number;
     congregationQuestions: number;
     illustrationScore: number;
+    emotionalResonanceScore?: number;
   };
 
   topFillerWords: { word: string; count: number }[];
@@ -307,6 +308,7 @@ const drawMetricsPage = (doc: jsPDF, data: ClientReportData) => {
     ["Insider Language", `${m.insiderLanguageCount}`, "potentially unclear terms", BRAND.accent],
     ["Audience Questions", `${m.congregationQuestions}`, "rhetorical or direct asks", BRAND.teal],
     ["Illustrations", `${m.illustrationScore.toFixed(1)} / 10`, "story & imagery score", BRAND.primaryDark],
+    ["Emotional Resonance", `${(m.emotionalResonanceScore ?? 0).toFixed(1)} / 10`, "heart-engagement score", BRAND.rose],
   ];
 
   for (let i = 0; i < cards.length; i++) {
