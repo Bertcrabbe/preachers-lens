@@ -1779,6 +1779,23 @@ const SermonViewer = () => {
     }
   };
 
+  const fetchEmotionalResonance = async () => {
+    if (!id || loadingEmotional) return;
+    setLoadingEmotional(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-emotional-resonance', {
+        body: { sermonId: id }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setEmotionalData(data);
+    } catch (error: any) {
+      console.error("Failed to analyze emotional resonance:", error);
+    } finally {
+      setLoadingEmotional(false);
+    }
+  };
+
   const countSlowSpeechParagraphs = (threshold: number = 0.75): number => {
     if (sentences.length === 0) return 0;
     
