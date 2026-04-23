@@ -242,6 +242,13 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingMissedQuestions, setLoadingMissedQuestions] = useState(false);
   const [showMissedQuestions, setShowMissedQuestions] = useState(false);
+  const [intentData, setIntentData] = useState<{
+    know: string;
+    feel: string;
+    do: string;
+    summary: string;
+  } | null>(null);
+  const [loadingIntent, setLoadingIntent] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
   const [hiddenRuleIds, setHiddenRuleIds] = useState<Set<string>>(new Set());
@@ -343,6 +350,13 @@ const SermonViewer = () => {
   useEffect(() => {
     if (sentences.length > 0 && !missedQuestionsData && !loadingMissedQuestions) {
       fetchMissedQuestions();
+    }
+  }, [sentences]);
+
+  // Auto-run sermon intent (Know/Feel/Do) analysis when sentences are loaded
+  useEffect(() => {
+    if (sentences.length > 0 && !intentData && !loadingIntent) {
+      fetchSermonIntent();
     }
   }, [sentences]);
 
@@ -1832,6 +1846,23 @@ const SermonViewer = () => {
       console.error("Failed to analyze missed question opportunities:", error);
     } finally {
       setLoadingMissedQuestions(false);
+    }
+  };
+
+  const fetchSermonIntent = async () => {
+    if (!id || loadingIntent) return;
+    setLoadingIntent(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-sermon-intent', {
+        body: { sermonId: id }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setIntentData(data);
+    } catch (error: any) {
+      console.error("Failed to analyze sermon intent:", error);
+    } finally {
+      setLoadingIntent(false);
     }
   };
 
@@ -5022,6 +5053,58 @@ const SermonViewer = () => {
             </Card>
 
           </div>
+
+          {/* Sermon Intent: Know / Feel / Do */}
+          <Card className="mt-6 p-5 bg-gradient-to-br from-indigo-50/50 via-card to-rose-50/30 dark:from-indigo-950/20 dark:via-card dark:to-rose-950/10 border-indigo-200/50 dark:border-indigo-800/30">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-base font-bold text-indigo-700 dark:text-indigo-400">Sermon Intent</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  What the AI thinks the preacher wanted listeners to <span className="font-medium">know</span>, <span className="font-medium">feel</span>, and <span className="font-medium">do</span>.
+                </p>
+              </div>
+              {loadingIntent && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+
+            {!loadingIntent && intentData ? (
+              <div className="space-y-3">
+                {intentData.summary && (
+                  <p className="text-sm italic text-muted-foreground border-l-2 border-indigo-400 pl-3">
+                    {intentData.summary}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-blue-200/60 dark:border-blue-800/40 bg-blue-50/40 dark:bg-blue-950/20 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">🧠</span>
+                      <h4 className="text-sm font-bold text-blue-700 dark:text-blue-400">Know</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{intentData.know || "—"}</p>
+                  </div>
+                  <div className="rounded-lg border border-rose-200/60 dark:border-rose-800/40 bg-rose-50/40 dark:bg-rose-950/20 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">❤️</span>
+                      <h4 className="text-sm font-bold text-rose-700 dark:text-rose-400">Feel</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{intentData.feel || "—"}</p>
+                  </div>
+                  <div className="rounded-lg border border-emerald-200/60 dark:border-emerald-800/40 bg-emerald-50/40 dark:bg-emerald-950/20 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">🎯</span>
+                      <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Do</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{intentData.do || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            ) : !loadingIntent ? (
+              <p className="text-sm text-muted-foreground">No intent analysis yet.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Analyzing the preacher's intent...</p>
+            )}
+          </Card>
 
           {/* WPM Timeline Chart */}
           {getWpmTimelineData().length > 0 && (
