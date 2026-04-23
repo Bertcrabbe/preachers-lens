@@ -5276,7 +5276,10 @@ const SermonViewer = () => {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => handleDeleteComment(comment.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteComment(comment.id);
+                            }}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -5703,7 +5706,10 @@ const SermonViewer = () => {
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        onClick={() => handleDeleteComment(comment.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteComment(comment.id);
+                                        }}
                                       >
                                         <X className="h-4 w-4" />
                                       </Button>
