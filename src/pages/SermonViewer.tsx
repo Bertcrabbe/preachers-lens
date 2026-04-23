@@ -35,6 +35,7 @@ import {
   Minimize2,
   ZoomOut,
   Highlighter,
+  FileBarChart,
 } from "lucide-react";
 import { AudioEditor } from "@/components/AudioEditor";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
@@ -56,6 +57,7 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { FloatingRecordingIndicator } from "@/components/FloatingRecordingIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
+import { generateClientReportPdf, type ClientReportData } from "@/utils/clientReportPdf";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
@@ -3019,6 +3021,99 @@ const SermonViewer = () => {
     }
   };
 
+  const handleExportClientPdf = async () => {
+    if (!sermon) return;
+    setExporting(true);
+    try {
+      const totalWords = sentences.reduce(
+        (sum: number, s: any) => sum + s.sentence_text.split(/\s+/).filter(Boolean).length,
+        0,
+      );
+      const congQuestions = sentences.filter((s: any, idx: number) => {
+        if (!s.sentence_text.trim().endsWith("?")) return false;
+        if (congregationQuestionIndices && !congregationQuestionIndices.has(idx)) return false;
+        return true;
+      }).length;
+
+      const engagement = getEngagementScore();
+
+      // Group AI comments by rule
+      const aiComments = comments.filter((c: any) => c.rule_id);
+      const ruleMap = new Map<string, { ruleName: string; ruleColor?: string | null; items: { startMs: number; text: string }[] }>();
+      for (const c of aiComments) {
+        const rule = rules.find((r) => r.id === c.rule_id);
+        const key = rule?.id || "unknown";
+        if (!ruleMap.has(key)) {
+          ruleMap.set(key, {
+            ruleName: rule?.name || "Unnamed Rule",
+            ruleColor: rule?.color,
+            items: [],
+          });
+        }
+        ruleMap.get(key)!.items.push({ startMs: c.start_time_ms, text: c.comment_text });
+      }
+      const grouped = Array.from(ruleMap.values()).map((g) => ({
+        ...g,
+        items: g.items.sort((a, b) => a.startMs - b.startMs),
+      }));
+
+      const data: ClientReportData = {
+        sermonTitle: sermon.title || "Untitled Sermon",
+        sermonDate: new Date((sermon as any).created_at || Date.now()).toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        durationSeconds: sermon.duration_seconds ?? null,
+        communicatorName: null,
+        engagement: {
+          total: engagement.total,
+          subscores: engagement.subscores.map((s) => ({ label: s.label, score: s.score })),
+        },
+        metrics: {
+          averageWPM: Math.round(getAverageSpeechRate()),
+          wordCount: totalWords,
+          fastSpeechCount: countFastSpeechParagraphs(fastSpeechThreshold),
+          fastSpeechThreshold,
+          slowSpeechCount: countSlowSpeechParagraphs(slowSpeechThreshold),
+          slowSpeechThreshold,
+          verbalPausesCount: countVerbalPauses(),
+          insiderLanguageCount: countInsiderLanguage(),
+          congregationQuestions: congQuestions,
+          illustrationScore: illustrationData?.illustration_score ?? 0,
+        },
+        topFillerWords: getTopFillerWords().map((f) => ({ word: f.word, count: f.count })),
+        topInsiderTerms: getTopInsiderTerms().map((t) => ({ word: t.word, count: t.count })),
+        repeatedPhrases: getRepeatedPhrases(3).slice(0, 8),
+        scriptureRefs: scriptureRefs?.references?.map((r: any) => ({
+          reference: r.reference,
+          context: r.context,
+        })) || [],
+        aiComments: grouped,
+      };
+
+      const blob = generateClientReportPdf(data);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const safeTitle = (sermon.title || "sermon").replace(/[^\w\d-]+/g, "-").slice(0, 60);
+      a.href = url;
+      a.download = `${safeTitle}-client-report.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Client report downloaded" });
+    } catch (error: any) {
+      console.error("Client PDF export error:", error);
+      toast({
+        title: "Export failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -3098,6 +3193,18 @@ const SermonViewer = () => {
                 <Download className="mr-2 h-4 w-4" />
               )}
               Export Combined Audio
+            </Button>
+            <Button
+              variant="default"
+              onClick={handleExportClientPdf}
+              disabled={exporting || sentences.length === 0}
+            >
+              {exporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileBarChart className="mr-2 h-4 w-4" />
+              )}
+              Client PDF Report
             </Button>
             <Button
               variant="outline"
