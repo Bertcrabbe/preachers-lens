@@ -218,6 +218,20 @@ const SermonViewer = () => {
     breakdown: { stories: number; humor: number; illustrations: number; audience_interactions: number };
   } | null>(null);
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
+  const [emotionalData, setEmotionalData] = useState<{
+    overall_score: number;
+    subscores: {
+      vulnerability: number;
+      affective_language: number;
+      sensory_imagery: number;
+      pathos_moments: number;
+    };
+    affective_percentage: number;
+    summary: string;
+    pathos_moments: Array<{ type: string; excerpt: string; note: string }>;
+  } | null>(null);
+  const [loadingEmotional, setLoadingEmotional] = useState(false);
+  const [emotionalExpanded, setEmotionalExpanded] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
@@ -308,6 +322,13 @@ const SermonViewer = () => {
     }
   }, [sentences]);
 
+  // Auto-run emotional resonance detection when sentences are loaded
+  useEffect(() => {
+    if (sentences.length > 0 && !emotionalData && !loadingEmotional) {
+      fetchEmotionalResonance();
+    }
+  }, [sentences]);
+
   // Auto-run visitor confusion detection when sentences are loaded
   useEffect(() => {
     if (sentences.length > 0 && !confusingPhrases && !loadingConfusing) {
@@ -337,12 +358,14 @@ const SermonViewer = () => {
 
         const engagement = getEngagementScore().total;
         const illScore = illustrationData?.illustration_score ?? null;
+        const emoScore = emotionalData?.overall_score ?? null;
 
         await supabase.from("sermon_metrics" as any).upsert({
           sermon_id: id,
           user_id: user.id,
           engagement_score: engagement,
           illustration_score: illScore,
+          emotional_resonance_score: emoScore,
           congregation_questions: congQuestions,
           wpm,
           word_count: totalWords,
@@ -353,7 +376,7 @@ const SermonViewer = () => {
       }
     };
     persistMetrics();
-  }, [id, sentences, illustrationData, loadingIllustrations, congregationQuestionIndices, loadingQuestions]);
+  }, [id, sentences, illustrationData, loadingIllustrations, emotionalData, loadingEmotional, congregationQuestionIndices, loadingQuestions]);
 
   useEffect(() => {
     if (audioUrl) {
@@ -1701,23 +1724,32 @@ const SermonViewer = () => {
     return illustrationData.illustration_score;
   };
 
+  const getEmotionalResonanceScore = (): number => {
+    if (!emotionalData) return 0;
+    return emotionalData.overall_score;
+  };
+
   const getEngagementScore = (): { total: number; subscores: { label: string; score: number; icon: string }[] } => {
     const paceDynamics = getPaceDynamicsScore();
     const volumeDynamics = getVolumeDynamicsScore();
     const useOfSilence = getUseOfSilenceScore();
     const illustrationScore = getIllustrationScore();
+    const emotionalScore = getEmotionalResonanceScore();
 
     const subscores = [
       { label: "Pace Dynamics", score: paceDynamics, icon: "🎯" },
       { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊" },
       { label: "Use of Silence", score: useOfSilence, icon: "🤫" },
       { label: "Illustrations & Stories", score: illustrationScore, icon: "🎭" },
+      { label: "Emotional Resonance", score: emotionalScore, icon: "❤️" },
     ];
 
-    // Only include illustration score if loaded
-    const scoresToAvg = illustrationScore > 0 
-      ? subscores 
-      : subscores.filter(s => s.label !== "Illustrations & Stories");
+    // Only include AI-derived scores once they're loaded (>0)
+    const scoresToAvg = subscores.filter(s => {
+      if (s.label === "Illustrations & Stories") return illustrationScore > 0;
+      if (s.label === "Emotional Resonance") return emotionalScore > 0;
+      return true;
+    });
     
     const total = scoresToAvg.length > 0 
       ? Math.round(scoresToAvg.reduce((sum, s) => sum + s.score, 0) / scoresToAvg.length)
@@ -1744,6 +1776,23 @@ const SermonViewer = () => {
       });
     } finally {
       setLoadingIllustrations(false);
+    }
+  };
+
+  const fetchEmotionalResonance = async () => {
+    if (!id || loadingEmotional) return;
+    setLoadingEmotional(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-emotional-resonance', {
+        body: { sermonId: id }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setEmotionalData(data);
+    } catch (error: any) {
+      console.error("Failed to analyze emotional resonance:", error);
+    } finally {
+      setLoadingEmotional(false);
     }
   };
 
@@ -3107,6 +3156,7 @@ const SermonViewer = () => {
           insiderLanguageCount: countInsiderLanguage(),
           congregationQuestions: congQuestions,
           illustrationScore: illustrationData?.illustration_score ?? 0,
+          emotionalResonanceScore: emotionalData?.overall_score ?? 0,
         },
         topFillerWords: getTopFillerWords().map((f) => ({ word: f.word, count: f.count })),
         topInsiderTerms: getTopInsiderTerms().map((t) => ({ word: t.word, count: t.count })),
@@ -4183,10 +4233,14 @@ const SermonViewer = () => {
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-base font-bold text-amber-700">Engagement Score</h3>
               <div className="flex gap-2">
-                {loadingIllustrations && (
+                {(loadingIllustrations || loadingEmotional) && (
                   <span className="flex items-center text-xs text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    Analyzing stories...
+                    {loadingIllustrations && loadingEmotional
+                      ? "Analyzing stories & heart..."
+                      : loadingIllustrations
+                      ? "Analyzing stories..."
+                      : "Analyzing emotional resonance..."}
                   </span>
                 )}
                 <Button
@@ -4249,6 +4303,114 @@ const SermonViewer = () => {
                       {illustrationData.breakdown.audience_interactions > 0 && (
                         <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.audience_interactions}</div><div className="text-muted-foreground">Crowd Work</div></div>
                       )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+
+          {/* Emotional Resonance Card - Full Width */}
+          <Card className="stats-card p-4 mb-4">
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="text-base font-bold text-rose-700">Emotional Resonance ❤️</h3>
+              <div className="flex gap-2">
+                {loadingEmotional && (
+                  <span className="flex items-center text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    Analyzing heart...
+                  </span>
+                )}
+                {emotionalData && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs px-2"
+                    onClick={() => setEmotionalExpanded(!emotionalExpanded)}
+                  >
+                    {emotionalExpanded ? "Collapse" : "Details"}
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col items-center text-center mb-3">
+              <div className="text-4xl font-bold text-rose-600">
+                <AnimatedCounter value={emotionalData?.overall_score ?? 0} />
+                <span className="text-lg text-muted-foreground">/10</span>
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {emotionalData
+                  ? "Heart-engagement score"
+                  : loadingEmotional
+                  ? "Analyzing emotional content…"
+                  : "Not yet analyzed"}
+              </div>
+            </div>
+            {emotionalData && emotionalExpanded && (
+              <div className="space-y-3 border-t pt-3">
+                {emotionalData.summary && (
+                  <p className="text-sm text-muted-foreground italic">{emotionalData.summary}</p>
+                )}
+                <div className="space-y-2">
+                  {[
+                    { label: "Vulnerability", score: emotionalData.subscores.vulnerability, icon: "🫀" },
+                    { label: "Affective Language", score: emotionalData.subscores.affective_language, icon: "💬" },
+                    { label: "Sensory & Concrete Imagery", score: emotionalData.subscores.sensory_imagery, icon: "🎨" },
+                    { label: "Pathos Moments", score: emotionalData.subscores.pathos_moments, icon: "✨" },
+                  ].map((sub) => (
+                    <div key={sub.label} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <span>{sub.icon}</span>
+                        <span>{sub.label}</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              sub.score >= 7 ? 'bg-emerald-500' : sub.score >= 4 ? 'bg-amber-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${(sub.score / 10) * 100}%` }}
+                          />
+                        </div>
+                        <span className={`font-semibold w-6 text-right ${
+                          sub.score >= 7 ? 'text-emerald-600' : sub.score >= 4 ? 'text-amber-600' : 'text-red-600'
+                        }`}>{sub.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Head/Heart ratio bar */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>Head 🧠</span>
+                    <span className="font-medium text-foreground">
+                      {emotionalData.affective_percentage}% Heart
+                    </span>
+                    <span>❤️ Heart</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full overflow-hidden bg-sky-200 dark:bg-sky-950 relative">
+                    <div
+                      className="h-full bg-rose-500 transition-all"
+                      style={{ width: `${Math.max(0, Math.min(100, emotionalData.affective_percentage))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Pathos moments */}
+                {emotionalData.pathos_moments && emotionalData.pathos_moments.length > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Pathos Moments</p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {emotionalData.pathos_moments.map((m, i) => (
+                        <div key={i} className="text-xs p-2 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="capitalize text-[10px] py-0 h-4">{m.type}</Badge>
+                            <span className="text-muted-foreground italic">{m.note}</span>
+                          </div>
+                          <p className="text-foreground">"{m.excerpt}"</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

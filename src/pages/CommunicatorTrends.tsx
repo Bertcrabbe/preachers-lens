@@ -18,6 +18,7 @@ interface SermonMetrics {
   engagementScore: number | null;
   questionsAsked: number | null;
   illustrationScore: number | null;
+  emotionalResonanceScore: number | null;
 }
 
 const CommunicatorTrends = () => {
@@ -65,7 +66,7 @@ const CommunicatorTrends = () => {
       // Fetch stored metrics
       const { data: storedMetrics } = await supabase
         .from("sermon_metrics" as any)
-        .select("sermon_id, engagement_score, illustration_score, congregation_questions, wpm, word_count")
+        .select("sermon_id, engagement_score, illustration_score, emotional_resonance_score, congregation_questions, wpm, word_count")
         .in("sermon_id", sermonIds);
 
       const metricsMap: Record<string, any> = {};
@@ -116,6 +117,7 @@ const CommunicatorTrends = () => {
             engagementScore: stored.engagement_score ? Number(stored.engagement_score) : null,
             questionsAsked: stored.congregation_questions,
             illustrationScore: stored.illustration_score ? Number(stored.illustration_score) : null,
+            emotionalResonanceScore: stored.emotional_resonance_score ? Number(stored.emotional_resonance_score) : null,
           };
         }
 
@@ -141,6 +143,7 @@ const CommunicatorTrends = () => {
           engagementScore: null,
           questionsAsked: questionCount,
           illustrationScore: null,
+          emotionalResonanceScore: null,
         };
       });
 
@@ -196,6 +199,7 @@ const CommunicatorTrends = () => {
   const chartConfigs = [
     { key: "wpm", label: "Words Per Minute", color: "hsl(var(--primary))", unit: " WPM" },
     { key: "engagementScore", label: "Engagement Score", color: "hsl(var(--chart-1))", unit: "/10" },
+    { key: "emotionalResonanceScore", label: "Emotional Resonance", color: "hsl(346 77% 50%)", unit: "/10" },
     { key: "questionsAsked", label: "Questions Asked", color: "hsl(var(--chart-2))", unit: "" },
     { key: "illustrationScore", label: "Illustration Score", color: "hsl(var(--chart-5, 280 65% 60%))", unit: "/10" },
     { key: "wordCount", label: "Word Count", color: "hsl(var(--chart-3))", unit: " words" },

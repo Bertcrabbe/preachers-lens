@@ -198,6 +198,7 @@ export type Database = {
       sermon_metrics: {
         Row: {
           congregation_questions: number | null
+          emotional_resonance_score: number | null
           engagement_score: number | null
           id: string
           illustration_score: number | null
@@ -209,6 +210,7 @@ export type Database = {
         }
         Insert: {
           congregation_questions?: number | null
+          emotional_resonance_score?: number | null
           engagement_score?: number | null
           id?: string
           illustration_score?: number | null
@@ -220,6 +222,7 @@ export type Database = {
         }
         Update: {
           congregation_questions?: number | null
+          emotional_resonance_score?: number | null
           engagement_score?: number | null
           id?: string
           illustration_score?: number | null

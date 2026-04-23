@@ -106,6 +106,29 @@ serve(async (req) => {
           }
         }
 
+        // Call analyze-emotional-resonance
+        let emotionalResonanceScore: number | null = null;
+        if (lovableApiKey) {
+          try {
+            const eRes = await fetch(`${supabaseUrl}/functions/v1/analyze-emotional-resonance`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({ sermonId }),
+            });
+            if (eRes.ok) {
+              const eData = await eRes.json();
+              emotionalResonanceScore = eData.overall_score ?? null;
+            } else {
+              await eRes.text();
+            }
+          } catch (e) {
+            console.error(`analyze-emotional-resonance failed for ${sermonId}:`, e);
+          }
+        }
+
         // Upsert metrics
         const upsertRes = await fetch(
           `${supabaseUrl}/rest/v1/sermon_metrics?on_conflict=sermon_id`,
@@ -124,6 +147,7 @@ serve(async (req) => {
               word_count: totalWords,
               congregation_questions: congregationQuestions,
               illustration_score: illustrationScore,
+              emotional_resonance_score: emotionalResonanceScore,
               updated_at: new Date().toISOString(),
             }),
           }
