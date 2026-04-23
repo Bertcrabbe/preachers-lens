@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import logoUrl from "@/assets/preacherslens-logo.png";
 
 export interface ClientReportData {
   sermonTitle: string;
@@ -15,10 +16,6 @@ export interface ClientReportData {
   metrics: {
     averageWPM: number;
     wordCount: number;
-    fastSpeechCount: number;
-    fastSpeechThreshold: number;
-    slowSpeechCount: number;
-    slowSpeechThreshold: number;
     verbalPausesCount: number;
     insiderLanguageCount: number;
     congregationQuestions: number;
@@ -42,13 +39,13 @@ type RGB = readonly [number, number, number];
 
 const BRAND = {
   ink: [22, 28, 45] as RGB,
-  primary: [99, 102, 241] as RGB,
-  primaryDark: [67, 56, 202] as RGB,
+  primary: [30, 58, 95] as RGB,
+  primaryDark: [16, 35, 64] as RGB,
   accent: [236, 72, 153] as RGB,
   amber: [217, 119, 6] as RGB,
   teal: [13, 148, 136] as RGB,
   rose: [225, 29, 72] as RGB,
-  sky: [2, 132, 199] as RGB,
+  sky: [37, 99, 158] as RGB,
   muted: [100, 116, 139] as RGB,
   surface: [248, 250, 252] as RGB,
   surfaceAlt: [241, 245, 249] as RGB,
