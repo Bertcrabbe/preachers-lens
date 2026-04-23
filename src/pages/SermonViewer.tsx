@@ -5054,6 +5054,58 @@ const SermonViewer = () => {
 
           </div>
 
+          {/* Sermon Intent: Know / Feel / Do */}
+          <Card className="mt-6 p-5 bg-gradient-to-br from-indigo-50/50 via-card to-rose-50/30 dark:from-indigo-950/20 dark:via-card dark:to-rose-950/10 border-indigo-200/50 dark:border-indigo-800/30">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-base font-bold text-indigo-700 dark:text-indigo-400">Sermon Intent</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  What the AI thinks the preacher wanted listeners to <span className="font-medium">know</span>, <span className="font-medium">feel</span>, and <span className="font-medium">do</span>.
+                </p>
+              </div>
+              {loadingIntent && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+
+            {!loadingIntent && intentData ? (
+              <div className="space-y-3">
+                {intentData.summary && (
+                  <p className="text-sm italic text-muted-foreground border-l-2 border-indigo-400 pl-3">
+                    {intentData.summary}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-blue-200/60 dark:border-blue-800/40 bg-blue-50/40 dark:bg-blue-950/20 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">🧠</span>
+                      <h4 className="text-sm font-bold text-blue-700 dark:text-blue-400">Know</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{intentData.know || "—"}</p>
+                  </div>
+                  <div className="rounded-lg border border-rose-200/60 dark:border-rose-800/40 bg-rose-50/40 dark:bg-rose-950/20 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">❤️</span>
+                      <h4 className="text-sm font-bold text-rose-700 dark:text-rose-400">Feel</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{intentData.feel || "—"}</p>
+                  </div>
+                  <div className="rounded-lg border border-emerald-200/60 dark:border-emerald-800/40 bg-emerald-50/40 dark:bg-emerald-950/20 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-lg">🎯</span>
+                      <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Do</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{intentData.do || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            ) : !loadingIntent ? (
+              <p className="text-sm text-muted-foreground">No intent analysis yet.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Analyzing the preacher's intent...</p>
+            )}
+          </Card>
+
           {/* WPM Timeline Chart */}
           {getWpmTimelineData().length > 0 && (
               <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="wpm">
