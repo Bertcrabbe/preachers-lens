@@ -4232,10 +4232,14 @@ const SermonViewer = () => {
             <div className="flex items-start justify-between mb-3">
               <h3 className="text-base font-bold text-amber-700">Engagement Score</h3>
               <div className="flex gap-2">
-                {loadingIllustrations && (
+                {(loadingIllustrations || loadingEmotional) && (
                   <span className="flex items-center text-xs text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    Analyzing stories...
+                    {loadingIllustrations && loadingEmotional
+                      ? "Analyzing stories & heart..."
+                      : loadingIllustrations
+                      ? "Analyzing stories..."
+                      : "Analyzing emotional resonance..."}
                   </span>
                 )}
                 <Button
