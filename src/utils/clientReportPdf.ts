@@ -71,7 +71,7 @@ const fmtTimestamp = (ms: number): string => {
 };
 
 const fmtDuration = (sec: number | null): string => {
-  if (!sec) return "—";
+  if (!sec) return "\u2014";
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
@@ -89,9 +89,24 @@ const drawFooter = (doc: jsPDF, pageNum: number, totalPages: number, sermonTitle
   doc.setFontSize(8);
   setText(doc, BRAND.muted);
   doc.text("THE PREACHER\u2019S LENS", MARGIN, PAGE_H - 22);
-  const truncated = sermonTitle.length > 60 ? sermonTitle.slice(0, 57) + "…" : sermonTitle;
+  const truncated = sermonTitle.length > 60 ? sermonTitle.slice(0, 57) + "\u2026" : sermonTitle;
   doc.text(truncated, PAGE_W / 2, PAGE_H - 22, { align: "center" });
   doc.text(`${pageNum} / ${totalPages}`, PAGE_W - MARGIN, PAGE_H - 22, { align: "right" });
+};
+
+const drawWatermark = (doc: jsPDF, logoDataUrl: string | null) => {
+  if (!logoDataUrl) return;
+  try {
+    const size = 120;
+    const x = (PAGE_W - size) / 2;
+    const y = (PAGE_H - size) / 2;
+    doc.saveGraphicsState();
+    doc.setGState(new (doc as any).GState({ opacity: 0.06 }));
+    doc.addImage(logoDataUrl, "PNG", x, y, size, size);
+    doc.restoreGraphicsState();
+  } catch {
+    // ignore
+  }
 };
 
 const drawScoreBar = (
@@ -183,7 +198,7 @@ const drawCoverPage = (doc: jsPDF, data: ClientReportData, logoDataUrl: string |
   if (data.communicatorName) metaParts.push(data.communicatorName);
   metaParts.push(data.sermonDate);
   if (data.durationSeconds) metaParts.push(`${fmtDuration(data.durationSeconds)} runtime`);
-  doc.text(metaParts.join("  •  "), MARGIN, 220);
+  doc.text(metaParts.join("  \u2022  "), MARGIN, 220);
 
   const cardX = MARGIN;
   const cardY = 280;
@@ -236,7 +251,7 @@ const drawCoverPage = (doc: jsPDF, data: ClientReportData, logoDataUrl: string |
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   const intro =
-    "This dashboard summarizes sermon delivery, content, and AI-detected coaching opportunities. Scores reflect dynamics rather than judgment of message — use them as conversation starters.";
+    "This dashboard summarizes sermon delivery, content, and AI-detected coaching opportunities. Scores reflect dynamics rather than judgment of message \u2014 use them as conversation starters.";
   const lines = doc.splitTextToSize(intro, PAGE_W - MARGIN * 2 - 32);
   doc.text(lines, MARGIN + 16, stripY + 40);
 };
@@ -272,8 +287,8 @@ const drawMetricsPage = (doc: jsPDF, data: ClientReportData) => {
     ["Average Pace", `${m.averageWPM}`, "words per minute", BRAND.primary],
     ["Total Words", `${m.wordCount.toLocaleString()}`, "spoken in sermon", BRAND.sky],
     ["Runtime", fmtDuration(data.durationSeconds), "audio duration", BRAND.teal],
-    ["Fast Sections", `${m.fastSpeechCount}`, `> ${m.fastSpeechThreshold}× avg pace`, BRAND.rose],
-    ["Slow Sections", `${m.slowSpeechCount}`, `< ${m.slowSpeechThreshold}× avg pace`, BRAND.sky],
+    ["Fast Sections", `${m.fastSpeechCount}`, `> ${m.fastSpeechThreshold}\u00d7 avg pace`, BRAND.rose],
+    ["Slow Sections", `${m.slowSpeechCount}`, `< ${m.slowSpeechThreshold}\u00d7 avg pace`, BRAND.sky],
     ["Verbal Pauses", `${m.verbalPausesCount}`, "filler/hesitation moments", BRAND.amber],
     ["Insider Language", `${m.insiderLanguageCount}`, "potentially unclear terms", BRAND.accent],
     ["Audience Questions", `${m.congregationQuestions}`, "rhetorical or direct asks", BRAND.teal],
@@ -318,7 +333,7 @@ const drawMetricsPage = (doc: jsPDF, data: ClientReportData) => {
       setText(doc, BRAND.ink);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      const wordTxt = item.word.length > 22 ? item.word.slice(0, 21) + "…" : item.word;
+      const wordTxt = item.word.length > 22 ? item.word.slice(0, 21) + "\u2026" : item.word;
       doc.text(wordTxt, x, ly);
       setText(doc, BRAND.muted);
       doc.text(String(item.count), x + colW - 12, ly, { align: "right" });
@@ -492,16 +507,17 @@ export const generateClientReportPdf = async (data: ClientReportData): Promise<B
   const logoDataUrl = await loadLogoDataUrl();
 
   drawCoverPage(doc, data, logoDataUrl);
-  // Draw logo + brand mark in footer too
-  // (footer drawn after all pages added below)
   drawMetricsPage(doc, data);
   drawScripturePage(doc, data);
   drawCommentsPages(doc, data);
 
   const total = doc.getNumberOfPages();
-  for (let p = 2; p <= total; p++) {
+  for (let p = 1; p <= total; p++) {
     doc.setPage(p);
-    drawFooter(doc, p, total, data.sermonTitle || "Sermon Report");
+    drawWatermark(doc, logoDataUrl);
+    if (p >= 2) {
+      drawFooter(doc, p, total, data.sermonTitle || "Sermon Report");
+    }
   }
 
   return doc.output("blob");
