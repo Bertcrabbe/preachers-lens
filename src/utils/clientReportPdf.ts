@@ -768,6 +768,8 @@ export const generateClientReportPdf = async (data: ClientReportData): Promise<B
 
   drawCoverPage(doc, data, logoDataUrl);
   drawMetricsPage(doc, data);
+  drawChartsPage(doc, data);
+  drawConfusionPage(doc, data);
   drawScripturePage(doc, data);
   drawCommentsPages(doc, data);
 
