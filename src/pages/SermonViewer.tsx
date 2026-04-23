@@ -3073,10 +3073,6 @@ const SermonViewer = () => {
         metrics: {
           averageWPM: Math.round(getAverageSpeechRate()),
           wordCount: totalWords,
-          fastSpeechCount: countFastSpeechParagraphs(fastSpeechThreshold),
-          fastSpeechThreshold,
-          slowSpeechCount: countSlowSpeechParagraphs(slowSpeechThreshold),
-          slowSpeechThreshold,
           verbalPausesCount: countVerbalPauses(),
           insiderLanguageCount: countInsiderLanguage(),
           congregationQuestions: congQuestions,
