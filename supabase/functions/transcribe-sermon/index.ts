@@ -1,27 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
+// @ts-ignore - EdgeRuntime is provided by Supabase Edge runtime
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+function getServiceClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+}
 
+async function runTranscription(sermonId: string) {
+  const supabaseClient = getServiceClient();
   try {
-    const { sermonId } = await req.json();
-    if (!sermonId) {
-      throw new Error("Sermon ID is required");
-    }
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
     // Get sermon details
     const { data: sermon, error: sermonError } = await supabaseClient
       .from("sermons")
@@ -34,7 +31,7 @@ serve(async (req) => {
     // Update status to processing
     await supabaseClient
       .from("sermons")
-      .update({ transcription_status: "processing" })
+      .update({ transcription_status: "processing", error_message: null })
       .eq("id", sermonId);
 
     // Get signed URL for the audio file
@@ -136,10 +133,8 @@ serve(async (req) => {
           })
           .eq("id", sermonId);
 
-        return new Response(
-          JSON.stringify({ success: true, sentenceCount: sentences.length }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        console.log(`Transcription completed for ${sermonId}: ${sentences.length} sentences`);
+        return;
       } else if (status === "error") {
         throw new Error(statusData.error || "Transcription failed");
       }
@@ -149,31 +144,57 @@ serve(async (req) => {
 
     throw new Error("Unexpected transcription status");
   } catch (error: any) {
-    console.error("Transcription error:", error);
-    
-    // Update sermon status to failed
-    const errorSermonId = error?.sermonId;
-    if (errorSermonId) {
-      const supabaseClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-      
+    console.error(`Transcription error for ${sermonId}:`, error);
+    try {
       await supabaseClient
         .from("sermons")
         .update({
           transcription_status: "failed",
           error_message: error?.message || "Transcription failed",
         })
-        .eq("id", errorSermonId);
+        .eq("id", sermonId);
+    } catch (updateErr) {
+      console.error("Failed to mark sermon as failed:", updateErr);
+    }
+  }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { sermonId } = await req.json();
+    if (!sermonId) throw new Error("Sermon ID is required");
+
+    // Verify sermon exists before dispatching background work
+    const supabaseClient = getServiceClient();
+    const { data: sermon, error: sermonError } = await supabaseClient
+      .from("sermons")
+      .select("id")
+      .eq("id", sermonId)
+      .single();
+    if (sermonError || !sermon) {
+      return new Response(
+        JSON.stringify({ error: "Sermon not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
+    // Run the long-running transcription in the background so this request
+    // returns immediately and the worker isn't killed mid-poll.
+    EdgeRuntime.waitUntil(runTranscription(sermonId));
+
     return new Response(
-      JSON.stringify({ error: error?.message || "Transcription failed" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ message: "Transcription started", sermonId }),
+      { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error: any) {
+    console.error("Dispatch error:", error);
+    return new Response(
+      JSON.stringify({ error: error?.message || "Failed to start transcription" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
