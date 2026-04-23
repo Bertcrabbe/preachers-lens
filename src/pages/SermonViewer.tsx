@@ -322,6 +322,13 @@ const SermonViewer = () => {
     }
   }, [sentences]);
 
+  // Auto-run emotional resonance detection when sentences are loaded
+  useEffect(() => {
+    if (sentences.length > 0 && !emotionalData && !loadingEmotional) {
+      fetchEmotionalResonance();
+    }
+  }, [sentences]);
+
   // Auto-run visitor confusion detection when sentences are loaded
   useEffect(() => {
     if (sentences.length > 0 && !confusingPhrases && !loadingConfusing) {
@@ -351,12 +358,14 @@ const SermonViewer = () => {
 
         const engagement = getEngagementScore().total;
         const illScore = illustrationData?.illustration_score ?? null;
+        const emoScore = emotionalData?.overall_score ?? null;
 
         await supabase.from("sermon_metrics" as any).upsert({
           sermon_id: id,
           user_id: user.id,
           engagement_score: engagement,
           illustration_score: illScore,
+          emotional_resonance_score: emoScore,
           congregation_questions: congQuestions,
           wpm,
           word_count: totalWords,
@@ -367,7 +376,7 @@ const SermonViewer = () => {
       }
     };
     persistMetrics();
-  }, [id, sentences, illustrationData, loadingIllustrations, congregationQuestionIndices, loadingQuestions]);
+  }, [id, sentences, illustrationData, loadingIllustrations, emotionalData, loadingEmotional, congregationQuestionIndices, loadingQuestions]);
 
   useEffect(() => {
     if (audioUrl) {
@@ -1715,23 +1724,32 @@ const SermonViewer = () => {
     return illustrationData.illustration_score;
   };
 
+  const getEmotionalResonanceScore = (): number => {
+    if (!emotionalData) return 0;
+    return emotionalData.overall_score;
+  };
+
   const getEngagementScore = (): { total: number; subscores: { label: string; score: number; icon: string }[] } => {
     const paceDynamics = getPaceDynamicsScore();
     const volumeDynamics = getVolumeDynamicsScore();
     const useOfSilence = getUseOfSilenceScore();
     const illustrationScore = getIllustrationScore();
+    const emotionalScore = getEmotionalResonanceScore();
 
     const subscores = [
       { label: "Pace Dynamics", score: paceDynamics, icon: "🎯" },
       { label: "Volume Dynamics", score: volumeDynamics, icon: "🔊" },
       { label: "Use of Silence", score: useOfSilence, icon: "🤫" },
       { label: "Illustrations & Stories", score: illustrationScore, icon: "🎭" },
+      { label: "Emotional Resonance", score: emotionalScore, icon: "❤️" },
     ];
 
-    // Only include illustration score if loaded
-    const scoresToAvg = illustrationScore > 0 
-      ? subscores 
-      : subscores.filter(s => s.label !== "Illustrations & Stories");
+    // Only include AI-derived scores once they're loaded (>0)
+    const scoresToAvg = subscores.filter(s => {
+      if (s.label === "Illustrations & Stories") return illustrationScore > 0;
+      if (s.label === "Emotional Resonance") return emotionalScore > 0;
+      return true;
+    });
     
     const total = scoresToAvg.length > 0 
       ? Math.round(scoresToAvg.reduce((sum, s) => sum + s.score, 0) / scoresToAvg.length)
