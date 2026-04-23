@@ -3025,7 +3025,12 @@ const SermonViewer = () => {
   const captureChartElement = async (key: "wpm" | "volume"): Promise<string | null> => {
     const el = document.querySelector<HTMLElement>(`[data-export-chart="${key}"]`);
     if (!el) return null;
+    const prevPadding = el.style.paddingBottom;
     try {
+      // Add temporary bottom padding so x-axis labels aren't clipped during capture
+      el.style.paddingBottom = "32px";
+      // Allow layout to settle
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
       const dataUrl = await toPng(el, {
         pixelRatio: 2,
         backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--background")
@@ -3037,6 +3042,8 @@ const SermonViewer = () => {
     } catch (err) {
       console.warn(`Chart capture failed for ${key}`, err);
       return null;
+    } finally {
+      el.style.paddingBottom = prevPadding;
     }
   };
 
