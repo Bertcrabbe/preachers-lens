@@ -1744,14 +1744,16 @@ const SermonViewer = () => {
       { label: "Emotional Resonance", score: emotionalScore, icon: "❤️" },
     ];
 
-    // Only include AI-derived scores once they're loaded (>0)
+    // Only exclude AI-derived scores when their data hasn't loaded yet.
+    // Once loaded, the score counts even if it's low — a 0 emotional resonance
+    // score should drag the overall score down, not be silently dropped.
     const scoresToAvg = subscores.filter(s => {
-      if (s.label === "Illustrations & Stories") return illustrationScore > 0;
-      if (s.label === "Emotional Resonance") return emotionalScore > 0;
+      if (s.label === "Illustrations & Stories") return illustrationData !== null;
+      if (s.label === "Emotional Resonance") return emotionalData !== null;
       return true;
     });
-    
-    const total = scoresToAvg.length > 0 
+
+    const total = scoresToAvg.length > 0
       ? Math.round(scoresToAvg.reduce((sum, s) => sum + s.score, 0) / scoresToAvg.length)
       : 5;
 
