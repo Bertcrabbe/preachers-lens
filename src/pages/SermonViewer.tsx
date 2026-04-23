@@ -58,6 +58,7 @@ import { FloatingRecordingIndicator } from "@/components/FloatingRecordingIndica
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
 import { generateClientReportPdf, type ClientReportData } from "@/utils/clientReportPdf";
+import { toPng } from "html-to-image";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
@@ -3092,6 +3093,8 @@ const SermonViewer = () => {
         wpmSeries: getWpmTimelineData().map((d) => ({ timeMs: d.time, value: d.wpm })),
         volumeSeries: getVolumeTimelineData().map((d) => ({ timeMs: d.time, value: d.volume })),
         averageWPM: Math.round(getAverageSpeechRate()),
+        wpmChartImage: await captureChartElement('wpm'),
+        volumeChartImage: await captureChartElement('volume'),
         visitorConfusion: (confusingPhrases?.phrases || []).map((p) => ({
           severity: (p.severity as "mild" | "moderate" | "severe") || "mild",
           phrase: p.phrase,
