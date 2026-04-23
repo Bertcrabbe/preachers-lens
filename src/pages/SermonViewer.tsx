@@ -252,6 +252,7 @@ const SermonViewer = () => {
     { active: showScriptureRefs, clear: () => setShowScriptureRefs(false) },
     { active: showConfusingPhrases, clear: () => setShowConfusingPhrases(false) },
     { active: showQuestions, clear: () => setShowQuestions(false) },
+    { active: showMissedQuestions, clear: () => setShowMissedQuestions(false) },
     {
       active: !hideAIEvalComments && comments.some(c => !!c.rule_id),
       clear: () => setHideAIEvalComments(true),
@@ -335,6 +336,13 @@ const SermonViewer = () => {
   useEffect(() => {
     if (sentences.length > 0 && !emotionalData && !loadingEmotional) {
       fetchEmotionalResonance();
+    }
+  }, [sentences]);
+
+  // Auto-run "missed question opportunities" detection when sentences are loaded
+  useEffect(() => {
+    if (sentences.length > 0 && !missedQuestionsData && !loadingMissedQuestions) {
+      fetchMissedQuestions();
     }
   }, [sentences]);
 
@@ -1807,6 +1815,23 @@ const SermonViewer = () => {
       console.error("Failed to analyze emotional resonance:", error);
     } finally {
       setLoadingEmotional(false);
+    }
+  };
+
+  const fetchMissedQuestions = async () => {
+    if (!id || loadingMissedQuestions) return;
+    setLoadingMissedQuestions(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-missed-questions', {
+        body: { sermonId: id }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setMissedQuestionsData(data);
+    } catch (error: any) {
+      console.error("Failed to analyze missed question opportunities:", error);
+    } finally {
+      setLoadingMissedQuestions(false);
     }
   };
 
