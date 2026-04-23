@@ -480,20 +480,18 @@ const drawChartCard = (
     fallback();
     return;
   }
+  // The captured chart image already includes its own title heading,
+  // so render the image edge-to-edge inside the card without an extra title.
   setFill(doc, BRAND.white);
   setStroke(doc, BRAND.divider);
   doc.setLineWidth(0.75);
   doc.roundedRect(x, y, w, h, 6, 6, "FD");
 
-  setText(doc, BRAND.ink);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text(title, x + 14, y + 18);
-
   try {
     const props = (doc as any).getImageProperties(imageDataUrl);
-    const availW = w - 24;
-    const availH = h - 32;
+    const pad = 8;
+    const availW = w - pad * 2;
+    const availH = h - pad * 2;
     const ratio = props.width / props.height;
     let imgW = availW;
     let imgH = imgW / ratio;
@@ -502,7 +500,7 @@ const drawChartCard = (
       imgW = imgH * ratio;
     }
     const ix = x + (w - imgW) / 2;
-    const iy = y + 28 + (availH - imgH) / 2;
+    const iy = y + (h - imgH) / 2;
     doc.addImage(imageDataUrl, "PNG", ix, iy, imgW, imgH);
   } catch {
     fallback();
