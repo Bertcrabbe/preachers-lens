@@ -141,7 +141,7 @@ const drawMetricCard = (
   doc.text(sub, x + 12, y + h - 10);
 };
 
-const drawCoverPage = (doc: jsPDF, data: ClientReportData) => {
+const drawCoverPage = (doc: jsPDF, data: ClientReportData, logoDataUrl: string | null) => {
   const bandH = 240;
   for (let i = 0; i < bandH; i++) {
     const t = i / bandH;
@@ -150,6 +150,14 @@ const drawCoverPage = (doc: jsPDF, data: ClientReportData) => {
     const b = Math.round(BRAND.primaryDark[2] + (BRAND.primary[2] - BRAND.primaryDark[2]) * t);
     doc.setFillColor(r, g, b);
     doc.rect(0, i, PAGE_W, 1, "F");
+  }
+
+  if (logoDataUrl) {
+    try {
+      doc.addImage(logoDataUrl, "PNG", PAGE_W - MARGIN - 72, 44, 72, 72);
+    } catch {
+      // ignore image errors
+    }
   }
 
   setText(doc, BRAND.white);
@@ -446,10 +454,28 @@ const drawCommentsPages = (doc: jsPDF, data: ClientReportData) => {
   }
 };
 
-export const generateClientReportPdf = (data: ClientReportData): Blob => {
-  const doc = new jsPDF({ unit: "pt", format: "letter", compress: true });
+const loadLogoDataUrl = async (): Promise<string | null> => {
+  try {
+    const res = await fetch(logoUrl);
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
 
-  drawCoverPage(doc, data);
+export const generateClientReportPdf = async (data: ClientReportData): Promise<Blob> => {
+  const doc = new jsPDF({ unit: "pt", format: "letter", compress: true });
+  const logoDataUrl = await loadLogoDataUrl();
+
+  drawCoverPage(doc, data, logoDataUrl);
+  // Draw logo + brand mark in footer too
+  // (footer drawn after all pages added below)
   drawMetricsPage(doc, data);
   drawScripturePage(doc, data);
   drawCommentsPages(doc, data);
