@@ -16,6 +16,10 @@ export interface ClientReportData {
   metrics: {
     averageWPM: number;
     wordCount: number;
+    fastSpeechCount: number;
+    fastSpeechThreshold: number;
+    slowSpeechCount: number;
+    slowSpeechThreshold: number;
     verbalPausesCount: number;
     insiderLanguageCount: number;
     congregationQuestions: number;
@@ -268,6 +272,8 @@ const drawMetricsPage = (doc: jsPDF, data: ClientReportData) => {
     ["Average Pace", `${m.averageWPM}`, "words per minute", BRAND.primary],
     ["Total Words", `${m.wordCount.toLocaleString()}`, "spoken in sermon", BRAND.sky],
     ["Runtime", fmtDuration(data.durationSeconds), "audio duration", BRAND.teal],
+    ["Fast Sections", `${m.fastSpeechCount}`, `> ${m.fastSpeechThreshold}× avg pace`, BRAND.rose],
+    ["Slow Sections", `${m.slowSpeechCount}`, `< ${m.slowSpeechThreshold}× avg pace`, BRAND.sky],
     ["Verbal Pauses", `${m.verbalPausesCount}`, "filler/hesitation moments", BRAND.amber],
     ["Insider Language", `${m.insiderLanguageCount}`, "potentially unclear terms", BRAND.accent],
     ["Audience Questions", `${m.congregationQuestions}`, "rhetorical or direct asks", BRAND.teal],
@@ -403,7 +409,19 @@ const drawCommentsPages = (doc: jsPDF, data: ClientReportData) => {
     return;
   }
 
-  for (const group of data.aiComments) {
+  const filteredGroups = data.aiComments.filter(
+    (g) => !/pace|speed|tempo|fast|slow|wpm/i.test(g.ruleName),
+  );
+
+  if (filteredGroups.length === 0) {
+    setText(doc, BRAND.muted);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+    doc.text("No AI-generated evaluation findings to report.", MARGIN, y + 4);
+    return;
+  }
+
+  for (const group of filteredGroups) {
     const accent = hexToRgb(group.ruleColor);
 
     y = ensureSpace(doc, y, 60);
