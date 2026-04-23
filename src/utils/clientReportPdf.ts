@@ -466,39 +466,102 @@ const drawLineChart = (
   }
 };
 
+const drawChartCard = (
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  title: string,
+  imageDataUrl: string | null | undefined,
+  fallback: () => void,
+) => {
+  if (!imageDataUrl) {
+    fallback();
+    return;
+  }
+  setFill(doc, BRAND.white);
+  setStroke(doc, BRAND.divider);
+  doc.setLineWidth(0.75);
+  doc.roundedRect(x, y, w, h, 6, 6, "FD");
+
+  setText(doc, BRAND.ink);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(title, x + 14, y + 18);
+
+  try {
+    const props = (doc as any).getImageProperties(imageDataUrl);
+    const availW = w - 24;
+    const availH = h - 32;
+    const ratio = props.width / props.height;
+    let imgW = availW;
+    let imgH = imgW / ratio;
+    if (imgH > availH) {
+      imgH = availH;
+      imgW = imgH * ratio;
+    }
+    const ix = x + (w - imgW) / 2;
+    const iy = y + 28 + (availH - imgH) / 2;
+    doc.addImage(imageDataUrl, "PNG", ix, iy, imgW, imgH);
+  } catch {
+    fallback();
+  }
+};
+
 const drawChartsPage = (doc: jsPDF, data: ClientReportData) => {
   doc.addPage();
   let y = MARGIN + 12;
   y = drawSectionHeading(doc, y, "Sermon Analytics", BRAND.primary);
 
   const chartW = PAGE_W - MARGIN * 2;
-  const chartH = 220;
+  const chartH = 230;
 
-  drawLineChart(
+  drawChartCard(
     doc,
     MARGIN,
     y,
     chartW,
     chartH,
     "Speaking Pace Over Time",
-    data.wpmSeries,
-    "words / minute",
-    BRAND.primary,
-    data.averageWPM,
+    data.wpmChartImage,
+    () =>
+      drawLineChart(
+        doc,
+        MARGIN,
+        y,
+        chartW,
+        chartH,
+        "Speaking Pace Over Time",
+        data.wpmSeries,
+        "words / minute",
+        BRAND.primary,
+        data.averageWPM,
+      ),
   );
   y += chartH + 16;
 
-  drawLineChart(
+  drawChartCard(
     doc,
     MARGIN,
     y,
     chartW,
     chartH,
     "Speaking Volume Over Time",
-    data.volumeSeries,
-    "% of baseline",
-    BRAND.amber,
-    100,
+    data.volumeChartImage,
+    () =>
+      drawLineChart(
+        doc,
+        MARGIN,
+        y,
+        chartW,
+        chartH,
+        "Speaking Volume Over Time",
+        data.volumeSeries,
+        "% of baseline",
+        BRAND.amber,
+        100,
+      ),
   );
   y += chartH + 16;
 
@@ -506,7 +569,7 @@ const drawChartsPage = (doc: jsPDF, data: ClientReportData) => {
   doc.setFont("helvetica", "italic");
   doc.setFontSize(9);
   const caption =
-    "Dashed line shows the speaker's baseline. Spikes above and dips below highlight moments of dynamic delivery.";
+    "Captured live from the Sermon Analytics dashboard. Dashed line shows the speaker's baseline.";
   const lines = doc.splitTextToSize(caption, chartW);
   doc.text(lines, MARGIN, y + 4);
 };
