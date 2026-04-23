@@ -3195,6 +3195,18 @@ const SermonViewer = () => {
               Export Combined Audio
             </Button>
             <Button
+              variant="default"
+              onClick={handleExportClientPdf}
+              disabled={exporting || sentences.length === 0}
+            >
+              {exporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileBarChart className="mr-2 h-4 w-4" />
+              )}
+              Client PDF Report
+            </Button>
+            <Button
               variant="outline"
               onClick={() => setEvaluationDialogOpen(true)}
               disabled={rules.length === 0}
