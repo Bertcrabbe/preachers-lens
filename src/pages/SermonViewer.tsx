@@ -35,6 +35,7 @@ import {
   Minimize2,
   ZoomOut,
   Highlighter,
+  FileBarChart,
 } from "lucide-react";
 import { AudioEditor } from "@/components/AudioEditor";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
@@ -56,6 +57,7 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { FloatingRecordingIndicator } from "@/components/FloatingRecordingIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { combineAudioFiles } from "@/utils/audioCombiner";
+import { generateClientReportPdf, type ClientReportData } from "@/utils/clientReportPdf";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
