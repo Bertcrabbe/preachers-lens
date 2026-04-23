@@ -4260,7 +4260,9 @@ const SermonViewer = () => {
                 <AnimatedCounter value={getEngagementScore().total} /><span className="text-lg text-muted-foreground">/10</span>
               </div>
               <div className="text-sm text-muted-foreground mt-1">
-                Overall Engagement{!illustrationData && " (without story analysis)"}
+                Overall Engagement
+                {!illustrationData && !emotionalData && " (loading AI metrics)"}
+                {((illustrationData && !emotionalData) || (!illustrationData && emotionalData)) && " (some AI metrics loaded)"}
               </div>
             </div>
             {engagementExpanded && (
