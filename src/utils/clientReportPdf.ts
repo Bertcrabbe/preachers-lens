@@ -33,6 +33,8 @@ export interface ClientReportData {
   wpmSeries: { timeMs: number; value: number }[];
   volumeSeries: { timeMs: number; value: number }[];
   averageWPM: number;
+  wpmChartImage?: string | null;
+  volumeChartImage?: string | null;
 
   scriptureRefs: { reference: string; context: string }[];
 

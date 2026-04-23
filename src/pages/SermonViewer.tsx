@@ -3022,6 +3022,24 @@ const SermonViewer = () => {
     }
   };
 
+  const captureChartElement = async (key: "wpm" | "volume"): Promise<string | null> => {
+    const el = document.querySelector<HTMLElement>(`[data-export-chart="${key}"]`);
+    if (!el) return null;
+    try {
+      const dataUrl = await toPng(el, {
+        pixelRatio: 2,
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--background")
+          ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue("--background").trim()})`
+          : "#ffffff",
+        cacheBust: true,
+      });
+      return dataUrl;
+    } catch (err) {
+      console.warn(`Chart capture failed for ${key}`, err);
+      return null;
+    }
+  };
+
   const handleExportClientPdf = async () => {
     if (!sermon) return;
     setExporting(true);
