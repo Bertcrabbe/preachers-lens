@@ -1,0 +1,1 @@
+ALTER TABLE public.sermon_metrics ADD COLUMN IF NOT EXISTS emotional_resonance_score numeric;
