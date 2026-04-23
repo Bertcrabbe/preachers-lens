@@ -30,7 +30,19 @@ export interface ClientReportData {
   topInsiderTerms: { word: string; count: number }[];
   repeatedPhrases: { word: string; count: number }[];
 
+  wpmSeries: { timeMs: number; value: number }[];
+  volumeSeries: { timeMs: number; value: number }[];
+  averageWPM: number;
+
   scriptureRefs: { reference: string; context: string }[];
+
+  visitorConfusion: {
+    severity: "mild" | "moderate" | "severe";
+    phrase: string;
+    startMs: number;
+    reason: string;
+    suggestion?: string;
+  }[];
 
   aiComments: {
     ruleName: string;
