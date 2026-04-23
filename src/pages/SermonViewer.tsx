@@ -4952,6 +4952,75 @@ const SermonViewer = () => {
               })()}
             </Card>
 
+            <Card 
+              className="stats-card p-4 cursor-pointer"
+              onClick={() => setShowMissedQuestions(!showMissedQuestions)}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-base font-bold text-rose-700">Missed Question Opportunities</h3>
+                <Checkbox
+                  checked={showMissedQuestions}
+                  onCheckedChange={(checked) => setShowMissedQuestions(checked === true)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex flex-col items-center text-center mb-3">
+                <div className="text-3xl font-bold text-rose-600">
+                  {loadingMissedQuestions ? (
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  ) : (
+                    <AnimatedCounter value={missedQuestionsData?.opportunities.length ?? 0} />
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  statements that could be questions
+                </div>
+              </div>
+              {!loadingMissedQuestions && missedQuestionsData && missedQuestionsData.opportunities.length > 0 && (
+                <div className="space-y-2 max-h-64 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <p className="font-medium">Try rephrasing these as questions:</p>
+                  </div>
+                  {missedQuestionsData.opportunities.map((opp) => {
+                    const s = sentences[opp.index];
+                    if (!s) return null;
+                    return (
+                      <div
+                        key={opp.index}
+                        className="text-sm border-l-2 border-rose-500 pl-2 py-1 cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-r"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (audioRef.current) {
+                            audioRef.current.currentTime = s.start_time_ms / 1000;
+                            void playSermonAudio();
+                          }
+                        }}
+                      >
+                        <div className="text-muted-foreground italic line-through decoration-rose-300/60">
+                          "{opp.statement}"
+                        </div>
+                        <div className="text-rose-800 dark:text-rose-300 font-medium mt-1">
+                          → "{opp.suggested_question}"
+                        </div>
+                        {opp.reason && (
+                          <div className="text-xs text-muted-foreground mt-0.5">{opp.reason}</div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {Math.floor(s.start_time_ms / 1000 / 60)}:{String(Math.floor((s.start_time_ms / 1000) % 60)).padStart(2, "0")}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {!loadingMissedQuestions && missedQuestionsData && missedQuestionsData.opportunities.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  No clear opportunities flagged. Statements about shared experience are already engaging or unavoidably declarative.
+                </p>
+              )}
+            </Card>
+
           </div>
 
           {/* WPM Timeline Chart */}
@@ -5446,7 +5515,9 @@ const SermonViewer = () => {
                       ? "bg-primary/10 border border-primary"
                       : showQuestions && sentence.sentence_text.trim().endsWith('?') && !isSentenceInScripture(sentence.sentence_text, sentences.indexOf(sentence)) && (!congregationQuestionIndices || congregationQuestionIndices.has(sentences.indexOf(sentence)))
                         ? "bg-amber-100 border border-amber-300"
-                        : "hover:bg-muted"
+                        : showMissedQuestions && missedQuestionsData?.opportunities.some(o => o.index === sentences.indexOf(sentence))
+                          ? "bg-rose-100 border border-rose-300 dark:bg-rose-950/30 dark:border-rose-700"
+                          : "hover:bg-muted"
                   }`}
                   onClick={() => seekTo(sentence.start_time_ms)}
                 >
