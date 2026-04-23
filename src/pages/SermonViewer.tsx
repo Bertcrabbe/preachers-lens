@@ -218,6 +218,20 @@ const SermonViewer = () => {
     breakdown: { stories: number; humor: number; illustrations: number; audience_interactions: number };
   } | null>(null);
   const [loadingIllustrations, setLoadingIllustrations] = useState(false);
+  const [emotionalData, setEmotionalData] = useState<{
+    overall_score: number;
+    subscores: {
+      vulnerability: number;
+      affective_language: number;
+      sensory_imagery: number;
+      pathos_moments: number;
+    };
+    affective_percentage: number;
+    summary: string;
+    pathos_moments: Array<{ type: string; excerpt: string; note: string }>;
+  } | null>(null);
+  const [loadingEmotional, setLoadingEmotional] = useState(false);
+  const [emotionalExpanded, setEmotionalExpanded] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
