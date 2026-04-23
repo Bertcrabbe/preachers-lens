@@ -3073,10 +3073,6 @@ const SermonViewer = () => {
         metrics: {
           averageWPM: Math.round(getAverageSpeechRate()),
           wordCount: totalWords,
-          fastSpeechCount: countFastSpeechParagraphs(fastSpeechThreshold),
-          fastSpeechThreshold,
-          slowSpeechCount: countSlowSpeechParagraphs(slowSpeechThreshold),
-          slowSpeechThreshold,
           verbalPausesCount: countVerbalPauses(),
           insiderLanguageCount: countInsiderLanguage(),
           congregationQuestions: congQuestions,
@@ -3092,7 +3088,7 @@ const SermonViewer = () => {
         aiComments: grouped,
       };
 
-      const blob = generateClientReportPdf(data);
+      const blob = await generateClientReportPdf(data);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const safeTitle = (sermon.title || "sermon").replace(/[^\w\d-]+/g, "-").slice(0, 60);
