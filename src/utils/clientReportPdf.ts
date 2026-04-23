@@ -409,7 +409,19 @@ const drawCommentsPages = (doc: jsPDF, data: ClientReportData) => {
     return;
   }
 
-  for (const group of data.aiComments) {
+  const filteredGroups = data.aiComments.filter(
+    (g) => !/pace|speed|tempo|fast|slow|wpm/i.test(g.ruleName),
+  );
+
+  if (filteredGroups.length === 0) {
+    setText(doc, BRAND.muted);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+    doc.text("No AI-generated evaluation findings to report.", MARGIN, y + 4);
+    return;
+  }
+
+  for (const group of filteredGroups) {
     const accent = hexToRgb(group.ruleColor);
 
     y = ensureSpace(doc, y, 60);
