@@ -231,7 +231,6 @@ const SermonViewer = () => {
     pathos_moments: Array<{ type: string; excerpt: string; note: string }>;
   } | null>(null);
   const [loadingEmotional, setLoadingEmotional] = useState(false);
-  const [emotionalExpanded, setEmotionalExpanded] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
