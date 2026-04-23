@@ -16,6 +16,10 @@ export interface ClientReportData {
   metrics: {
     averageWPM: number;
     wordCount: number;
+    fastSpeechCount: number;
+    fastSpeechThreshold: number;
+    slowSpeechCount: number;
+    slowSpeechThreshold: number;
     verbalPausesCount: number;
     insiderLanguageCount: number;
     congregationQuestions: number;
@@ -268,6 +272,8 @@ const drawMetricsPage = (doc: jsPDF, data: ClientReportData) => {
     ["Average Pace", `${m.averageWPM}`, "words per minute", BRAND.primary],
     ["Total Words", `${m.wordCount.toLocaleString()}`, "spoken in sermon", BRAND.sky],
     ["Runtime", fmtDuration(data.durationSeconds), "audio duration", BRAND.teal],
+    ["Fast Sections", `${m.fastSpeechCount}`, `> ${m.fastSpeechThreshold}× avg pace`, BRAND.rose],
+    ["Slow Sections", `${m.slowSpeechCount}`, `< ${m.slowSpeechThreshold}× avg pace`, BRAND.sky],
     ["Verbal Pauses", `${m.verbalPausesCount}`, "filler/hesitation moments", BRAND.amber],
     ["Insider Language", `${m.insiderLanguageCount}`, "potentially unclear terms", BRAND.accent],
     ["Audience Questions", `${m.congregationQuestions}`, "rhetorical or direct asks", BRAND.teal],
