@@ -4272,13 +4272,13 @@ const SermonViewer = () => {
                     <span className="flex items-center gap-1.5">
                       <span>{sub.icon}</span>
                       <span>{sub.label}</span>
-                      {sub.label === "Illustrations & Stories" && sub.score === 0 && (
+                      {(sub.label === "Illustrations & Stories" || sub.label === "Emotional Resonance") && sub.score === 0 && (
                         <span className="text-xs text-muted-foreground italic">(not loaded)</span>
                       )}
                     </span>
                     <div className="flex items-center gap-2">
                       <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className={`h-full rounded-full transition-all ${
                             sub.score >= 7 ? 'bg-emerald-500' : sub.score >= 4 ? 'bg-amber-500' : 'bg-red-500'
                           }`}
@@ -4291,9 +4291,84 @@ const SermonViewer = () => {
                     </div>
                   </div>
                 ))}
+
+                {/* Inline Emotional Resonance Details */}
+                {emotionalData && (
+                  <div className="mt-3 pt-3 border-t space-y-3">
+                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400 mb-2">❤️ Emotional Resonance Breakdown</p>
+                    {emotionalData.summary && (
+                      <p className="text-sm text-muted-foreground italic">{emotionalData.summary}</p>
+                    )}
+                    <div className="space-y-2">
+                      {[
+                        { label: "Vulnerability", score: emotionalData.subscores.vulnerability, icon: "🫀" },
+                        { label: "Affective Language", score: emotionalData.subscores.affective_language, icon: "💬" },
+                        { label: "Sensory & Concrete Imagery", score: emotionalData.subscores.sensory_imagery, icon: "🎨" },
+                        { label: "Pathos Moments", score: emotionalData.subscores.pathos_moments, icon: "✨" },
+                      ].map((sub) => (
+                        <div key={sub.label} className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-1.5">
+                            <span>{sub.icon}</span>
+                            <span>{sub.label}</span>
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  sub.score >= 7 ? 'bg-emerald-500' : sub.score >= 4 ? 'bg-amber-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${(sub.score / 10) * 100}%` }}
+                              />
+                            </div>
+                            <span className={`font-semibold w-6 text-right ${
+                              sub.score >= 7 ? 'text-emerald-600' : sub.score >= 4 ? 'text-amber-600' : 'text-red-600'
+                            }`}>{sub.score}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Head/Heart ratio bar */}
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                        <span>Head 🧠</span>
+                        <span className="font-medium text-foreground">
+                          {emotionalData.affective_percentage}% Heart
+                        </span>
+                        <span>❤️ Heart</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full overflow-hidden bg-sky-200 dark:bg-sky-950 relative">
+                        <div
+                          className="h-full bg-rose-500 transition-all"
+                          style={{ width: `${Math.max(0, Math.min(100, emotionalData.affective_percentage))}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pathos moments */}
+                    {emotionalData.pathos_moments && emotionalData.pathos_moments.length > 0 && (
+                      <div className="pt-2 border-t">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Pathos Moments</p>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {emotionalData.pathos_moments.map((m, i) => (
+                            <div key={i} className="text-xs p-2 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="capitalize text-[10px] py-0 h-4">{m.type}</Badge>
+                                <span className="text-muted-foreground italic">{m.note}</span>
+                              </div>
+                              <p className="text-foreground">"{m.excerpt}"</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Story Breakdown */}
                 {illustrationData && (
                   <div className="mt-3 pt-3 border-t">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Story Breakdown:</p>
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-2">🎭 Story Breakdown:</p>
                     <div className="grid grid-cols-3 gap-2 text-xs text-center">
                       {illustrationData.breakdown.stories > 0 && (
                         <div><div className="font-semibold text-amber-600">{illustrationData.breakdown.stories}</div><div className="text-muted-foreground">Stories</div></div>
