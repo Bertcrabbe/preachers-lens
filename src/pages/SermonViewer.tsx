@@ -4858,7 +4858,7 @@ const SermonViewer = () => {
 
           {/* Volume Timeline Chart */}
           {getVolumeTimelineData().length > 0 && (
-            <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4">
+            <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="volume">
               <h3 className="text-base font-semibold mb-3">Speaking Volume Over Time</h3>
               <div className="h-48 w-full cursor-pointer">
                 <ResponsiveContainer width="100%" height="100%">
