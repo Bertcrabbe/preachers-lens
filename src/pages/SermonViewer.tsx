@@ -232,6 +232,16 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingEmotional, setLoadingEmotional] = useState(false);
   const [engagementExpanded, setEngagementExpanded] = useState(false);
+  const [missedQuestionsData, setMissedQuestionsData] = useState<{
+    opportunities: Array<{
+      index: number;
+      statement: string;
+      suggested_question: string;
+      reason?: string;
+    }>;
+  } | null>(null);
+  const [loadingMissedQuestions, setLoadingMissedQuestions] = useState(false);
+  const [showMissedQuestions, setShowMissedQuestions] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
   const [hiddenRuleIds, setHiddenRuleIds] = useState<Set<string>>(new Set());
