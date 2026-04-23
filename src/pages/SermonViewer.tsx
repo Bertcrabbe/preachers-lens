@@ -3156,6 +3156,7 @@ const SermonViewer = () => {
           insiderLanguageCount: countInsiderLanguage(),
           congregationQuestions: congQuestions,
           illustrationScore: illustrationData?.illustration_score ?? 0,
+          emotionalResonanceScore: emotionalData?.overall_score ?? 0,
         },
         topFillerWords: getTopFillerWords().map((f) => ({ word: f.word, count: f.count })),
         topInsiderTerms: getTopInsiderTerms().map((t) => ({ word: t.word, count: t.count })),
