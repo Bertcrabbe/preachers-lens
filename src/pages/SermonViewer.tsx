@@ -3089,6 +3089,16 @@ const SermonViewer = () => {
           reference: r.reference,
           context: r.context,
         })) || [],
+        wpmSeries: getWpmTimelineData().map((d) => ({ timeMs: d.time, value: d.wpm })),
+        volumeSeries: getVolumeTimelineData().map((d) => ({ timeMs: d.time, value: d.volume })),
+        averageWPM: Math.round(getAverageSpeechRate()),
+        visitorConfusion: (confusingPhrases?.phrases || []).map((p) => ({
+          severity: (p.severity as "mild" | "moderate" | "severe") || "mild",
+          phrase: p.phrase,
+          startMs: p.start_time_ms,
+          reason: p.reason,
+          suggestion: p.suggestion,
+        })),
         aiComments: grouped,
       };
 
