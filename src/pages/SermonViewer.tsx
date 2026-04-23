@@ -242,6 +242,13 @@ const SermonViewer = () => {
   } | null>(null);
   const [loadingMissedQuestions, setLoadingMissedQuestions] = useState(false);
   const [showMissedQuestions, setShowMissedQuestions] = useState(false);
+  const [intentData, setIntentData] = useState<{
+    know: string;
+    feel: string;
+    do: string;
+    summary: string;
+  } | null>(null);
+  const [loadingIntent, setLoadingIntent] = useState(false);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
   const [hiddenRuleIds, setHiddenRuleIds] = useState<Set<string>>(new Set());
@@ -343,6 +350,13 @@ const SermonViewer = () => {
   useEffect(() => {
     if (sentences.length > 0 && !missedQuestionsData && !loadingMissedQuestions) {
       fetchMissedQuestions();
+    }
+  }, [sentences]);
+
+  // Auto-run sermon intent (Know/Feel/Do) analysis when sentences are loaded
+  useEffect(() => {
+    if (sentences.length > 0 && !intentData && !loadingIntent) {
+      fetchSermonIntent();
     }
   }, [sentences]);
 
@@ -1832,6 +1846,23 @@ const SermonViewer = () => {
       console.error("Failed to analyze missed question opportunities:", error);
     } finally {
       setLoadingMissedQuestions(false);
+    }
+  };
+
+  const fetchSermonIntent = async () => {
+    if (!id || loadingIntent) return;
+    setLoadingIntent(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-sermon-intent', {
+        body: { sermonId: id }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setIntentData(data);
+    } catch (error: any) {
+      console.error("Failed to analyze sermon intent:", error);
+    } finally {
+      setLoadingIntent(false);
     }
   };
 
