@@ -5008,7 +5008,7 @@ const SermonViewer = () => {
         </div>
         
         <Card className="p-6 flex-1 min-w-0">
-          <div className="space-y-4 overflow-y-auto overflow-x-hidden scroll-smooth transcript-parallax max-h-[calc(100vh-4rem)]" ref={transcriptContainerRef}>
+          <div className="space-y-4 overflow-y-auto overflow-x-hidden scroll-smooth transcript-parallax max-h-[calc(100vh-4rem)] pr-4" ref={transcriptContainerRef}>
             {/* Intro comment section at top - scrolls with transcript */}
             <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-dashed border-border">
               {/* Show existing intro comment if there is one */}
