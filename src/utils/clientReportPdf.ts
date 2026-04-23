@@ -30,7 +30,19 @@ export interface ClientReportData {
   topInsiderTerms: { word: string; count: number }[];
   repeatedPhrases: { word: string; count: number }[];
 
+  wpmSeries: { timeMs: number; value: number }[];
+  volumeSeries: { timeMs: number; value: number }[];
+  averageWPM: number;
+
   scriptureRefs: { reference: string; context: string }[];
+
+  visitorConfusion: {
+    severity: "mild" | "moderate" | "severe";
+    phrase: string;
+    startMs: number;
+    reason: string;
+    suggestion?: string;
+  }[];
 
   aiComments: {
     ruleName: string;
@@ -351,6 +363,254 @@ const drawMetricsPage = (doc: jsPDF, data: ClientReportData) => {
   drawList(MARGIN + (colW + 8) * 2, "Most Repeated Phrases", data.repeatedPhrases, BRAND.teal);
 };
 
+const fmtMin = (ms: number): string => {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+};
+
+const drawLineChart = (
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  title: string,
+  series: { timeMs: number; value: number }[],
+  unit: string,
+  lineColor: RGB,
+  baselineValue?: number,
+) => {
+  setFill(doc, BRAND.white);
+  setStroke(doc, BRAND.divider);
+  doc.setLineWidth(0.75);
+  doc.roundedRect(x, y, w, h, 6, 6, "FD");
+
+  setText(doc, BRAND.ink);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(title, x + 14, y + 18);
+
+  setText(doc, BRAND.muted);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(unit, x + w - 14, y + 18, { align: "right" });
+
+  const padL = 40;
+  const padR = 16;
+  const padT = 32;
+  const padB = 24;
+  const plotX = x + padL;
+  const plotY = y + padT;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  if (series.length === 0) {
+    setText(doc, BRAND.muted);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.text("No data available", x + w / 2, y + h / 2, { align: "center" });
+    return;
+  }
+
+  const values = series.map((s) => s.value);
+  const minV = Math.min(...values, baselineValue ?? Infinity);
+  const maxV = Math.max(...values, baselineValue ?? -Infinity);
+  const pad = Math.max(5, (maxV - minV) * 0.1);
+  const yMin = Math.floor((minV - pad) / 10) * 10;
+  const yMax = Math.ceil((maxV + pad) / 10) * 10;
+  const yRange = Math.max(1, yMax - yMin);
+  const tMin = series[0].timeMs;
+  const tMax = series[series.length - 1].timeMs;
+  const tRange = Math.max(1, tMax - tMin);
+
+  setStroke(doc, BRAND.divider);
+  doc.setLineWidth(0.3);
+  setText(doc, BRAND.muted);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  for (let i = 0; i <= 4; i++) {
+    const gy = plotY + (plotH * i) / 4;
+    doc.line(plotX, gy, plotX + plotW, gy);
+    const label = Math.round(yMax - (yRange * i) / 4);
+    doc.text(`${label}`, plotX - 4, gy + 2, { align: "right" });
+  }
+  for (let i = 0; i <= 4; i++) {
+    const tx = plotX + (plotW * i) / 4;
+    const ms = tMin + (tRange * i) / 4;
+    doc.text(fmtMin(ms), tx, plotY + plotH + 12, { align: "center" });
+  }
+
+  if (baselineValue !== undefined) {
+    setStroke(doc, BRAND.muted);
+    doc.setLineWidth(0.5);
+    const by = plotY + plotH * (1 - (baselineValue - yMin) / yRange);
+    const dashLen = 3;
+    for (let dx = 0; dx < plotW; dx += dashLen * 2) {
+      doc.line(plotX + dx, by, plotX + Math.min(dx + dashLen, plotW), by);
+    }
+  }
+
+  const points = series.map((s) => ({
+    px: plotX + plotW * ((s.timeMs - tMin) / tRange),
+    py: plotY + plotH * (1 - (s.value - yMin) / yRange),
+  }));
+
+  setStroke(doc, lineColor);
+  doc.setLineWidth(1.4);
+  for (let i = 1; i < points.length; i++) {
+    doc.line(points[i - 1].px, points[i - 1].py, points[i].px, points[i].py);
+  }
+};
+
+const drawChartsPage = (doc: jsPDF, data: ClientReportData) => {
+  doc.addPage();
+  let y = MARGIN + 12;
+  y = drawSectionHeading(doc, y, "Sermon Analytics", BRAND.primary);
+
+  const chartW = PAGE_W - MARGIN * 2;
+  const chartH = 220;
+
+  drawLineChart(
+    doc,
+    MARGIN,
+    y,
+    chartW,
+    chartH,
+    "Speaking Pace Over Time",
+    data.wpmSeries,
+    "words / minute",
+    BRAND.primary,
+    data.averageWPM,
+  );
+  y += chartH + 16;
+
+  drawLineChart(
+    doc,
+    MARGIN,
+    y,
+    chartW,
+    chartH,
+    "Speaking Volume Over Time",
+    data.volumeSeries,
+    "% of baseline",
+    BRAND.amber,
+    100,
+  );
+  y += chartH + 16;
+
+  setText(doc, BRAND.muted);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(9);
+  const caption =
+    "Dashed line shows the speaker's baseline. Spikes above and dips below highlight moments of dynamic delivery.";
+  const lines = doc.splitTextToSize(caption, chartW);
+  doc.text(lines, MARGIN, y + 4);
+};
+
+const SEVERITY_META: Record<string, { label: string; color: RGB }> = {
+  severe: { label: "Severe", color: [225, 29, 72] },
+  moderate: { label: "Medium", color: [249, 115, 22] },
+  mild: { label: "Mild", color: [234, 179, 8] },
+};
+
+const drawConfusionPage = (doc: jsPDF, data: ClientReportData) => {
+  doc.addPage();
+  let y = MARGIN + 12;
+  y = drawSectionHeading(doc, y, "Visitor Confusion", BRAND.rose);
+
+  setText(doc, BRAND.muted);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const intro =
+    "Phrases or terms that may be unclear to first-time visitors. Severity reflects how unfamiliar the language is likely to feel.";
+  const introLines = doc.splitTextToSize(intro, PAGE_W - MARGIN * 2);
+  doc.text(introLines, MARGIN, y);
+  y += introLines.length * 11 + 10;
+
+  if (data.visitorConfusion.length === 0) {
+    setText(doc, BRAND.muted);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+    doc.text("No potentially confusing phrases identified.", MARGIN, y + 4);
+    return;
+  }
+
+  const legendY = y;
+  let lx = MARGIN;
+  (["severe", "moderate", "mild"] as const).forEach((sev) => {
+    const meta = SEVERITY_META[sev];
+    setFill(doc, meta.color);
+    doc.roundedRect(lx, legendY, 8, 8, 2, 2, "F");
+    setText(doc, BRAND.ink);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text(meta.label, lx + 12, legendY + 7);
+    lx += 70;
+  });
+  y += 24;
+
+  const order: Record<string, number> = { severe: 0, moderate: 1, mild: 2 };
+  const sorted = [...data.visitorConfusion].sort((a, b) => {
+    const so = (order[a.severity] ?? 9) - (order[b.severity] ?? 9);
+    if (so !== 0) return so;
+    return a.startMs - b.startMs;
+  });
+
+  for (const item of sorted) {
+    const meta = SEVERITY_META[item.severity] ?? SEVERITY_META.mild;
+    const ts = fmtTimestamp(item.startMs);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const reasonLines = doc.splitTextToSize(item.reason || "\u2014", PAGE_W - MARGIN * 2 - 24);
+    const suggestionLines = item.suggestion
+      ? doc.splitTextToSize(`Try: ${item.suggestion}`, PAGE_W - MARGIN * 2 - 24)
+      : [];
+    const blockH = 38 + reasonLines.length * 11 + (suggestionLines.length ? 6 + suggestionLines.length * 11 : 0);
+    y = ensureSpace(doc, y, blockH + 8);
+
+    setFill(doc, BRAND.white);
+    setStroke(doc, BRAND.divider);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(MARGIN, y, PAGE_W - MARGIN * 2, blockH, 6, 6, "FD");
+    setFill(doc, meta.color);
+    doc.roundedRect(MARGIN, y, 4, blockH, 2, 2, "F");
+
+    setText(doc, BRAND.ink);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(`\u201C${item.phrase}\u201D`, MARGIN + 14, y + 16);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    const badgeW = doc.getTextWidth(meta.label.toUpperCase()) + 14;
+    setFill(doc, meta.color);
+    doc.roundedRect(PAGE_W - MARGIN - badgeW - 8, y + 8, badgeW, 14, 3, 3, "F");
+    setText(doc, BRAND.white);
+    doc.text(meta.label.toUpperCase(), PAGE_W - MARGIN - badgeW / 2 - 8, y + 17, { align: "center" });
+
+    setText(doc, BRAND.muted);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(ts, MARGIN + 14, y + 28);
+
+    setText(doc, BRAND.ink);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(reasonLines, MARGIN + 14, y + 40);
+
+    if (suggestionLines.length) {
+      setText(doc, BRAND.teal);
+      doc.setFont("helvetica", "italic");
+      doc.text(suggestionLines, MARGIN + 14, y + 40 + reasonLines.length * 11 + 6);
+    }
+
+    y += blockH + 8;
+  }
+};
+
 const drawScripturePage = (doc: jsPDF, data: ClientReportData) => {
   doc.addPage();
   let y = MARGIN + 12;
@@ -508,6 +768,8 @@ export const generateClientReportPdf = async (data: ClientReportData): Promise<B
 
   drawCoverPage(doc, data, logoDataUrl);
   drawMetricsPage(doc, data);
+  drawChartsPage(doc, data);
+  drawConfusionPage(doc, data);
   drawScripturePage(doc, data);
   drawCommentsPages(doc, data);
 
