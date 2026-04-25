@@ -4286,6 +4286,18 @@ const SermonViewer = () => {
               >
                 {anyAIOverlayActive ? "Hide AI Highlights" : "Show AI Comments"}
               </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDashboardCollapsed(true);
+                }}
+                title="Collapse Analytics"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </Button>
               </div>
             )}
           </div>
