@@ -116,12 +116,15 @@ Transcript:\n\n${transcript}`
         
         console.log(`Found ${result.scripture_sentence_indices.length} scripture sentence indices`);
 
+        clearTimeout(timeoutId);
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      } catch (modelError) {
-        console.error(`Model ${model} failed:`, modelError);
-        lastError = `${model}: ${modelError}`;
+      } catch (modelError: any) {
+        clearTimeout(timeoutId);
+        const isAbort = modelError?.name === "AbortError";
+        console.error(`Model ${model} failed${isAbort ? " (timeout)" : ""}:`, modelError);
+        lastError = `${model}: ${isAbort ? "timeout" : modelError}`;
         continue;
       }
     }
