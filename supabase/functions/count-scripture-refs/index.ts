@@ -42,7 +42,7 @@ serve(async (req) => {
     const numberedTranscript = sentences.map((s: any, i: number) => `[${i}] ${s.sentence_text}`).join("\n");
     
     // Truncate to avoid exceeding AI context limits and reduce latency
-    const maxChars = 40000;
+    const maxChars = 30000;
     const transcript = numberedTranscript.length > maxChars 
       ? numberedTranscript.substring(0, maxChars) + "\n\n[TRANSCRIPT TRUNCATED]"
       : numberedTranscript;
@@ -50,14 +50,19 @@ serve(async (req) => {
     console.log(`Transcript length: ${numberedTranscript.length} chars, sending: ${transcript.length} chars`);
 
     // Use fastest models first to minimize response time
-    const models = ["google/gemini-2.5-flash-lite", "openai/gpt-5-nano", "google/gemini-2.5-flash"];
+    const models = ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash", "openai/gpt-5-nano"];
+    // Per-model timeout budget so we never exceed the 150s edge function limit
+    const PER_MODEL_TIMEOUT_MS = 45000;
     let lastError = "";
-    
+
     for (const model of models) {
       console.log(`Trying model: ${model}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
       try {
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
+          signal: controller.signal,
           headers: {
             Authorization: `Bearer ${lovableApiKey}`,
             "Content-Type": "application/json",
@@ -94,6 +99,7 @@ Transcript:\n\n${transcript}`
           const errorText = await aiResponse.text();
           console.error(`Model ${model} error:`, aiResponse.status, errorText);
           lastError = `${model}: ${aiResponse.status}`;
+          clearTimeout(timeoutId);
           continue;
         }
 
@@ -110,12 +116,15 @@ Transcript:\n\n${transcript}`
         
         console.log(`Found ${result.scripture_sentence_indices.length} scripture sentence indices`);
 
+        clearTimeout(timeoutId);
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      } catch (modelError) {
-        console.error(`Model ${model} failed:`, modelError);
-        lastError = `${model}: ${modelError}`;
+      } catch (modelError: any) {
+        clearTimeout(timeoutId);
+        const isAbort = modelError?.name === "AbortError";
+        console.error(`Model ${model} failed${isAbort ? " (timeout)" : ""}:`, modelError);
+        lastError = `${model}: ${isAbort ? "timeout" : modelError}`;
         continue;
       }
     }
