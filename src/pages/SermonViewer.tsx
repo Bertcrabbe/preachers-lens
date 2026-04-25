@@ -3372,13 +3372,6 @@ const SermonViewer = () => {
               <Sparkles className="mr-2 h-4 w-4" />
               Evaluate
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setViewMode(viewMode === "sentence" ? "paragraph" : "sentence")}
-            >
-              {viewMode === "sentence" ? <AlignLeft className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
-              {viewMode === "sentence" ? "Paragraph View" : "Sentence View"}
-            </Button>
           </div>
         </div>
 
