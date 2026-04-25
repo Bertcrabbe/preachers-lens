@@ -5070,11 +5070,6 @@ const SermonViewer = () => {
 
             {!loadingIntent && intentData ? (
               <div className="space-y-3">
-                {intentData.summary && (
-                  <p className="text-sm italic text-muted-foreground border-l-2 border-indigo-400 pl-3">
-                    {intentData.summary}
-                  </p>
-                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="rounded-lg border border-blue-200/60 dark:border-blue-800/40 bg-blue-50/40 dark:bg-blue-950/20 p-3">
                     <div className="flex items-center gap-2 mb-1.5">
