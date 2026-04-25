@@ -3372,13 +3372,6 @@ const SermonViewer = () => {
               <Sparkles className="mr-2 h-4 w-4" />
               Evaluate
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setViewMode(viewMode === "sentence" ? "paragraph" : "sentence")}
-            >
-              {viewMode === "sentence" ? <AlignLeft className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
-              {viewMode === "sentence" ? "Paragraph View" : "Sentence View"}
-            </Button>
           </div>
         </div>
 
@@ -5455,6 +5448,22 @@ const SermonViewer = () => {
                   ))}
             </div>
               )}
+            </div>
+
+            <div className="border-t border-border" />
+
+            {/* View Mode Toggle */}
+            <div className="text-center space-y-2">
+              <div className="text-xs text-muted-foreground">View Mode</div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setViewMode(viewMode === "sentence" ? "paragraph" : "sentence")}
+              >
+                {viewMode === "sentence" ? <AlignLeft className="h-4 w-4 mr-2" /> : <List className="h-4 w-4 mr-2" />}
+                {viewMode === "sentence" ? "Paragraph View" : "Sentence View"}
+              </Button>
             </div>
 
             {userScrolledAway && (
