@@ -3461,9 +3461,10 @@ const SermonViewer = () => {
                     setPlayedCommentIds(new Set());
                     audioRef.current.currentTime = 0;
                     
-                    // Check if there's an intro comment (at time 0 or before first sentence)
-                    const firstSentenceStart = sentences.length > 0 ? sentences[0].start_time_ms : 0;
-                    const introComment = comments.find(c => c.audio_url && c.start_time_ms <= firstSentenceStart);
+                    // Check if there's an intro comment (start=0, end=0)
+                    const introComment = comments.find(
+                      c => c.audio_url && c.start_time_ms === 0 && c.end_time_ms === 0
+                    );
                     if (introComment) {
                       // Play the intro comment first
                       audioRef.current.pause();
