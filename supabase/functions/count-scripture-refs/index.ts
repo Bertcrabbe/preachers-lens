@@ -62,6 +62,7 @@ serve(async (req) => {
       try {
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
+          signal: controller.signal,
           headers: {
             Authorization: `Bearer ${lovableApiKey}`,
             "Content-Type": "application/json",
@@ -98,6 +99,7 @@ Transcript:\n\n${transcript}`
           const errorText = await aiResponse.text();
           console.error(`Model ${model} error:`, aiResponse.status, errorText);
           lastError = `${model}: ${aiResponse.status}`;
+          clearTimeout(timeoutId);
           continue;
         }
 
