@@ -113,8 +113,80 @@ Transcript:\n\n${transcript}`
         if (!result.scripture_sentence_indices) {
           result.scripture_sentence_indices = [];
         }
-        
-        console.log(`Found ${result.scripture_sentence_indices.length} scripture sentence indices`);
+
+        // Deduplicate references and consolidate overlapping verse ranges so we
+        // don't count the same verse twice (e.g. "Romans 6:1-4" and "Romans 6:3").
+        if (Array.isArray(result.references)) {
+          // Parse a reference like "Romans 6:1-4" or "1 John 2:3" into structured form
+          const parseRef = (ref: string): { book: string; chapter: number; start: number; end: number } | null => {
+            const m = ref.trim().match(/^(.+?)\s+(\d+):(\d+)(?:\s*[-–]\s*(\d+))?$/);
+            if (!m) return null;
+            const book = m[1].trim().toLowerCase().replace(/\s+/g, " ");
+            const chapter = parseInt(m[2], 10);
+            const start = parseInt(m[3], 10);
+            const end = m[4] ? parseInt(m[4], 10) : start;
+            if (isNaN(chapter) || isNaN(start) || isNaN(end)) return null;
+            return { book, chapter, start, end: Math.max(start, end) };
+          };
+
+          // Group verse ranges per book+chapter and merge overlaps
+          const groups = new Map<string, { ranges: [number, number][]; original: any[] }>();
+          const unparseable: any[] = [];
+          for (const r of result.references) {
+            const parsed = parseRef(String(r.reference || ""));
+            if (!parsed) {
+              unparseable.push(r);
+              continue;
+            }
+            const key = `${parsed.book}|${parsed.chapter}`;
+            if (!groups.has(key)) groups.set(key, { ranges: [], original: [] });
+            const g = groups.get(key)!;
+            g.ranges.push([parsed.start, parsed.end]);
+            g.original.push({ ...r, _parsed: parsed });
+          }
+
+          const merged: any[] = [];
+          let totalVerses = 0;
+          for (const [key, g] of groups) {
+            g.ranges.sort((a, b) => a[0] - b[0]);
+            const stack: [number, number][] = [];
+            for (const [s, e] of g.ranges) {
+              if (stack.length && s <= stack[stack.length - 1][1] + 1) {
+                stack[stack.length - 1][1] = Math.max(stack[stack.length - 1][1], e);
+              } else {
+                stack.push([s, e]);
+              }
+            }
+            const first = g.original[0]._parsed;
+            // Capitalize book words
+            const bookDisplay = first.book.replace(/\b\w/g, (c: string) => c.toUpperCase());
+            for (const [s, e] of stack) {
+              const refStr = s === e
+                ? `${bookDisplay} ${first.chapter}:${s}`
+                : `${bookDisplay} ${first.chapter}:${s}-${e}`;
+              const verseCount = e - s + 1;
+              totalVerses += verseCount;
+              // Pick the longest context from any original ref overlapping this merged range
+              const ctx = g.original
+                .filter((o) => o._parsed.start <= e && o._parsed.end >= s)
+                .map((o) => o.context || "")
+                .reduce((a, b) => (b.length > a.length ? b : a), "");
+              merged.push({ reference: refStr, context: ctx, verse_count: verseCount });
+            }
+          }
+
+          // Add any unparseable refs as-is (count their stated verse_count once)
+          for (const r of unparseable) {
+            merged.push(r);
+            totalVerses += Number(r.verse_count) || 0;
+          }
+
+          result.references = merged;
+          result.total_count = merged.length;
+          result.total_verses = totalVerses;
+        }
+
+        console.log(`Found ${result.scripture_sentence_indices.length} scripture sentence indices, ${result.references?.length || 0} refs, ${result.total_verses} verses`);
 
         clearTimeout(timeoutId);
         return new Response(JSON.stringify(result), {
