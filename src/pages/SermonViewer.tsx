@@ -5060,7 +5060,7 @@ const SermonViewer = () => {
               <div>
                 <h3 className="text-base font-bold text-indigo-700 dark:text-indigo-400">Sermon Intent</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  What the AI thinks the preacher wanted listeners to <span className="font-medium">know</span>, <span className="font-medium">feel</span>, and <span className="font-medium">do</span>.
+                  What the AI thinks the preacher wants listeners to <span className="font-medium">know</span>, <span className="font-medium">feel</span>, and <span className="font-medium">do</span>.
                 </p>
               </div>
               {loadingIntent && (
