@@ -60,21 +60,28 @@ serve(async (req) => {
               {
                 role: "system",
                 content: `You are a homiletics coach. Every sermon should answer three questions about the preacher's intent:
-1. KNOW — What truth, idea, or doctrine does the preacher want listeners to understand?
-2. FEEL — What emotional response does the preacher want to evoke?
-3. DO — What concrete action or response does the preacher want listeners to take?
+1. KNOW — the core truth, idea, or doctrine
+2. FEEL — the emotional response
+3. DO — the concrete action
 
-Read the sermon transcript and infer the preacher's likely answers to each. Answer directly and concisely in one sentence each — do NOT use framing like "the preacher wants listeners to..." or "listeners should understand that..." Just state the substance plainly. Be specific and concrete — avoid vague generalities like "to grow in faith." If an answer is genuinely unclear or absent from the sermon, say so directly in one sentence (e.g., "Not clearly addressed — the sermon focuses on knowing without a specific action").
+Answer each in the most concise form possible — ideally a short phrase or single short sentence (under 12 words). Get straight to the substance. Do NOT use framing phrases like "the preacher wants...", "listeners should...", "to feel...", "that...". State the thing itself.
+
+Examples of the desired style:
+- KNOW: "The resurrection of Jesus is a real historical event."
+- FEEL: "Hopeful in the face of struggle."
+- DO: "Entrust their lives to Jesus Christ."
+
+If an answer is genuinely unclear, write "Not clearly addressed."
 
 Also write a one-sentence summary of the sermon's overall thrust.`,
               },
               {
                 role: "user",
-                content: `Analyze this sermon transcript. Return ONLY valid JSON (no markdown):
+                content: `Analyze this sermon transcript. Return ONLY valid JSON (no markdown). Each of know/feel/do must be a short phrase or single short sentence under 12 words, with no framing language:
 {
-  "know": "<one direct sentence stating what the preacher wants listeners to understand, without framing phrases>",
-  "feel": "<one direct sentence stating the emotional response the preacher wants to evoke, without framing phrases>",
-  "do": "<one direct sentence stating the concrete action the preacher wants listeners to take, without framing phrases>",
+  "know": "<the core truth itself, stated plainly>",
+  "feel": "<the emotion itself, e.g. 'Hopeful in the face of struggle.'>",
+  "do": "<the action itself, e.g. 'Entrust their lives to Jesus Christ.'>",
   "summary": "<one sentence summarizing the sermon's central thrust>"
 }
 
