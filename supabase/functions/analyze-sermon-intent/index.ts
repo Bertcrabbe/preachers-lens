@@ -64,7 +64,7 @@ serve(async (req) => {
 2. FEEL — What emotional response does the preacher want to evoke?
 3. DO — What concrete action or response does the preacher want listeners to take?
 
-Read the sermon transcript and infer the preacher's likely answers to each. Be specific and concrete in a single sentence — avoid vague generalities like "to grow in faith." If an answer is genuinely unclear or absent from the sermon, say so directly in one sentence (e.g., "Not clearly addressed — the sermon focuses on knowing without a specific action").
+Read the sermon transcript and infer the preacher's likely answers to each. Answer directly and concisely in one sentence each — do NOT use framing like "the preacher wants listeners to..." or "listeners should understand that..." Just state the substance plainly. Be specific and concrete — avoid vague generalities like "to grow in faith." If an answer is genuinely unclear or absent from the sermon, say so directly in one sentence (e.g., "Not clearly addressed — the sermon focuses on knowing without a specific action").
 
 Also write a one-sentence summary of the sermon's overall thrust.`,
               },
@@ -72,9 +72,9 @@ Also write a one-sentence summary of the sermon's overall thrust.`,
                 role: "user",
                 content: `Analyze this sermon transcript. Return ONLY valid JSON (no markdown):
 {
-  "know": "<one sentence on what the preacher wants listeners to understand>",
-  "feel": "<one sentence on the intended emotional response>",
-  "do": "<one sentence on the concrete action>",
+  "know": "<one direct sentence stating what the preacher wants listeners to understand, without framing phrases>",
+  "feel": "<one direct sentence stating the emotional response the preacher wants to evoke, without framing phrases>",
+  "do": "<one direct sentence stating the concrete action the preacher wants listeners to take, without framing phrases>",
   "summary": "<one sentence summarizing the sermon's central thrust>"
 }
 
