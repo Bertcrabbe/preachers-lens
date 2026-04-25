@@ -5058,7 +5058,7 @@ const SermonViewer = () => {
           <Card className="mt-6 p-5 bg-gradient-to-br from-indigo-50/50 via-card to-rose-50/30 dark:from-indigo-950/20 dark:via-card dark:to-rose-950/10 border-indigo-200/50 dark:border-indigo-800/30">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="text-base font-bold text-indigo-700 dark:text-indigo-400">Sermon Intent</h3>
+                <h3 className="text-base font-bold text-indigo-700 dark:text-indigo-400">Preacher's Intent</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   What the AI thinks the preacher wants listeners to <span className="font-medium">know</span>, <span className="font-medium">feel</span>, and <span className="font-medium">do</span>.
                 </p>
