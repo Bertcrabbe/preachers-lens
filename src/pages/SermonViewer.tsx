@@ -4297,18 +4297,6 @@ const SermonViewer = () => {
               >
                 {anyAIOverlayActive ? "Hide AI Highlights" : "Show AI Comments"}
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDashboardCollapsed(true);
-                }}
-                title="Collapse Analytics"
-              >
-                <ChevronUp className="h-4 w-4" />
-              </Button>
               </div>
             )}
           </div>
@@ -5362,6 +5350,20 @@ const SermonViewer = () => {
             </Card>
           </Collapsible>
           </div>
+          {!dashboardCollapsed && (
+            <div className="mt-4 pt-3 border-t border-border flex justify-center">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs gap-1"
+                onClick={() => setDashboardCollapsed(true)}
+                title="Collapse Analytics"
+              >
+                <ChevronUp className="h-4 w-4" />
+                Collapse Analytics
+              </Button>
+            </div>
+          )}
         </Card>
 
         <div className="flex gap-4">
