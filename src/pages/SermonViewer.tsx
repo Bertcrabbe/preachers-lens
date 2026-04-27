@@ -4209,8 +4209,25 @@ const SermonViewer = () => {
 
         {/* Sermon Dashboard */}
         <Card className={`mb-6 shadow-lg animate-slide-up transition-all duration-300 ${dashboardCollapsed ? 'py-2 px-4' : 'p-6'}`}>
-          <div className="w-full flex items-center justify-between">
+          <div
+            className="w-full flex items-center justify-between cursor-pointer"
+            onClick={() => setDashboardCollapsed((v) => !v)}
+          >
             <h2 className={`font-semibold text-gradient-primary transition-all duration-300 ${dashboardCollapsed ? 'text-sm' : 'text-xl'}`}>Sermon Analytics</h2>
+            {dashboardCollapsed && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDashboardCollapsed(false);
+                }}
+                title="Expand Analytics"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            )}
             {!dashboardCollapsed && (
               <div className="flex items-center gap-2 ml-3">
               <Popover>
