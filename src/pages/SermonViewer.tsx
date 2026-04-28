@@ -4207,6 +4207,193 @@ const SermonViewer = () => {
           </div>
         </Card>
 
+        {/* WPM Timeline Chart */}
+        {getWpmTimelineData().length > 0 && (
+            <div className="mb-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="wpm">
+              <h3 className="text-base font-semibold mb-3">Speaking Pace Over Time</h3>
+            <div className="h-48 w-full cursor-pointer">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart 
+                  data={getWpmTimelineData()} 
+                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                  onClick={(data) => {
+                    if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
+                      const timeMs = data.activePayload[0].payload.time;
+                      audioRef.current.currentTime = timeMs / 1000;
+                      void playSermonAudio();
+                      setWpmChartClockActive(true);
+                    }
+                  }}
+                >
+                  <XAxis 
+                    dataKey="time" 
+                    type="number"
+                    domain={['dataMin', 'dataMax']}
+                    tick={{ fontSize: 10 }} 
+                    tickFormatter={(ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10 }} 
+                    domain={['dataMin - 10', 'dataMax + 10']}
+                    width={40}
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const wpm = payload[0].value as number;
+                      const avg = getAverageSpeechRate();
+                      const pctDev = avg > 0 ? ((wpm - avg) / avg) * 100 : 0;
+                      const ms = payload[0].payload.time as number;
+                      const sign = pctDev >= 0 ? '+' : '';
+                      return (
+                        <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg text-xs">
+                          <p className="text-muted-foreground">{`${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}</p>
+                          <p className="font-semibold">{wpm} WPM</p>
+                          <p className={pctDev >= 0 ? 'text-rose-600' : 'text-blue-600'}>{sign}{pctDev.toFixed(1)}% from avg</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <ReferenceLine 
+                    y={Math.round(getAverageSpeechRate())} 
+                    stroke="hsl(var(--muted-foreground))" 
+                    strokeDasharray="5 5"
+                    label={{ value: 'Avg', position: 'right', fontSize: 10 }}
+                  />
+                  {currentTime > 0 && (
+                    <ReferenceLine 
+                      x={currentTime * 1000}
+                      stroke="hsl(var(--destructive))"
+                      strokeWidth={3}
+                      isFront={true}
+                      label={{
+                        value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
+                        position: 'top',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        fill: 'hsl(var(--destructive))',
+                        offset: 5
+                      }}
+                    />
+                  )}
+                  <Line 
+                    type="monotone" 
+                    dataKey="wpm" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-0.5 bg-primary" />
+                <span>WPM</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
+                <span>Average ({Math.round(getAverageSpeechRate())} WPM)</span>
+              </div>
+            </div>
+            {wpmChartClockActive && (
+              <div className="text-center mt-2 text-sm font-medium text-primary">
+                ▶ {Math.floor(currentTime / 1000 / 60)}m {String(Math.floor((currentTime / 1000) % 60)).padStart(2, '0')}s
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Volume Timeline Chart */}
+        {getVolumeTimelineData().length > 0 && (
+          <div className="mb-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="volume">
+            <h3 className="text-base font-semibold mb-3">Speaking Volume Over Time</h3>
+            <div className="h-48 w-full cursor-pointer">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart 
+                  data={getVolumeTimelineData()} 
+                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                  onClick={(data) => {
+                    if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
+                      const timeMs = data.activePayload[0].payload.time;
+                      audioRef.current.currentTime = timeMs / 1000;
+                      void playSermonAudio();
+                      setVolumeChartClockActive(true);
+                    }
+                  }}
+                >
+                  <XAxis 
+                    dataKey="time" 
+                    type="number"
+                    domain={['dataMin', 'dataMax']}
+                    tick={{ fontSize: 10 }} 
+                    tickFormatter={(ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10 }} 
+                    domain={[0, 'dataMax + 20']}
+                    width={40}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [`${value}%`, 'Volume']}
+                    labelFormatter={(ms: number) => `Time: ${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
+                    contentStyle={{ fontSize: 12 }}
+                  />
+                  <ReferenceLine 
+                    y={100} 
+                    stroke="hsl(var(--muted-foreground))" 
+                    strokeDasharray="5 5"
+                    label={{ value: 'Avg', position: 'right', fontSize: 10 }}
+                  />
+                  {currentTime > 0 && (
+                    <ReferenceLine 
+                      x={currentTime * 1000}
+                      stroke="hsl(var(--destructive))"
+                      strokeWidth={3}
+                      isFront={true}
+                      label={{
+                        value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
+                        position: 'top',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        fill: 'hsl(var(--destructive))',
+                        offset: 5
+                      }}
+                    />
+                  )}
+                  <Line 
+                    type="monotone" 
+                    dataKey="volume" 
+                    stroke="hsl(var(--chart-3))" 
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-0.5" style={{ backgroundColor: 'hsl(var(--chart-3))' }} />
+                <span>Volume</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
+                <span>Baseline (100%)</span>
+              </div>
+            </div>
+            {volumeChartClockActive && (
+              <div className="text-center mt-2 text-sm font-medium text-primary">
+                ▶ {Math.floor(currentTime / 1000 / 60)}m {String(Math.floor((currentTime / 1000) % 60)).padStart(2, '0')}s
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Sermon Dashboard */}
         <Card className={`mb-6 shadow-lg animate-slide-up transition-all duration-300 ${dashboardCollapsed ? 'py-2 px-4' : 'p-6'}`}>
           <div
@@ -5106,192 +5293,6 @@ const SermonViewer = () => {
             )}
           </Card>
 
-          {/* WPM Timeline Chart */}
-          {getWpmTimelineData().length > 0 && (
-              <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="wpm">
-                <h3 className="text-base font-semibold mb-3">Speaking Pace Over Time</h3>
-              <div className="h-48 w-full cursor-pointer">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={getWpmTimelineData()} 
-                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                    onClick={(data) => {
-                      if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
-                        const timeMs = data.activePayload[0].payload.time;
-                        audioRef.current.currentTime = timeMs / 1000;
-                        void playSermonAudio();
-                        setWpmChartClockActive(true);
-                      }
-                    }}
-                  >
-                    <XAxis 
-                      dataKey="time" 
-                      type="number"
-                      domain={['dataMin', 'dataMax']}
-                      tick={{ fontSize: 10 }} 
-                      tickFormatter={(ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      domain={['dataMin - 10', 'dataMax + 10']}
-                      width={40}
-                    />
-                    <Tooltip 
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const wpm = payload[0].value as number;
-                        const avg = getAverageSpeechRate();
-                        const pctDev = avg > 0 ? ((wpm - avg) / avg) * 100 : 0;
-                        const ms = payload[0].payload.time as number;
-                        const sign = pctDev >= 0 ? '+' : '';
-                        return (
-                          <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg text-xs">
-                            <p className="text-muted-foreground">{`${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}</p>
-                            <p className="font-semibold">{wpm} WPM</p>
-                            <p className={pctDev >= 0 ? 'text-rose-600' : 'text-blue-600'}>{sign}{pctDev.toFixed(1)}% from avg</p>
-                          </div>
-                        );
-                      }}
-                    />
-                    <ReferenceLine 
-                      y={Math.round(getAverageSpeechRate())} 
-                      stroke="hsl(var(--muted-foreground))" 
-                      strokeDasharray="5 5"
-                      label={{ value: 'Avg', position: 'right', fontSize: 10 }}
-                    />
-                    {currentTime > 0 && (
-                      <ReferenceLine 
-                        x={currentTime * 1000}
-                        stroke="hsl(var(--destructive))"
-                        strokeWidth={3}
-                        isFront={true}
-                        label={{
-                          value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
-                          position: 'top',
-                          fontSize: 11,
-                          fontWeight: 'bold',
-                          fill: 'hsl(var(--destructive))',
-                          offset: 5
-                        }}
-                      />
-                    )}
-                    <Line 
-                      type="monotone" 
-                      dataKey="wpm" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ r: 2 }}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-0.5 bg-primary" />
-                  <span>WPM</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
-                  <span>Average ({Math.round(getAverageSpeechRate())} WPM)</span>
-                </div>
-              </div>
-              {wpmChartClockActive && (
-                <div className="text-center mt-2 text-sm font-medium text-primary">
-                  ▶ {Math.floor(currentTime / 1000 / 60)}m {String(Math.floor((currentTime / 1000) % 60)).padStart(2, '0')}s
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Volume Timeline Chart */}
-          {getVolumeTimelineData().length > 0 && (
-            <div className="mt-6 rounded-lg border border-border/50 bg-card/30 p-4" data-export-chart="volume">
-              <h3 className="text-base font-semibold mb-3">Speaking Volume Over Time</h3>
-              <div className="h-48 w-full cursor-pointer">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={getVolumeTimelineData()} 
-                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                    onClick={(data) => {
-                      if (data?.activePayload?.[0]?.payload?.time !== undefined && audioRef.current) {
-                        const timeMs = data.activePayload[0].payload.time;
-                        audioRef.current.currentTime = timeMs / 1000;
-                        void playSermonAudio();
-                        setVolumeChartClockActive(true);
-                      }
-                    }}
-                  >
-                    <XAxis 
-                      dataKey="time" 
-                      type="number"
-                      domain={['dataMin', 'dataMax']}
-                      tick={{ fontSize: 10 }} 
-                      tickFormatter={(ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      domain={[0, 'dataMax + 20']}
-                      width={40}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value}%`, 'Volume']}
-                      labelFormatter={(ms: number) => `Time: ${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`}
-                      contentStyle={{ fontSize: 12 }}
-                    />
-                    <ReferenceLine 
-                      y={100} 
-                      stroke="hsl(var(--muted-foreground))" 
-                      strokeDasharray="5 5"
-                      label={{ value: 'Avg', position: 'right', fontSize: 10 }}
-                    />
-                    {currentTime > 0 && (
-                      <ReferenceLine 
-                        x={currentTime * 1000}
-                        stroke="hsl(var(--destructive))"
-                        strokeWidth={3}
-                        isFront={true}
-                        label={{
-                          value: `▼ ${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`,
-                          position: 'top',
-                          fontSize: 11,
-                          fontWeight: 'bold',
-                          fill: 'hsl(var(--destructive))',
-                          offset: 5
-                        }}
-                      />
-                    )}
-                    <Line 
-                      type="monotone" 
-                      dataKey="volume" 
-                      stroke="hsl(var(--chart-3))" 
-                      strokeWidth={2}
-                      dot={{ r: 2 }}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-0.5" style={{ backgroundColor: 'hsl(var(--chart-3))' }} />
-                  <span>Volume</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
-                  <span>Baseline (100%)</span>
-                </div>
-              </div>
-              {volumeChartClockActive && (
-                <div className="text-center mt-2 text-sm font-medium text-primary">
-                  ▶ {Math.floor(currentTime / 1000 / 60)}m {String(Math.floor((currentTime / 1000) % 60)).padStart(2, '0')}s
-                </div>
-              )}
-            </div>
-          )}
           <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen} className="mt-6">
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
