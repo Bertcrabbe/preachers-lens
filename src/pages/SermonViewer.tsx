@@ -160,6 +160,18 @@ const SermonViewer = () => {
     summary: string;
     bulletPoints: string[];
   } | null>(null);
+  // AI Coach (in-your-voice generated comments)
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachApplying, setCoachApplying] = useState(false);
+  const [coachDeleting, setCoachDeleting] = useState(false);
+  const [coachNotes, setCoachNotes] = useState<Array<{
+    sentence_index: number;
+    category?: string;
+    comment_text: string;
+    start_time_ms: number;
+    end_time_ms: number;
+  }> | null>(null);
   const [viewStart, setViewStart] = useState(0); // percentage of audio (0-100)
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
