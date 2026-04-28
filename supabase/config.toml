@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.scrape-audio-links]
 verify_jwt = false
+
+[functions.ai-coach-comments]
+verify_jwt = true
