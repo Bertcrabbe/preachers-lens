@@ -160,6 +160,18 @@ const SermonViewer = () => {
     summary: string;
     bulletPoints: string[];
   } | null>(null);
+  // AI Coach (in-your-voice generated comments)
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachApplying, setCoachApplying] = useState(false);
+  const [coachDeleting, setCoachDeleting] = useState(false);
+  const [coachNotes, setCoachNotes] = useState<Array<{
+    sentence_index: number;
+    category?: string;
+    comment_text: string;
+    start_time_ms: number;
+    end_time_ms: number;
+  }> | null>(null);
   const [viewStart, setViewStart] = useState(0); // percentage of audio (0-100)
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
@@ -2267,6 +2279,101 @@ const SermonViewer = () => {
       });
     } finally {
       setSummarizing(false);
+    }
+  };
+
+  const AI_COACH_TAG = "[AI Coach]";
+
+  const handleGenerateCoachComments = async () => {
+    if (!id) return;
+    if (!sentences || sentences.length === 0) {
+      toast({
+        title: "Transcript not ready",
+        description: "The sermon must finish transcription before AI Coach can review it.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCoachLoading(true);
+    setCoachOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-coach-comments", {
+        body: { sermonId: id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const notes = Array.isArray(data?.notes) ? data.notes : [];
+      setCoachNotes(notes);
+      toast({
+        title: "AI Coach is ready",
+        description: `Generated ${notes.length} note${notes.length === 1 ? "" : "s"} in your voice. Review below.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "AI Coach failed",
+        description: err?.message || "Could not generate notes.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  const handleApplyCoachComments = async () => {
+    if (!id || !coachNotes || coachNotes.length === 0) return;
+    setCoachApplying(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+      const rows = coachNotes.map((n) => ({
+        sermon_id: id,
+        user_id: user.id,
+        comment_text: `${AI_COACH_TAG}${n.category ? ` (${n.category})` : ""} ${n.comment_text}`,
+        start_time_ms: n.start_time_ms,
+        end_time_ms: n.end_time_ms,
+      }));
+      const { error } = await supabase.from("sermon_comments").insert(rows);
+      if (error) throw error;
+      toast({
+        title: "Applied to timeline",
+        description: `Inserted ${rows.length} AI Coach comment${rows.length === 1 ? "" : "s"}.`,
+      });
+      setCoachNotes(null);
+      fetchComments();
+    } catch (err: any) {
+      toast({
+        title: "Could not apply",
+        description: err?.message || "Insertion failed.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoachApplying(false);
+    }
+  };
+
+  const handleDeleteAllCoachComments = async () => {
+    if (!id) return;
+    setCoachDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("sermon_comments")
+        .delete()
+        .eq("sermon_id", id)
+        .like("comment_text", `${AI_COACH_TAG}%`);
+      if (error) throw error;
+      toast({
+        title: "AI Coach comments removed",
+        description: "All AI-generated comments on this sermon were deleted.",
+      });
+      fetchComments();
+    } catch (err: any) {
+      toast({
+        title: "Delete failed",
+        description: err?.message || "Could not delete AI Coach comments.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoachDeleting(false);
     }
   };
 
@@ -5345,6 +5452,125 @@ const SermonViewer = () => {
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     Click "Generate Summary" to analyze all comments and get AI-powered improvement suggestions.
+                  </p>
+                )}
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible open={coachOpen} onOpenChange={setCoachOpen} className="mt-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">AI Coach (in your voice)</h3>
+                </CollapsibleTrigger>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    onClick={handleDeleteAllCoachComments}
+                    disabled={coachDeleting}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {coachDeleting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Removing...
+                      </>
+                    ) : (
+                      "Delete all AI Coach comments"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleGenerateCoachComments}
+                    disabled={coachLoading || sentences.length === 0}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {coachLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Reviewing sermon...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {coachNotes ? "Re-generate notes" : "Generate AI Coach notes"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <CollapsibleContent className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  AI reviews this sermon's transcript and writes 6–10 timestamped coaching notes,
+                  modeled on the voice of your past comments across all sermons.
+                </p>
+
+                {coachNotes && coachNotes.length > 0 ? (
+                  <>
+                    <div className="space-y-3">
+                      {coachNotes.map((n, i) => {
+                        const ms = n.start_time_ms || 0;
+                        const ts = `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
+                        return (
+                          <div key={i} className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              <Badge variant="outline" className="font-mono text-[10px]">{ts}</Badge>
+                              {n.category && (
+                                <Badge variant="secondary" className="text-[10px] capitalize">{n.category}</Badge>
+                              )}
+                              <button
+                                type="button"
+                                className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline ml-auto"
+                                onClick={() => {
+                                  if (audioRef.current) {
+                                    audioRef.current.currentTime = ms / 1000;
+                                    void playSermonAudio();
+                                  }
+                                }}
+                              >
+                                Jump to moment
+                              </button>
+                            </div>
+                            <p className="text-sm leading-relaxed">{n.comment_text}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCoachNotes(null)}
+                        disabled={coachApplying}
+                      >
+                        Discard
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleApplyCoachComments}
+                        disabled={coachApplying}
+                      >
+                        {coachApplying ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Applying...
+                          </>
+                        ) : (
+                          `Apply ${coachNotes.length} as comments`
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                ) : coachNotes && coachNotes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    The model didn't return any notes. Try re-generating.
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Click "Generate AI Coach notes" to have the AI review this sermon and draft comments in your voice.
                   </p>
                 )}
               </CollapsibleContent>
