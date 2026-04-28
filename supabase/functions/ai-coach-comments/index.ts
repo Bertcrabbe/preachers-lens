@@ -53,20 +53,23 @@ serve(async (req) => {
       );
     }
 
-    // Voice baseline: user's text comments across ALL their sermons
+    // Voice + content baseline: user's OWN text comments across ALL their sermons.
+    // Exclude rule-based (AI evaluation) comments and exclude this sermon to avoid leakage.
     const { data: pastComments } = await supabase
       .from("sermon_comments")
-      .select("comment_text, created_at")
+      .select("comment_text, created_at, sermon_id, rule_id")
       .eq("user_id", ownerUserId)
+      .is("rule_id", null)
       .not("comment_text", "is", null)
+      .neq("sermon_id", sermonId)
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(300);
 
     const voiceSamplesAll = (pastComments || [])
       .map((c: any) => (c.comment_text || "").trim())
-      .filter((t: string) => t.length >= 8 && t.length <= 600);
+      .filter((t: string) => t.length >= 6 && t.length <= 800);
 
-    const MAX_VOICE_CHARS = 8000;
+    const MAX_VOICE_CHARS = 14000;
     let runChars = 0;
     const voiceCorpus = voiceSamplesAll
       .filter((t) => {
@@ -93,16 +96,29 @@ serve(async (req) => {
     const transcript = transcriptLines.join("\n");
 
     const voiceSection = voiceCorpus
-      ? `Below is a corpus of the coach's OWN past written comments across many sermons. Treat this as the authoritative reference for their VOICE: word choice, sentence length, rhythm, level of directness, favorite phrases, jargon they use or avoid, balance of encouragement and critique, and how they typically open/close feedback. Mirror this voice precisely. Do NOT quote these samples verbatim — absorb the style.\n\n--- COACH VOICE SAMPLES (most recent first) ---\n${voiceCorpus}\n--- END COACH VOICE SAMPLES ---\n\n`
+      ? `Below is a corpus of the coach's OWN past written comments across many sermons. Treat this as the authoritative reference for BOTH:
+
+1) CONTENT — what this coach habitually notices and comments on. Study the samples for recurring themes: e.g. transitions, illustrations, scripture handling, opening hooks, audience connection, vulnerability, repetition, jargon/insider language, application, the close, pacing calls, theological precision, emotional beats, etc. Your generated comments should focus on the SAME categories of things this coach notices — not generic homiletics advice. If the coach rarely comments on a category, you should also rarely comment on it.
+
+2) VOICE — word choice, sentence length, rhythm, directness, favorite phrases, jargon they use or avoid, balance of encouragement vs. critique, and how they open/close a note.
+
+Mirror BOTH precisely. Do NOT quote samples verbatim — absorb the patterns.
+
+--- COACH'S OWN PAST COMMENTS (most recent first) ---
+${voiceCorpus}
+--- END SAMPLES ---
+
+`
       : "";
 
-    const userPrompt = `${voiceSection}You are reviewing a new sermon transcript. Each line is one sentence prefixed with #<order_index> and a [m:ss] timestamp. Pick the 6-10 most important moments to comment on (a balanced mix: opening, illustrations, transitions, key turns, theological clarity, pacing, emotional beats, and the close). For EACH note:
+    const userPrompt = `${voiceSection}You are reviewing a new sermon transcript. Each line is one sentence prefixed with #<order_index> and a [m:ss] timestamp. Pick 6-10 moments to comment on, weighted toward the SAME kinds of moments this coach has historically flagged in the samples above. For EACH note:
 
 - Anchor it to ONE specific sentence by its #order_index.
-- Write the comment in the COACH'S OWN VOICE, modeled on the samples above. Match their sentence length, vocabulary, directness, and tone. Avoid generic AI coach phrasing or hedging.
-- Be concrete: name what's working or what to try next, not vague observations.
-- Keep each comment to 1-3 sentences.
-- Tag a short category for the moment (one of: opening, illustration, structure, clarity, theology, pacing, emotion, close, transition, language).
+- The SUBJECT MATTER of the comment must echo what this coach typically notices (see samples). Don't invent new categories they never use.
+- Write in the COACH'S OWN VOICE — match their sentence length, vocabulary, directness, hedging level, and tone. Avoid generic AI-coach phrasing (no "Consider...", no "It might be helpful if...", unless the coach actually talks like that).
+- Be concrete and specific to this sentence. No vague platitudes.
+- Keep each comment within the typical length range you observed in the samples.
+- Tag a short category (one of: opening, illustration, structure, clarity, theology, pacing, emotion, close, transition, language).
 
 Transcript:
 ${transcript}
