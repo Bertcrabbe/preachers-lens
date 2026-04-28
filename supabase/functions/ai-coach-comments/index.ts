@@ -111,14 +111,24 @@ ${voiceCorpus}
 `
       : "";
 
-    const userPrompt = `${voiceSection}You are reviewing a new sermon transcript. Each line is one sentence prefixed with #<order_index> and a [m:ss] timestamp. Pick 6-10 moments to comment on, weighted toward the SAME kinds of moments this coach has historically flagged in the samples above. For EACH note:
+    const firstIdx = sentences[0].order_index;
+    const lastIdx = sentences[sentences.length - 1].order_index;
+
+    const userPrompt = `${voiceSection}You are reviewing a new sermon transcript. Each line is one sentence prefixed with #<order_index> and a [m:ss] timestamp.
+
+You MUST produce notes in this order:
+1. FIRST note: an INTRO comment — an overall opening reflection on the sermon as a whole (the kind of thing the coach would say before diving in). Use category "intro" and sentence_index = ${firstIdx}.
+2. MIDDLE notes: 6-10 in-line moments (see rules below), weighted toward the SAME kinds of moments this coach has historically flagged in the samples above.
+3. LAST note: an OUTRO comment — an overall closing reflection / summary takeaway in the coach's voice. Use category "outro" and sentence_index = ${lastIdx}.
+
+For EACH note:
 
 - Anchor it to ONE specific sentence by its #order_index.
 - The SUBJECT MATTER of the comment must echo what this coach typically notices (see samples). Don't invent new categories they never use.
 - Write in the COACH'S OWN VOICE — match their sentence length, vocabulary, directness, hedging level, and tone. Avoid generic AI-coach phrasing (no "Consider...", no "It might be helpful if...", unless the coach actually talks like that).
 - Be concrete and specific to this sentence. No vague platitudes.
 - Keep each comment within the typical length range you observed in the samples.
-- Tag a short category (one of: opening, illustration, structure, clarity, theology, pacing, emotion, close, transition, language).
+- Tag a short category. The first note's category MUST be "intro" and the last note's category MUST be "outro". Middle notes use one of: opening, illustration, structure, clarity, theology, pacing, emotion, close, transition, language.
 
 Transcript:
 ${transcript}
@@ -130,7 +140,7 @@ Return STRICT JSON of the form:
   ]
 }
 
-Generate between 6 and 10 notes. Do not include any prose outside the JSON.`;
+Generate exactly: 1 intro note + 6-10 middle notes + 1 outro note. Do not include any prose outside the JSON.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -201,15 +211,43 @@ Generate between 6 and 10 notes. Do not include any prose outside the JSON.`;
     for (const s of sentences) sentenceMap.set(s.order_index as number, s);
 
     const notes: Array<GeneratedNote & { start_time_ms: number; end_time_ms: number }> = [];
-    for (const n of parsed.notes || []) {
+    const rawNotes = parsed.notes || [];
+    for (let i = 0; i < rawNotes.length; i++) {
+      const n = rawNotes[i];
       if (!n || typeof n.sentence_index !== "number") continue;
-      if (!validIndices.has(n.sentence_index)) continue;
       const text = (n.comment_text || "").trim();
       if (!text) continue;
+      const cat = (n.category || "").toString().toLowerCase().slice(0, 24);
+      const isIntro = cat === "intro" || i === 0;
+      const isOutro = cat === "outro" || i === rawNotes.length - 1;
+
+      if (isIntro) {
+        // Intro comments are stored with start=end=0 per the app's intro convention
+        notes.push({
+          sentence_index: sentences[0].order_index,
+          category: "intro",
+          comment_text: text,
+          start_time_ms: 0,
+          end_time_ms: 0,
+        });
+        continue;
+      }
+      if (isOutro) {
+        const last = sentences[sentences.length - 1];
+        notes.push({
+          sentence_index: last.order_index,
+          category: "outro",
+          comment_text: text,
+          start_time_ms: last.start_time_ms ?? 0,
+          end_time_ms: last.end_time_ms ?? (last.start_time_ms ?? 0) + 3000,
+        });
+        continue;
+      }
+      if (!validIndices.has(n.sentence_index)) continue;
       const s = sentenceMap.get(n.sentence_index);
       notes.push({
         sentence_index: n.sentence_index,
-        category: (n.category || "").toString().slice(0, 24),
+        category: cat,
         comment_text: text,
         start_time_ms: s.start_time_ms ?? 0,
         end_time_ms: s.end_time_ms ?? (s.start_time_ms ?? 0) + 3000,
