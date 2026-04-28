@@ -264,6 +264,7 @@ const SermonViewer = () => {
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [hideAIEvalComments, setHideAIEvalComments] = useState(false);
   const [hiddenRuleIds, setHiddenRuleIds] = useState<Set<string>>(new Set());
+  const [hideMyComments, setHideMyComments] = useState(false);
 
   // Registry of all AI-driven overlay toggles. Add future AI categories here
   // so the master "Hide AI Highlights" control automatically clears them.
@@ -3169,6 +3170,8 @@ const SermonViewer = () => {
       if (hideAIEvalComments && c.rule_id) return false;
       // Hide individually-deselected AI rule categories
       if (c.rule_id && hiddenRuleIds.has(c.rule_id)) return false;
+      // Hide the user's own (non-rule) comments when toggle is on
+      if (hideMyComments && !c.rule_id) return false;
       // Check if comment falls within or just after the range (covers gaps between sentences)
       return c.start_time_ms >= start && c.start_time_ms < end;
     });
@@ -3771,6 +3774,21 @@ const SermonViewer = () => {
                   <span className="text-sm text-muted-foreground">Comments:</span>
                   <span className="text-sm font-medium">{comments.filter(c => !c.rule_id).length}</span>
                 </div>
+                {comments.filter(c => !c.rule_id).length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="hide-my-comments"
+                      checked={hideMyComments}
+                      onCheckedChange={setHideMyComments}
+                    />
+                    <label
+                      htmlFor="hide-my-comments"
+                      className="text-xs text-muted-foreground cursor-pointer"
+                    >
+                      Hide my comments
+                    </label>
+                  </div>
+                )}
               </div>
               
               <div className="flex items-center gap-2 border-l pl-4">
