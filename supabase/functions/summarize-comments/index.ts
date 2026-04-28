@@ -54,6 +54,41 @@ serve(async (req) => {
       );
     }
 
+    // Determine the owning user so we can pull their full comment history as a voice baseline
+    const { data: sermonRow } = await supabase
+      .from('sermons')
+      .select('user_id')
+      .eq('id', sermonId)
+      .maybeSingle();
+    const ownerUserId = sermonRow?.user_id as string | undefined;
+
+    // Pull a broad sample of the user's prior text comments across ALL their sermons as a voice/style baseline
+    let voiceSamples: string[] = [];
+    if (ownerUserId) {
+      const { data: allUserComments } = await supabase
+        .from('sermon_comments')
+        .select('comment_text, created_at')
+        .eq('user_id', ownerUserId)
+        .not('comment_text', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(400);
+      voiceSamples = (allUserComments || [])
+        .map((c: any) => (c.comment_text || '').trim())
+        .filter((t: string) => t.length >= 8 && t.length <= 600);
+    }
+
+    // Cap total characters to keep the prompt within model limits
+    const MAX_VOICE_CHARS = 8000;
+    let runningChars = 0;
+    const voiceCorpus = voiceSamples
+      .filter((t) => {
+        if (runningChars + t.length + 4 > MAX_VOICE_CHARS) return false;
+        runningChars += t.length + 4;
+        return true;
+      })
+      .map((t, i) => `${i + 1}. ${t}`)
+      .join('\n');
+
     // Format comments for AI analysis
     const commentTexts = comments.map((comment: any, index: number) => {
       const timeStamp = `[${Math.floor(comment.start_time_ms / 1000 / 60)}:${String(Math.floor((comment.start_time_ms / 1000) % 60)).padStart(2, '0')}]`;
@@ -64,14 +99,20 @@ serve(async (req) => {
       return `${index + 1}. ${timeStamp} ${commentType} ${ruleContext}\n   ${comment.comment_text || 'Audio feedback provided'}`;
     }).join('\n\n');
 
-    const prompt = `You are an expert sermon coach analyzing feedback on a sermon. Below are all the comments (both written and audio) that have been added to this sermon at various timestamps.
+    const voiceSection = voiceCorpus
+      ? `Below is a corpus of the coach's OWN past written comments across many sermons. Treat this as the authoritative reference for their VOICE: word choice, sentence length, rhythm, level of directness, favorite phrases, use (or avoidance) of jargon, tone of encouragement vs. critique, and how they typically open/close feedback. Mirror this voice precisely. Do NOT quote these samples verbatim — absorb their style.\n\n--- COACH VOICE SAMPLES (most recent first) ---\n${voiceCorpus}\n--- END COACH VOICE SAMPLES ---\n\n`
+      : '';
 
-Comments:
+    const prompt = `${voiceSection}You are summarizing feedback on a single sermon. Below are all the comments (both written and audio) added to this sermon at various timestamps.
+
+Comments on this sermon:
 ${commentTexts}
 
-Based on these comments, provide:
-1. A brief summary (2-3 sentences) of the overall feedback
-2. 3-5 specific, actionable bullet points on how the sermon could be improved
+Write the summary and bullet points AS IF THE COACH WROTE THEM, in their own voice (matched to the samples above). Use their typical sentence length, vocabulary, and tone. Avoid generic "AI coach" phrasing, hedging, or corporate cliches unless the samples show that pattern.
+
+Provide:
+1. A brief summary (2-3 sentences) of the overall feedback in the coach's voice
+2. 3-5 specific, actionable bullet points on how the sermon could be improved, also in the coach's voice
 
 Format your response as JSON:
 {
@@ -79,9 +120,10 @@ Format your response as JSON:
   "bulletPoints": ["Point 1", "Point 2", "Point 3"]
 }
 
-Focus on constructive, specific recommendations that the speaker can act on.`;
+Focus on constructive, specific recommendations the speaker can act on.`;
 
     console.log('Calling Lovable AI for summary...');
+    console.log(`Voice baseline: ${voiceSamples.length} candidate samples, ${runningChars} chars used`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -97,7 +139,7 @@ Focus on constructive, specific recommendations that the speaker can act on.`;
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'You are a helpful sermon coach. Always respond with valid JSON.' },
+          { role: 'system', content: 'You are a sermon coach. You will be given a corpus of the coach\'s own past comments — your job is to write feedback that sounds indistinguishable from them. Match their voice, not a generic AI assistant\'s voice. Always respond with valid JSON.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
