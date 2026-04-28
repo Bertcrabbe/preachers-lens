@@ -2282,6 +2282,101 @@ const SermonViewer = () => {
     }
   };
 
+  const AI_COACH_TAG = "[AI Coach]";
+
+  const handleGenerateCoachComments = async () => {
+    if (!id) return;
+    if (!sentences || sentences.length === 0) {
+      toast({
+        title: "Transcript not ready",
+        description: "The sermon must finish transcription before AI Coach can review it.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCoachLoading(true);
+    setCoachOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-coach-comments", {
+        body: { sermonId: id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const notes = Array.isArray(data?.notes) ? data.notes : [];
+      setCoachNotes(notes);
+      toast({
+        title: "AI Coach is ready",
+        description: `Generated ${notes.length} note${notes.length === 1 ? "" : "s"} in your voice. Review below.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "AI Coach failed",
+        description: err?.message || "Could not generate notes.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  const handleApplyCoachComments = async () => {
+    if (!id || !coachNotes || coachNotes.length === 0) return;
+    setCoachApplying(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+      const rows = coachNotes.map((n) => ({
+        sermon_id: id,
+        user_id: user.id,
+        comment_text: `${AI_COACH_TAG}${n.category ? ` (${n.category})` : ""} ${n.comment_text}`,
+        start_time_ms: n.start_time_ms,
+        end_time_ms: n.end_time_ms,
+      }));
+      const { error } = await supabase.from("sermon_comments").insert(rows);
+      if (error) throw error;
+      toast({
+        title: "Applied to timeline",
+        description: `Inserted ${rows.length} AI Coach comment${rows.length === 1 ? "" : "s"}.`,
+      });
+      setCoachNotes(null);
+      fetchComments();
+    } catch (err: any) {
+      toast({
+        title: "Could not apply",
+        description: err?.message || "Insertion failed.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoachApplying(false);
+    }
+  };
+
+  const handleDeleteAllCoachComments = async () => {
+    if (!id) return;
+    setCoachDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("sermon_comments")
+        .delete()
+        .eq("sermon_id", id)
+        .like("comment_text", `${AI_COACH_TAG}%`);
+      if (error) throw error;
+      toast({
+        title: "AI Coach comments removed",
+        description: "All AI-generated comments on this sermon were deleted.",
+      });
+      fetchComments();
+    } catch (err: any) {
+      toast({
+        title: "Delete failed",
+        description: err?.message || "Could not delete AI Coach comments.",
+        variant: "destructive",
+      });
+    } finally {
+      setCoachDeleting(false);
+    }
+  };
+
   // Keep ref in sync with playingCommentId state for use in event handlers
   useEffect(() => {
     isPlayingCommentRef.current = playingCommentId !== null;
