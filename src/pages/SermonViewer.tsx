@@ -5605,7 +5605,23 @@ const SermonViewer = () => {
               <div className="text-3xl font-bold text-primary">{comments.filter(c => !c.rule_id).length}</div>
               <div className="text-xs text-muted-foreground">Comments</div>
             </div>
-            
+
+            {comments.filter(c => !c.rule_id).length > 0 && (
+              <div className="flex items-center justify-center gap-2">
+                <Switch
+                  id="hide-my-comments"
+                  checked={hideMyComments}
+                  onCheckedChange={setHideMyComments}
+                />
+                <label
+                  htmlFor="hide-my-comments"
+                  className="text-xs text-muted-foreground cursor-pointer"
+                >
+                  Hide mine
+                </label>
+              </div>
+            )}
+
             <div className="border-t border-border" />
             
             {/* Time since last comment */}
