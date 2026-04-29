@@ -4,7 +4,7 @@ import lamejs from "@breezystack/lamejs";
 
 interface EncoderMessage {
   leftChannel: Int16Array;
-  rightChannel: Int16Array;
+  rightChannel?: Int16Array;
   sampleRate: number;
   numChannels: number;
   kbps: number;
@@ -21,8 +21,9 @@ self.onmessage = (e: MessageEvent<EncoderMessage>) => {
 
   for (let i = 0; i < totalSamples; i += sampleBlockSize) {
     const leftChunk = leftChannel.subarray(i, i + sampleBlockSize);
-    const rightChunk = rightChannel.subarray(i, i + sampleBlockSize);
-    const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+    const mp3buf = numChannels > 1 && rightChannel
+      ? mp3encoder.encodeBuffer(leftChunk, rightChannel.subarray(i, i + sampleBlockSize))
+      : mp3encoder.encodeBuffer(leftChunk);
     if (mp3buf.length > 0) {
       mp3Data.push(new Uint8Array(mp3buf));
     }

@@ -151,7 +151,7 @@ export async function audioBufferToMp3(
   const left = convertFloat32ToInt16(buffer.getChannelData(0));
   const right = buffer.numberOfChannels > 1
     ? convertFloat32ToInt16(buffer.getChannelData(1))
-    : left;
+    : undefined;
 
   return new Promise((resolve, reject) => {
     const worker = new Worker(
@@ -174,15 +174,18 @@ export async function audioBufferToMp3(
       reject(new Error(`MP3 encoding worker failed: ${err.message}`));
     };
 
+    const numChannels = right ? 2 : 1;
+    const transferList: Transferable[] = [left.buffer];
+
     worker.postMessage(
       {
         leftChannel: left,
         rightChannel: right,
         sampleRate: buffer.sampleRate,
-        numChannels: buffer.numberOfChannels,
+        numChannels,
         kbps: 192,
       },
-      [left.buffer, right.buffer]
+      right ? [...transferList, right.buffer] : transferList
     );
   });
 }
