@@ -934,6 +934,20 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportVoiceSample}
+              disabled={voiceSampleBusy}
+              title="Combine all your recorded comments into one MP3 (for ElevenLabs voice cloning)"
+            >
+              {voiceSampleBusy ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Mic className="h-4 w-4 mr-2" />
+              )}
+              {voiceSampleBusy ? (voiceSampleStatus || "Working…") : "Voice Sample MP3"}
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
