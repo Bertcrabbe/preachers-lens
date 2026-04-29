@@ -2190,6 +2190,52 @@ const SermonViewer = () => {
     }
   };
 
+  const isDirectCommentAudioUrl = (audioUrl?: string | null) =>
+    !!audioUrl && /^https?:\/\//i.test(audioUrl);
+
+  const resolveCommentAudioUrl = async (comment: Comment): Promise<string | null> => {
+    if (!comment.audio_url) return null;
+
+    const cachedUrl = commentSignedUrls[comment.id];
+    if (cachedUrl) return cachedUrl;
+
+    let resolvedUrl: string | null = null;
+    if (isDirectCommentAudioUrl(comment.audio_url)) {
+      resolvedUrl = comment.audio_url;
+    } else {
+      const { data } = await supabase.storage
+        .from("sermon-comments-audio")
+        .createSignedUrl(comment.audio_url, 3600);
+      resolvedUrl = data?.signedUrl ?? null;
+    }
+
+    if (resolvedUrl) {
+      setCommentSignedUrls((prev) => ({ ...prev, [comment.id]: resolvedUrl }));
+    }
+
+    return resolvedUrl;
+  };
+
+  const getCommentAudioBlob = async (comment: Comment): Promise<Blob> => {
+    if (!comment.audio_url) throw new Error("Comment has no audio");
+
+    if (isDirectCommentAudioUrl(comment.audio_url)) {
+      const response = await fetch(comment.audio_url);
+      if (!response.ok) throw new Error("Failed to download audio");
+      return await response.blob();
+    }
+
+    const { data: audioData, error: downloadError } = await supabase.storage
+      .from("sermon-comments-audio")
+      .download(comment.audio_url);
+
+    if (downloadError || !audioData) {
+      throw new Error("Failed to download audio");
+    }
+
+    return audioData;
+  };
+
   const fetchRules = async () => {
     try {
       const { data, error } = await supabase
@@ -2568,17 +2614,7 @@ const SermonViewer = () => {
             audioRef.current.pause();
             setPlayingCommentId(comment.id);
             
-            // Get signed URL if we don't have it
-            let url = commentSignedUrls[comment.id];
-            if (!url) {
-              const { data } = await supabase.storage
-                .from("sermon-comments-audio")
-                .createSignedUrl(comment.audio_url!, 3600);
-              if (data?.signedUrl) {
-                url = data.signedUrl;
-                setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
-              }
-            }
+            const url = await resolveCommentAudioUrl(comment);
             
             if (url) {
               // Stop any existing comment audio before playing new one
@@ -2964,7 +3000,7 @@ const SermonViewer = () => {
       };
 
       // Function to play a comment audio
-      const playCommentAudio = async (audioUrl: string): Promise<void> => {
+      const playCommentAudio = async (comment: Comment): Promise<void> => {
         // Ensure sermon is fully stopped
         if (audioRef.current) {
           audioRef.current.pause();
@@ -2972,16 +3008,14 @@ const SermonViewer = () => {
         }
         
         return new Promise(async (resolve) => {
-          const { data: urlData } = await supabase.storage
-            .from("sermon-comments-audio")
-            .createSignedUrl(audioUrl, 3600);
-          
-          if (!urlData?.signedUrl) {
+          const resolvedUrl = await resolveCommentAudioUrl(audioUrl);
+
+          if (!resolvedUrl) {
             resolve();
             return;
           }
 
-          const audio = new Audio(urlData.signedUrl);
+          const audio = new Audio(resolvedUrl);
           audio.playbackRate = playbackRate;
           audio.onended = () => resolve();
           audio.onerror = () => resolve();
@@ -3018,7 +3052,7 @@ const SermonViewer = () => {
         }
 
         // Play the comment audio (inserted at this point)
-        await playCommentAudio(comment.audio_url);
+        await playCommentAudio(comment);
         await new Promise(resolve => setTimeout(resolve, 300)); // Gap after commentary
 
         // Advance currentTime past this comment to prevent getting stuck
@@ -3062,13 +3096,11 @@ const SermonViewer = () => {
       const audioComments: { url: string; timestamp: number }[] = [];
       
       for (const comment of comments.filter(c => c.audio_url)) {
-        const { data: urlData } = await supabase.storage
-          .from("sermon-comments-audio")
-          .createSignedUrl(comment.audio_url!, 3600);
-        
-        if (urlData?.signedUrl) {
+        const resolvedUrl = await resolveCommentAudioUrl(comment);
+
+        if (resolvedUrl) {
           audioComments.push({
-            url: urlData.signedUrl,
+            url: resolvedUrl,
             timestamp: comment.start_time_ms
           });
         }
@@ -3142,13 +3174,7 @@ const SermonViewer = () => {
     setTranscribingCommentId(comment.id);
     try {
       // Download the audio file
-      const { data: audioData, error: downloadError } = await supabase.storage
-        .from("sermon-comments-audio")
-        .download(comment.audio_url);
-
-      if (downloadError || !audioData) {
-        throw new Error("Failed to download audio");
-      }
+      const audioData = await getCommentAudioBlob(comment);
 
       // Create form data for transcription
       const formData = new FormData();
@@ -3606,16 +3632,7 @@ const SermonViewer = () => {
                       setPlayingCommentId(introComment.id);
                       setPlayedCommentIds(new Set([introComment.id]));
                       
-                      let url = commentSignedUrls[introComment.id];
-                      if (!url) {
-                        const { data } = await supabase.storage
-                          .from("sermon-comments-audio")
-                          .createSignedUrl(introComment.audio_url!, 3600);
-                        if (data?.signedUrl) {
-                          url = data.signedUrl;
-                          setCommentSignedUrls(prev => ({ ...prev, [introComment.id]: url }));
-                        }
-                      }
+                      const url = await resolveCommentAudioUrl(introComment);
                       
                       if (url) {
                         const audio = new Audio(url);
@@ -5811,16 +5828,7 @@ const SermonViewer = () => {
                           
                           setPlayingCommentId(comment.id);
                           
-                          let url = commentSignedUrls[comment.id];
-                          if (!url) {
-                            const { data } = await supabase.storage
-                              .from("sermon-comments-audio")
-                              .createSignedUrl(comment.audio_url!, 3600);
-                            if (data?.signedUrl) {
-                              url = data.signedUrl;
-                              setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
-                            }
-                          }
+                          const url = await resolveCommentAudioUrl(comment);
                           
                           if (url) {
                             const audio = new Audio(url);
@@ -5994,16 +6002,7 @@ const SermonViewer = () => {
                                 
                                 setPlayingCommentId(comment.id);
                                 
-                                let url = commentSignedUrls[comment.id];
-                                if (!url) {
-                                  const { data } = await supabase.storage
-                                    .from("sermon-comments-audio")
-                                    .createSignedUrl(comment.audio_url!, 3600);
-                                  if (data?.signedUrl) {
-                                    url = data.signedUrl;
-                                    setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
-                                  }
-                                }
+                                const url = await resolveCommentAudioUrl(comment);
                                 
                                 if (url) {
                                   const audio = new Audio(url);
@@ -6424,16 +6423,7 @@ const SermonViewer = () => {
                                             
                                             setPlayingCommentId(comment.id);
                                             
-                                            let url = commentSignedUrls[comment.id];
-                                            if (!url) {
-                                              const { data } = await supabase.storage
-                                                .from("sermon-comments-audio")
-                                                .createSignedUrl(comment.audio_url!, 3600);
-                                              if (data?.signedUrl) {
-                                                url = data.signedUrl;
-                                                setCommentSignedUrls(prev => ({ ...prev, [comment.id]: url }));
-                                              }
-                                            }
+                                            const url = await resolveCommentAudioUrl(comment);
                                             
                                             if (url) {
                                               const audio = new Audio(url);
