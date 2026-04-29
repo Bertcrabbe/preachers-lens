@@ -135,6 +135,21 @@ ${voiceCorpus}
     const firstIdx = sentences[0].order_index;
     const lastIdx = sentences[sentences.length - 1].order_index;
 
+    // Spacing target: prefer ~3-4 minutes between middle comments, with a hard
+    // minimum of 3 minutes. For shorter sermons we relax slightly so we still
+    // produce a few notes.
+    const sermonStartMs = sentences[0].start_time_ms ?? 0;
+    const sermonEndMs =
+      sentences[sentences.length - 1].end_time_ms ??
+      sentences[sentences.length - 1].start_time_ms ??
+      0;
+    const sermonDurMs = Math.max(0, sermonEndMs - sermonStartMs);
+    const sermonDurMin = sermonDurMs / 60000;
+    const MIN_GAP_MIN = sermonDurMin >= 20 ? 3 : Math.max(1.5, sermonDurMin / 7);
+    const MIN_GAP_MS = Math.round(MIN_GAP_MIN * 60000);
+    // Aim for at most one middle comment per ~3.5 min, capped 6-10.
+    const targetMiddle = Math.min(10, Math.max(4, Math.round(sermonDurMin / 3.5)));
+
     const lengthSection = voiceSamplesAll.length
       ? `LENGTH TARGET (computed from this coach's own past comments):
 - Average words per comment: ${avgWords}
@@ -151,8 +166,14 @@ Write each note in the range of roughly ${minWords}-${maxWords} words (centered 
 
 You MUST produce notes in this order:
 1. FIRST note: an INTRO comment — an overall opening reflection on the sermon as a whole (the kind of thing the coach would say before diving in). Use category "intro" and sentence_index = ${firstIdx}.
-2. MIDDLE notes: 6-10 in-line moments (see rules below), weighted toward the SAME kinds of moments this coach has historically flagged in the samples above.
+2. MIDDLE notes: about ${targetMiddle} in-line moments (see rules below), weighted toward the SAME kinds of moments this coach has historically flagged in the samples above.
 3. LAST note: an OUTRO comment — an overall closing reflection / summary takeaway in the coach's voice. Use category "outro" and sentence_index = ${lastIdx}.
+
+SPACING (CRITICAL):
+- Sermon length: ${sermonDurMin.toFixed(1)} minutes.
+- Middle comments MUST be spread ACROSS THE WHOLE TIMELINE — do NOT cluster in the first few minutes.
+- Leave at LEAST ${MIN_GAP_MIN.toFixed(1)} minutes between consecutive middle comments (use the [m:ss] timestamps in the transcript to judge).
+- Distribute roughly evenly: roughly one comment per ${(sermonDurMin / targetMiddle).toFixed(1)} minutes of sermon. Cover early, middle, AND late sections (including the last third). If you cannot find a worthy moment in a section, you may skip it — but never bunch multiple notes inside the same few minutes.
 
 For EACH note:
 
@@ -173,7 +194,7 @@ Return STRICT JSON of the form:
   ]
 }
 
-Generate exactly: 1 intro note + 6-10 middle notes + 1 outro note. Do not include any prose outside the JSON.`;
+Generate exactly: 1 intro note + ~${targetMiddle} middle notes + 1 outro note. Respect the spacing rule above. Do not include any prose outside the JSON.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -245,6 +266,11 @@ Generate exactly: 1 intro note + 6-10 middle notes + 1 outro note. Do not includ
 
     const notes: Array<GeneratedNote & { start_time_ms: number; end_time_ms: number }> = [];
     const rawNotes = parsed.notes || [];
+    // First pass: split into intro / outro / middle, then enforce spacing on middles.
+    const introNote: any = null as any;
+    const middleCandidates: Array<{ idx: number; text: string; cat: string; t: number }> = [];
+    let outroNote: any = null;
+    let introTextHolder: string | null = null;
     for (let i = 0; i < rawNotes.length; i++) {
       const n = rawNotes[i];
       if (!n || typeof n.sentence_index !== "number") continue;
@@ -253,39 +279,74 @@ Generate exactly: 1 intro note + 6-10 middle notes + 1 outro note. Do not includ
       const cat = (n.category || "").toString().toLowerCase().slice(0, 24);
       const isIntro = cat === "intro" || i === 0;
       const isOutro = cat === "outro" || i === rawNotes.length - 1;
-
-      if (isIntro) {
-        // Intro comments are stored with start=end=0 per the app's intro convention
-        notes.push({
-          sentence_index: sentences[0].order_index,
-          category: "intro",
-          comment_text: text,
-          start_time_ms: 0,
-          end_time_ms: 0,
-        });
+      if (isIntro && !introTextHolder) {
+        introTextHolder = text;
         continue;
       }
       if (isOutro) {
-        const last = sentences[sentences.length - 1];
-        notes.push({
-          sentence_index: last.order_index,
-          category: "outro",
-          comment_text: text,
-          start_time_ms: last.start_time_ms ?? 0,
-          end_time_ms: last.end_time_ms ?? (last.start_time_ms ?? 0) + 3000,
-        });
+        outroNote = { text, cat: "outro" };
         continue;
       }
       if (!validIndices.has(n.sentence_index)) continue;
       const s = sentenceMap.get(n.sentence_index);
+      middleCandidates.push({
+        idx: n.sentence_index,
+        text,
+        cat,
+        t: s.start_time_ms ?? 0,
+      });
+    }
+
+    // Push intro
+    if (introTextHolder) {
       notes.push({
-        sentence_index: n.sentence_index,
-        category: cat,
-        comment_text: text,
+        sentence_index: sentences[0].order_index,
+        category: "intro",
+        comment_text: introTextHolder,
+        start_time_ms: 0,
+        end_time_ms: 0,
+      });
+    }
+
+    // Enforce minimum spacing on middle notes (sort by time, drop any that
+    // fall within MIN_GAP_MS of the previously kept one).
+    middleCandidates.sort((a, b) => a.t - b.t);
+    const keptMiddle: typeof middleCandidates = [];
+    for (const c of middleCandidates) {
+      if (keptMiddle.length === 0 || c.t - keptMiddle[keptMiddle.length - 1].t >= MIN_GAP_MS) {
+        keptMiddle.push(c);
+      } else {
+        console.log(
+          `Dropping middle comment at ${(c.t / 60000).toFixed(2)}min — too close to previous (gap < ${MIN_GAP_MIN.toFixed(1)}min)`,
+        );
+      }
+    }
+    for (const c of keptMiddle) {
+      const s = sentenceMap.get(c.idx);
+      notes.push({
+        sentence_index: c.idx,
+        category: c.cat,
+        comment_text: c.text,
         start_time_ms: s.start_time_ms ?? 0,
         end_time_ms: s.end_time_ms ?? (s.start_time_ms ?? 0) + 3000,
       });
     }
+
+    // Push outro
+    if (outroNote) {
+      const last = sentences[sentences.length - 1];
+      notes.push({
+        sentence_index: last.order_index,
+        category: "outro",
+        comment_text: outroNote.text,
+        start_time_ms: last.start_time_ms ?? 0,
+        end_time_ms: last.end_time_ms ?? (last.start_time_ms ?? 0) + 3000,
+      });
+    }
+
+    console.log(
+      `ai-coach-comments spacing: sermonDur=${sermonDurMin.toFixed(1)}min, minGap=${MIN_GAP_MIN.toFixed(1)}min, target=${targetMiddle}, kept=${keptMiddle.length}/${middleCandidates.length}`,
+    );
 
     return new Response(
       JSON.stringify({ notes }),
