@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp, Users } from "lucide-react";
+import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp, Users, Mic } from "lucide-react";
 import logo from "@/assets/preacherslens-logo.png";
 import { UploadDialog } from "@/components/UploadDialog";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { concatRecordingsToMp3 } from "@/utils/concatRecordingsToMp3";
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,8 @@ const Dashboard = () => {
   const [deletingSermon, setDeletingSermon] = useState(false);
   const [editingCommunicatorId, setEditingCommunicatorId] = useState<string | null>(null);
   const [editingCommunicatorName, setEditingCommunicatorName] = useState("");
+  const [voiceSampleBusy, setVoiceSampleBusy] = useState(false);
+  const [voiceSampleStatus, setVoiceSampleStatus] = useState<string>("");
 
   useEffect(() => {
     let isMounted = true;
@@ -271,6 +274,74 @@ const Dashboard = () => {
       title: "Data refreshed",
       description: "Communicators and sermons have been updated",
     });
+  };
+
+  const handleExportVoiceSample = async () => {
+    if (voiceSampleBusy) return;
+    setVoiceSampleBusy(true);
+    setVoiceSampleStatus("Preparing…");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+
+      // All recorded comments owned by this user (exclude AI Coach ElevenLabs URLs)
+      const { data: comments, error } = await supabase
+        .from("sermon_comments")
+        .select("audio_url, created_at")
+        .eq("user_id", user.id)
+        .not("audio_url", "is", null)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+
+      const paths = (comments || [])
+        .map((c) => c.audio_url as string)
+        .filter((u) => u && !/^https?:\/\//i.test(u));
+
+      if (paths.length === 0) {
+        toast({ title: "No recordings found", description: "You don't have any recorded comments yet." });
+        return;
+      }
+
+      setVoiceSampleStatus(`Signing ${paths.length} clips…`);
+      // Batch sign all paths (createSignedUrls supports up to 1000 paths at once).
+      const { data: signed, error: signErr } = await supabase
+        .storage
+        .from("sermon-comments-audio")
+        .createSignedUrls(paths, 60 * 60);
+      if (signErr) throw signErr;
+
+      const urls = (signed || [])
+        .map((s) => s.signedUrl)
+        .filter((u): u is string => !!u);
+
+      const mp3 = await concatRecordingsToMp3(urls, (pct, status) => {
+        setVoiceSampleStatus(`${status} (${pct}%)`);
+      });
+
+      const url = URL.createObjectURL(mp3);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `voice-sample-${new Date().toISOString().slice(0, 10)}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Voice sample ready",
+        description: `Combined ${urls.length} recordings into a single MP3.`,
+      });
+    } catch (e) {
+      console.error("Voice sample export failed", e);
+      toast({
+        title: "Export failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setVoiceSampleBusy(false);
+      setVoiceSampleStatus("");
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -863,6 +934,20 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportVoiceSample}
+              disabled={voiceSampleBusy}
+              title="Combine all your recorded comments into one MP3 (for ElevenLabs voice cloning)"
+            >
+              {voiceSampleBusy ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Mic className="h-4 w-4 mr-2" />
+              )}
+              {voiceSampleBusy ? (voiceSampleStatus || "Working…") : "Voice Sample MP3"}
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
