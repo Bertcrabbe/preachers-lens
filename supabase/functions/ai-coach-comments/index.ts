@@ -69,6 +69,27 @@ serve(async (req) => {
       .map((c: any) => (c.comment_text || "").trim())
       .filter((t: string) => t.length >= 6 && t.length <= 800);
 
+    // Compute target length stats from the user's own past comments so the model
+    // mirrors not just voice and content but also typical comment LENGTH.
+    const wordCounts = voiceSamplesAll.map((t) => t.split(/\s+/).filter(Boolean).length);
+    const charCounts = voiceSamplesAll.map((t) => t.length);
+    const avg = (arr: number[]) =>
+      arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    const median = (arr: number[]) => {
+      if (!arr.length) return 0;
+      const s = [...arr].sort((a, b) => a - b);
+      const m = Math.floor(s.length / 2);
+      return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+    };
+    const avgWords = avg(wordCounts);
+    const medWords = median(wordCounts);
+    const avgChars = avg(charCounts);
+    // Target a band around the user's typical length (use the larger of avg/median
+    // as the centerpoint so we don't get pulled down by a few terse one-liners).
+    const center = Math.max(avgWords, medWords) || 40;
+    const minWords = Math.max(15, Math.round(center * 0.7));
+    const maxWords = Math.max(minWords + 10, Math.round(center * 1.4));
+
     const MAX_VOICE_CHARS = 14000;
     let runChars = 0;
     const voiceCorpus = voiceSamplesAll
@@ -114,7 +135,19 @@ ${voiceCorpus}
     const firstIdx = sentences[0].order_index;
     const lastIdx = sentences[sentences.length - 1].order_index;
 
-    const userPrompt = `${voiceSection}You are reviewing a new sermon transcript. Each line is one sentence prefixed with #<order_index> and a [m:ss] timestamp.
+    const lengthSection = voiceSamplesAll.length
+      ? `LENGTH TARGET (computed from this coach's own past comments):
+- Average words per comment: ${avgWords}
+- Median words per comment: ${medWords}
+- Average characters per comment: ${avgChars}
+- Sample size: ${voiceSamplesAll.length}
+
+Write each note in the range of roughly ${minWords}-${maxWords} words (centered around ~${center} words). Do NOT write terse one-liners — match the substantive length this coach typically uses. Intro and outro notes should be at the LONGER end of that range since they cover the sermon as a whole.
+
+`
+      : "";
+
+    const userPrompt = `${voiceSection}${lengthSection}You are reviewing a new sermon transcript. Each line is one sentence prefixed with #<order_index> and a [m:ss] timestamp.
 
 You MUST produce notes in this order:
 1. FIRST note: an INTRO comment — an overall opening reflection on the sermon as a whole (the kind of thing the coach would say before diving in). Use category "intro" and sentence_index = ${firstIdx}.
@@ -127,7 +160,7 @@ For EACH note:
 - The SUBJECT MATTER of the comment must echo what this coach typically notices (see samples). Don't invent new categories they never use.
 - Write in the COACH'S OWN VOICE — match their sentence length, vocabulary, directness, hedging level, and tone. Avoid generic AI-coach phrasing (no "Consider...", no "It might be helpful if...", unless the coach actually talks like that).
 - Be concrete and specific to this sentence. No vague platitudes.
-- Keep each comment within the typical length range you observed in the samples.
+- Hit the LENGTH TARGET above. Comments shorter than ${minWords} words are too short and will be rejected.
 - Tag a short category. The first note's category MUST be "intro" and the last note's category MUST be "outro". Middle notes use one of: opening, illustration, structure, clarity, theology, pacing, emotion, close, transition, language.
 
 Transcript:
@@ -146,7 +179,7 @@ Generate exactly: 1 intro note + 6-10 middle notes + 1 outro note. Do not includ
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     console.log(
-      `ai-coach-comments: sentences=${sentences.length}, voiceSamples=${voiceSamplesAll.length}, voiceChars=${runChars}, transcriptChars=${tChars}`,
+      `ai-coach-comments: sentences=${sentences.length}, voiceSamples=${voiceSamplesAll.length}, voiceChars=${runChars}, transcriptChars=${tChars}, lengthTarget=${minWords}-${maxWords} words (avg=${avgWords}, median=${medWords})`,
     );
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
