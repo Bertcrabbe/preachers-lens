@@ -13,6 +13,7 @@ export async function concatRecordingsToMp3(
   onProgress?: (percent: number, status: string) => void,
   silenceMs = 400,
   maxTotalSeconds = 600,
+  skipSeconds = 0,
 ): Promise<Blob> {
   if (urls.length === 0) throw new Error("No recordings to combine");
 
@@ -20,6 +21,8 @@ export async function concatRecordingsToMp3(
   try {
     const buffers: AudioBuffer[] = [];
     let accumulatedSeconds = 0;
+    let skippedSeconds = 0;
+    let skippedClips = 0;
     for (let i = 0; i < urls.length; i++) {
       try {
         const resp = await fetch(urls[i]);
@@ -33,22 +36,36 @@ export async function concatRecordingsToMp3(
           continue;
         }
         const buf = await audioContext.decodeAudioData(ab);
-        buffers.push(buf);
-        accumulatedSeconds += buf.duration + silenceMs / 1000;
+        if (skippedSeconds < skipSeconds) {
+          skippedSeconds += buf.duration + silenceMs / 1000;
+          skippedClips += 1;
+        } else {
+          buffers.push(buf);
+          accumulatedSeconds += buf.duration + silenceMs / 1000;
+        }
       } catch (e) {
         console.warn(`Skipping clip ${i + 1}: decode failed`, e);
       }
       const pct = Math.round((i / urls.length) * 60);
-      onProgress?.(pct, `Downloading clips ${i + 1}/${urls.length}…`);
+      const label =
+        skippedSeconds < skipSeconds
+          ? `Skipping past first ${Math.round(skipSeconds / 60)} min (${i + 1}/${urls.length})…`
+          : `Downloading clips ${i + 1}/${urls.length}…`;
+      onProgress?.(pct, label);
       if (accumulatedSeconds >= maxTotalSeconds) {
         console.info(
-          `Reached ${Math.round(accumulatedSeconds)}s of audio after ${buffers.length} clips — stopping (cap ${maxTotalSeconds}s).`,
+          `Reached ${Math.round(accumulatedSeconds)}s of audio after ${buffers.length} clips (skipped ${skippedClips}) — stopping (cap ${maxTotalSeconds}s).`,
         );
         break;
       }
     }
 
-    if (buffers.length === 0) throw new Error("No clips could be decoded");
+    if (buffers.length === 0)
+      throw new Error(
+        skipSeconds > 0
+          ? `No clips remaining after skipping the first ${Math.round(skipSeconds / 60)} minutes.`
+          : "No clips could be decoded",
+      );
 
     const sampleRate = 44100;
     const silenceSamples = Math.floor((silenceMs / 1000) * sampleRate);
