@@ -276,6 +276,74 @@ const Dashboard = () => {
     });
   };
 
+  const handleExportVoiceSample = async () => {
+    if (voiceSampleBusy) return;
+    setVoiceSampleBusy(true);
+    setVoiceSampleStatus("Preparing…");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+
+      // All recorded comments owned by this user (exclude AI Coach ElevenLabs URLs)
+      const { data: comments, error } = await supabase
+        .from("sermon_comments")
+        .select("audio_url, created_at")
+        .eq("user_id", user.id)
+        .not("audio_url", "is", null)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+
+      const paths = (comments || [])
+        .map((c) => c.audio_url as string)
+        .filter((u) => u && !/^https?:\/\//i.test(u));
+
+      if (paths.length === 0) {
+        toast({ title: "No recordings found", description: "You don't have any recorded comments yet." });
+        return;
+      }
+
+      setVoiceSampleStatus(`Signing ${paths.length} clips…`);
+      // Batch sign all paths (createSignedUrls supports up to 1000 paths at once).
+      const { data: signed, error: signErr } = await supabase
+        .storage
+        .from("sermon-comments-audio")
+        .createSignedUrls(paths, 60 * 60);
+      if (signErr) throw signErr;
+
+      const urls = (signed || [])
+        .map((s) => s.signedUrl)
+        .filter((u): u is string => !!u);
+
+      const mp3 = await concatRecordingsToMp3(urls, (pct, status) => {
+        setVoiceSampleStatus(`${status} (${pct}%)`);
+      });
+
+      const url = URL.createObjectURL(mp3);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `voice-sample-${new Date().toISOString().slice(0, 10)}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Voice sample ready",
+        description: `Combined ${urls.length} recordings into a single MP3.`,
+      });
+    } catch (e) {
+      console.error("Voice sample export failed", e);
+      toast({
+        title: "Export failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setVoiceSampleBusy(false);
+      setVoiceSampleStatus("");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
