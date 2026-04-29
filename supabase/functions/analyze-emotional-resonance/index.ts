@@ -53,14 +53,8 @@ serve(async (req) => {
       ? fullTranscript.substring(0, maxChars) + "\n\n[TRANSCRIPT TRUNCATED]"
       : fullTranscript;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+    const buildBody = (model: string) => JSON.stringify({
+        model,
         messages: [
           {
             role: "system",
@@ -128,25 +122,61 @@ Also extract 3-8 specific PATHOS MOMENTS with short excerpts.`
           }
         ],
         tool_choice: { type: "function", function: { name: "report_emotional_resonance" } }
-      }),
-    });
+      });
+
+    const callModel = (model: string) =>
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: buildBody(model),
+      });
+
+    // Try primary, then fall back through alternate models on 5xx errors.
+    const modelChain = [
+      "google/gemini-3-flash-preview",
+      "google/gemini-2.5-flash",
+      "google/gemini-2.5-flash-lite",
+    ];
+    let aiResponse: Response | null = null;
+    let lastErrText = "";
+    for (const m of modelChain) {
+      const r = await callModel(m);
+      if (r.ok) { aiResponse = r; break; }
+      if (r.status === 429 || r.status === 402) { aiResponse = r; break; }
+      lastErrText = await r.text();
+      console.error(`AI model ${m} failed:`, r.status, lastErrText);
+      // only fall through on transient/server errors
+      if (r.status < 500) { aiResponse = r; break; }
+    }
+    if (!aiResponse) {
+      return new Response(
+        JSON.stringify({ error: "EMOTIONAL_RESONANCE_SERVICE_UNAVAILABLE", fallback: true, detail: lastErrText.slice(0, 500) }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
-          status: 429,
+        return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later.", fallback: true }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required, please add funds." }), {
-          status: 402,
+        return new Response(JSON.stringify({ error: "Payment required, please add funds.", fallback: true }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errorText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errorText);
-      throw new Error("Failed to analyze emotional resonance");
+      return new Response(
+        JSON.stringify({ error: "EMOTIONAL_RESONANCE_SERVICE_UNAVAILABLE", fallback: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const aiResult = await aiResponse.json();
@@ -161,9 +191,9 @@ Also extract 3-8 specific PATHOS MOMENTS with short excerpts.`
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error", fallback: true }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
