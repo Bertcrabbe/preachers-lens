@@ -2333,14 +2333,46 @@ const SermonViewer = () => {
         start_time_ms: n.start_time_ms,
         end_time_ms: n.end_time_ms,
       }));
-      const { error } = await supabase.from("sermon_comments").insert(rows);
+      const { data: inserted, error } = await supabase
+        .from("sermon_comments")
+        .insert(rows)
+        .select("id");
       if (error) throw error;
+      const insertedIds = (inserted ?? []).map((r: any) => r.id);
       toast({
         title: "Applied to timeline",
-        description: `Inserted ${rows.length} AI Coach comment${rows.length === 1 ? "" : "s"}.`,
+        description: `Inserted ${rows.length} comment${rows.length === 1 ? "" : "s"}. Generating audio in your voice…`,
       });
       setCoachNotes(null);
       fetchComments();
+
+      // Background queue: generate TTS audio in user's cloned voice for each comment
+      (async () => {
+        let done = 0;
+        let failed = 0;
+        await Promise.all(
+          insertedIds.map(async (cid) => {
+            try {
+              const { data: r, error: e } = await supabase.functions.invoke("tts-clone-comment", {
+                body: { commentId: cid },
+              });
+              if (e || r?.error) failed += 1;
+              else done += 1;
+            } catch {
+              failed += 1;
+            }
+          }),
+        );
+        toast({
+          title: failed === 0 ? "Voice audio ready" : "Voice audio finished",
+          description:
+            failed === 0
+              ? `Generated ${done} clip${done === 1 ? "" : "s"} in your voice.`
+              : `${done} succeeded, ${failed} failed. Check edge function logs.`,
+          variant: failed > 0 && done === 0 ? "destructive" : undefined,
+        });
+        fetchComments();
+      })();
     } catch (err: any) {
       toast({
         title: "Could not apply",
