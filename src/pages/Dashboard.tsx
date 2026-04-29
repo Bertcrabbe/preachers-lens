@@ -276,7 +276,7 @@ const Dashboard = () => {
     });
   };
 
-  const handleExportVoiceSample = async () => {
+  const handleExportVoiceSample = async (skipMinutes = 0) => {
     if (voiceSampleBusy) return;
     setVoiceSampleBusy(true);
     setVoiceSampleStatus("Preparing…");
@@ -314,14 +314,21 @@ const Dashboard = () => {
         .map((s) => s.signedUrl)
         .filter((u): u is string => !!u);
 
-      const mp3 = await concatRecordingsToMp3(urls, (pct, status) => {
-        setVoiceSampleStatus(`${status} (${pct}%)`);
-      });
+      const mp3 = await concatRecordingsToMp3(
+        urls,
+        (pct, status) => {
+          setVoiceSampleStatus(`${status} (${pct}%)`);
+        },
+        400,
+        600,
+        skipMinutes * 60,
+      );
 
       const url = URL.createObjectURL(mp3);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `voice-sample-${new Date().toISOString().slice(0, 10)}.mp3`;
+      const partLabel = skipMinutes > 0 ? `-part${Math.floor(skipMinutes / 10) + 1}` : "";
+      a.download = `voice-sample-${new Date().toISOString().slice(0, 10)}${partLabel}.mp3`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -937,7 +944,7 @@ const Dashboard = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExportVoiceSample}
+              onClick={() => handleExportVoiceSample(0)}
               disabled={voiceSampleBusy}
               title="Combine all your recorded comments into one MP3 (for ElevenLabs voice cloning)"
             >
@@ -947,6 +954,20 @@ const Dashboard = () => {
                 <Mic className="h-4 w-4 mr-2" />
               )}
               {voiceSampleBusy ? (voiceSampleStatus || "Working…") : "Voice Sample MP3"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExportVoiceSample(10)}
+              disabled={voiceSampleBusy}
+              title="Combine the NEXT 10 minutes of your recorded comments (skips the first 10 min)"
+            >
+              {voiceSampleBusy ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Mic className="h-4 w-4 mr-2" />
+              )}
+              Next 10 min
             </Button>
             <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
