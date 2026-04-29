@@ -3008,7 +3008,7 @@ const SermonViewer = () => {
         }
         
         return new Promise(async (resolve) => {
-          const resolvedUrl = await resolveCommentAudioUrl(audioUrl);
+          const resolvedUrl = await resolveCommentAudioUrl(comment);
 
           if (!resolvedUrl) {
             resolve();
