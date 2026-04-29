@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp, Users } from "lucide-react";
+import { Upload, LogOut, FileText, Clock, Loader2, ListChecks, Pencil, Check, X, FolderOpen, ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, TrendingUp, Users, Mic } from "lucide-react";
 import logo from "@/assets/preacherslens-logo.png";
 import { UploadDialog } from "@/components/UploadDialog";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { concatRecordingsToMp3 } from "@/utils/concatRecordingsToMp3";
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,8 @@ const Dashboard = () => {
   const [deletingSermon, setDeletingSermon] = useState(false);
   const [editingCommunicatorId, setEditingCommunicatorId] = useState<string | null>(null);
   const [editingCommunicatorName, setEditingCommunicatorName] = useState("");
+  const [voiceSampleBusy, setVoiceSampleBusy] = useState(false);
+  const [voiceSampleStatus, setVoiceSampleStatus] = useState<string>("");
 
   useEffect(() => {
     let isMounted = true;
