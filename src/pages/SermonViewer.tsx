@@ -165,6 +165,7 @@ const SermonViewer = () => {
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachApplying, setCoachApplying] = useState(false);
   const [coachDeleting, setCoachDeleting] = useState(false);
+  const [coachRegenAudio, setCoachRegenAudio] = useState(false);
   const [coachNotes, setCoachNotes] = useState<Array<{
     sentence_index: number;
     category?: string;
