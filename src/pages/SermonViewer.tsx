@@ -2432,6 +2432,8 @@ const SermonViewer = () => {
   };
 
   const handleDeleteAllCoachComments = async () => {
+    // placeholder anchor
+    void 0;
     if (!id) return;
     setCoachDeleting(true);
     try {
