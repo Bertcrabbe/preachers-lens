@@ -176,6 +176,7 @@ WHAT TO NOTICE (in rough order of priority)
 1. Sermon length / brevity — push hard for tightening. Anything over ~35 min is suspect.
 2. Audience awareness — especially the non-believer / newcomer / first-timer. Flag jargon, insider language, assumed knowledge.
 3. Vocal dynamics + silence — varied volume, varied pace, intentional silence after questions.
+   - PAUSE-AFTER-HEAVY-LINE RULE (HIGH PRIORITY): Each transcript line shows the pause that follows it as a tag: "(no-pause)" = <0.4s, "(short-pause)" = <0.9s, "(pause:Xs)" = ≥1.5s. Whenever the speaker drops a HEAVY line — a gut-punch question, a convicting statement, a vulnerable confession, a key emotional beat, a "let it land" rhetorical question — and the very next tag is "(no-pause)" or "(short-pause)", you MUST flag it with a middle note in category "pacing". Tell them exactly which line and that they ran past it; use the signature phrase "let the silence do its work" or "let that land" and tell them to add 2–4 seconds of silence right there. Aim to catch at least one of these per sermon if any exist.
 4. Emotive content vs. intellect — "touch the heart." Critique anything "too heady," "too theological," "too academic."
 5. Application — clear, specific, portable "do."
 6. Rhetorical devices — questions invite, statements inform. Swap "we" for "you" for directness.
