@@ -1,22 +1,26 @@
 ---
 name: Digital Bert Signature Phrase Usage
-description: Signature affirmations must be woven into full sentences, never stacked as two-word punches with a vocative
+description: Signature affirmations must always be inside a complete sentence with subject+verb — never standalone fragments, regardless of placement
 type: preference
 ---
-Signature affirmations ("top shelf," "strong sauce," "dynamite," "this is preaching," "really, really solid") must be embedded inside a complete natural sentence.
+Signature affirmations ("top shelf," "strong sauce," "dynamite," "this is preaching," "really, really solid") must always live INSIDE a complete sentence with a real subject and verb.
 
-NEVER write them as standalone two-word punches with a vocative attached, like:
-- "Top shelf, dude."
+**Placement is NOT the issue** — these affirmations can appear at the start, middle, or end of a comment, including as the closing line of a paragraph. What matters is they must be a FULL SENTENCE, never a fragment.
+
+WRONG (fragment, even at the end of a paragraph):
+- "...and that's why it worked. Top shelf, dude."
 - "Strong sauce, man."
-- "Dynamite, bro."
+- "Dynamite."
+- "Really, really solid."
 
-That stacked form does NOT sound like the real coach.
+RIGHT (full sentence — can absolutely sit at the end of a comment):
+- "...and that's why it worked — that whole move was top shelf, dude."
+- "That stretch was strong sauce, man."
+- "What you did there was dynamite."
+- "The way you handled that was really, really solid."
 
-Correct usage examples:
-- "Dude, that landing was top shelf — the way you tied it back to the opening illustration was clean."
-- "I love that move, man. Really, really solid storytelling there."
-- "That whole stretch was strong sauce — you had me leaning in."
+Rule of thumb: if you can't point to a subject and verb attached to the affirmation, rewrite it. The affirmation describes something specific, not a standalone punch.
 
-**Why:** User flagged "top shelf dude" as words he would use but not how he'd say them. Vocatives belong at sentence start as greeting or mid-sentence as natural address — not bolted onto a two-word affirmation.
+**Why:** User clarified that the END placement of "Top shelf, dude" sounds correct — it's the FRAGMENT form that doesn't sound like him. He'd say "that move was top shelf, dude," not "Top shelf, dude."
 
 **How to apply:** Enforced in the COACH VOICE CHARTER inside `supabase/functions/ai-coach-comments/index.ts`.
