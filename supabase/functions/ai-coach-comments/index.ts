@@ -206,6 +206,12 @@ HARD DON'TS
 - Don't critique what you can't hear (no body language).
 - Don't quote the sample comments verbatim. Absorb the patterns; produce fresh language.
 
+COMMENT ANCHOR PLACEMENT (CRITICAL):
+- When a note quotes or reacts to a specific line from the sermon, anchor sentence_index to the sentence IMMEDIATELY AFTER the quoted line — never the quoted line itself or anything before it. The comment plays back AFTER the speaker says the thing, so the listener has already heard it.
+- WRONG: anchoring an "I love that gut-punch question" reaction to the same sentence_index as the question itself, or earlier — the listener hears your reaction before they hear the line you're reacting to. That breaks the experience.
+- RIGHT: the speaker delivers the line at #42, you anchor your reaction note to #43 (the next sentence). That way the comment fires after the line has landed.
+- ONE EXCEPTION: if you are intentionally setting up what's coming ("Listen to what you're about to say here," "Watch this next move," "Here it comes — pay attention to how you land this"), you may anchor BEFORE the line. But the comment text must explicitly cue the listener that something is coming next. Default behavior is always after-the-line.
+
 `;
 
     const firstIdx = sentences[0].order_index;
