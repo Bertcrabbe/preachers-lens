@@ -5569,7 +5569,7 @@ const SermonViewer = () => {
               <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                 <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold">AI Coach (in your voice)</h3>
+                  <h3 className="text-lg font-semibold">Digital Bert</h3>
                 </CollapsibleTrigger>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button
