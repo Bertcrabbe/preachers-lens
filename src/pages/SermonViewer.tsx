@@ -5573,6 +5573,21 @@ const SermonViewer = () => {
                 </CollapsibleTrigger>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button
+                    onClick={handleRegenerateCoachAudio}
+                    disabled={coachRegenAudio}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {coachRegenAudio ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      "Regenerate voice audio"
+                    )}
+                  </Button>
+                  <Button
                     onClick={handleDeleteAllCoachComments}
                     disabled={coachDeleting}
                     variant="ghost"
