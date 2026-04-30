@@ -1,0 +1,2 @@
+UPDATE public.user_preferences SET elevenlabs_voice_id = 'gxRQFMYafnE4LPIfAhYl', updated_at = now() WHERE user_id = '1902a65a-d517-4454-a23b-8db63ebf75c1';
+UPDATE public.sermon_comments SET audio_url = NULL WHERE user_id = '1902a65a-d517-4454-a23b-8db63ebf75c1' AND comment_text LIKE '[AI Coach]%';
