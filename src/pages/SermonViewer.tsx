@@ -5863,7 +5863,7 @@ const SermonViewer = () => {
             {/* Intro comment section at top - scrolls with transcript */}
             <div className="flex flex-col gap-2 mb-4 pb-4 border-b border-dashed border-border">
               {/* Show existing intro comment if there is one */}
-              {comments.filter(c => c.start_time_ms === 0 && c.end_time_ms === 0 && !(hideMyComments && !c.rule_id)).map((comment) => (
+              {comments.filter(c => c.start_time_ms === 0 && c.end_time_ms === 0 && !(hideMyComments && !c.rule_id && !/^\s*\[AI Coach\]/i.test(c.comment_text || ""))).map((comment) => (
                 <div 
                   key={comment.id}
                   className="p-3 rounded-lg bg-accent/10 border border-accent/30"
