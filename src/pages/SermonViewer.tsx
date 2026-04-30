@@ -165,6 +165,7 @@ const SermonViewer = () => {
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachApplying, setCoachApplying] = useState(false);
   const [coachDeleting, setCoachDeleting] = useState(false);
+  const [coachRegenAudio, setCoachRegenAudio] = useState(false);
   const [coachNotes, setCoachNotes] = useState<Array<{
     sentence_index: number;
     category?: string;
@@ -2427,6 +2428,59 @@ const SermonViewer = () => {
       });
     } finally {
       setCoachApplying(false);
+    }
+  };
+
+  const handleRegenerateCoachAudio = async () => {
+    if (!id) return;
+    setCoachRegenAudio(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from("sermon_comments")
+        .select("id")
+        .eq("sermon_id", id)
+        .like("comment_text", "[AI Coach]%")
+        .is("audio_url", null);
+      if (error) throw error;
+      const ids = (rows ?? []).map((r: any) => r.id);
+      if (ids.length === 0) {
+        toast({ title: "Nothing to regenerate", description: "All AI Coach comments already have audio." });
+        return;
+      }
+      toast({ title: "Regenerating voice", description: `Generating ${ids.length} clip${ids.length === 1 ? "" : "s"}…` });
+      let done = 0;
+      let failed = 0;
+      // Throttle to 4 in flight to avoid rate limits
+      const concurrency = 4;
+      let cursor = 0;
+      const workers = Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
+        while (cursor < ids.length) {
+          const i = cursor++;
+          const cid = ids[i];
+          try {
+            const { data: r, error: e } = await supabase.functions.invoke("tts-clone-comment", {
+              body: { commentId: cid },
+            });
+            if (e || r?.error) failed += 1;
+            else done += 1;
+          } catch {
+            failed += 1;
+          }
+        }
+      });
+      await Promise.all(workers);
+      toast({
+        title: failed === 0 ? "Voice audio ready" : "Regeneration finished",
+        description: failed === 0
+          ? `Generated ${done} clip${done === 1 ? "" : "s"} in your new voice.`
+          : `${done} succeeded, ${failed} failed.`,
+        variant: failed > 0 && done === 0 ? "destructive" : undefined,
+      });
+      fetchComments();
+    } catch (err: any) {
+      toast({ title: "Could not regenerate", description: err?.message || "Failed", variant: "destructive" });
+    } finally {
+      setCoachRegenAudio(false);
     }
   };
 
@@ -5518,6 +5572,21 @@ const SermonViewer = () => {
                   <h3 className="text-lg font-semibold">AI Coach (in your voice)</h3>
                 </CollapsibleTrigger>
                 <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    onClick={handleRegenerateCoachAudio}
+                    disabled={coachRegenAudio}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {coachRegenAudio ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      "Regenerate voice audio"
+                    )}
+                  </Button>
                   <Button
                     onClick={handleDeleteAllCoachComments}
                     disabled={coachDeleting}
