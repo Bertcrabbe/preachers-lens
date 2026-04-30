@@ -105,11 +105,25 @@ serve(async (req) => {
     const MAX_TRANSCRIPT_CHARS = 22000;
     let tChars = 0;
     const transcriptLines: string[] = [];
-    for (const s of sentences) {
+    for (let i = 0; i < sentences.length; i++) {
+      const s = sentences[i];
+      const next = sentences[i + 1];
       const ts = `[${Math.floor((s.start_time_ms || 0) / 60000)}:${String(
         Math.floor(((s.start_time_ms || 0) % 60000) / 1000),
       ).padStart(2, "0")}]`;
-      const line = `#${s.order_index} ${ts} ${s.sentence_text}`;
+      // Gap to next sentence in seconds = pause length after this sentence.
+      const gapMs = next
+        ? Math.max(0, (next.start_time_ms ?? 0) - (s.end_time_ms ?? s.start_time_ms ?? 0))
+        : 0;
+      const gapSec = gapMs / 1000;
+      // Tag pause with a short hint so the model can spot heavy-line + no-pause.
+      let pauseTag = "";
+      if (next) {
+        if (gapSec < 0.4) pauseTag = " (no-pause)";
+        else if (gapSec < 0.9) pauseTag = " (short-pause)";
+        else if (gapSec >= 1.5) pauseTag = ` (pause:${gapSec.toFixed(1)}s)`;
+      }
+      const line = `#${s.order_index} ${ts}${pauseTag} ${s.sentence_text}`;
       if (tChars + line.length + 1 > MAX_TRANSCRIPT_CHARS) break;
       tChars += line.length + 1;
       transcriptLines.push(line);
