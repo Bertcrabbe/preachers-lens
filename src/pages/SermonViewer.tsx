@@ -5521,64 +5521,6 @@ const SermonViewer = () => {
             )}
           </Card>
 
-          <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen} className="mt-6">
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold">AI Comment Summary</h3>
-                </CollapsibleTrigger>
-                <Button
-                  onClick={handleSummarizeComments}
-                  disabled={summarizing || comments.length === 0}
-                  variant="outline"
-                  size="sm"
-                >
-                  {summarizing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      {commentSummary ? 'Refresh' : 'Generate'} Summary
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <CollapsibleContent className="space-y-4">
-                {commentSummary ? (
-                  <>
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">Overall Assessment</h4>
-                      <p className="text-sm leading-relaxed">{commentSummary.summary}</p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground">Key Improvement Areas</h4>
-                      <ul className="space-y-2">
-                        {commentSummary.bulletPoints.map((point, index) => (
-                          <li key={index} className="flex items-start gap-3">
-                            <Badge variant="outline" className="mt-0.5 shrink-0">
-                              {index + 1}
-                            </Badge>
-                            <span className="text-sm leading-relaxed">{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Click "Generate Summary" to analyze all comments and get AI-powered improvement suggestions.
-                  </p>
-                )}
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-
           <Collapsible open={coachOpen} onOpenChange={setCoachOpen} className="mt-6">
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -5587,6 +5529,24 @@ const SermonViewer = () => {
                   <h3 className="text-lg font-semibold">Digital Bert</h3>
                 </CollapsibleTrigger>
                 <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    onClick={handleSummarizeComments}
+                    disabled={summarizing || comments.length === 0}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {summarizing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Summarizing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {commentSummary ? 'Refresh' : 'Comment'} Summary
+                      </>
+                    )}
+                  </Button>
                   <Button
                     onClick={handleRegenerateCoachAudio}
                     disabled={coachRegenAudio}
@@ -5643,6 +5603,28 @@ const SermonViewer = () => {
                   AI reviews this sermon's transcript and writes 6–10 timestamped coaching notes,
                   modeled on the voice of your past comments across all sermons.
                 </p>
+
+                {commentSummary && (
+                  <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-4">
+                    <div>
+                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">Comment Summary — Overall Assessment</h4>
+                      <p className="text-sm leading-relaxed">{commentSummary.summary}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">Key Improvement Areas</h4>
+                      <ul className="space-y-2">
+                        {commentSummary.bulletPoints.map((point, index) => (
+                          <li key={index} className="flex items-start gap-3">
+                            <Badge variant="outline" className="mt-0.5 shrink-0">
+                              {index + 1}
+                            </Badge>
+                            <span className="text-sm leading-relaxed">{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
                 {coachNotes && coachNotes.length > 0 ? (
                   <>
