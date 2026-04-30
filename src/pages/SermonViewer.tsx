@@ -2431,7 +2431,6 @@ const SermonViewer = () => {
     }
   };
 
-  const handleDeleteAllCoachComments = async () => {
   const handleRegenerateCoachAudio = async () => {
     if (!id) return;
     setCoachRegenAudio(true);
