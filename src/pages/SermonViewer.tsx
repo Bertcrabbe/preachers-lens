@@ -2450,22 +2450,37 @@ const SermonViewer = () => {
       toast({ title: "Regenerating voice", description: `Generating ${ids.length} clip${ids.length === 1 ? "" : "s"}…` });
       let done = 0;
       let failed = 0;
-      // Throttle to 4 in flight to avoid rate limits
-      const concurrency = 4;
+      // Throttle to 2 in flight — ElevenLabs caps free/starter plans at ~5 concurrent
+      // requests, and other features (e.g. recorded-comment TTS) may also be in flight.
+      const concurrency = 2;
       let cursor = 0;
       const workers = Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
         while (cursor < ids.length) {
           const i = cursor++;
           const cid = ids[i];
-          try {
-            const { data: r, error: e } = await supabase.functions.invoke("tts-clone-comment", {
-              body: { commentId: cid },
-            });
-            if (e || r?.error) failed += 1;
-            else done += 1;
-          } catch {
-            failed += 1;
+          // Retry up to 3 times with backoff on failure (covers transient 429s)
+          let attempt = 0;
+          let ok = false;
+          while (attempt < 3 && !ok) {
+            try {
+              const { data: r, error: e } = await supabase.functions.invoke("tts-clone-comment", {
+                body: { commentId: cid },
+              });
+              const errMsg = (e as any)?.message || r?.error || "";
+              if (!errMsg) {
+                ok = true;
+                break;
+              }
+              // Backoff harder on rate-limit errors
+              const isRate = /429|rate|concurrent/i.test(String(errMsg));
+              await new Promise((res) => setTimeout(res, isRate ? 2500 * (attempt + 1) : 800 * (attempt + 1)));
+            } catch {
+              await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
+            }
+            attempt += 1;
           }
+          if (ok) done += 1;
+          else failed += 1;
         }
       });
       await Promise.all(workers);
