@@ -2432,8 +2432,60 @@ const SermonViewer = () => {
   };
 
   const handleDeleteAllCoachComments = async () => {
-    // placeholder anchor
-    void 0;
+  const handleRegenerateCoachAudio = async () => {
+    if (!id) return;
+    setCoachRegenAudio(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from("sermon_comments")
+        .select("id")
+        .eq("sermon_id", id)
+        .like("comment_text", "[AI Coach]%")
+        .is("audio_url", null);
+      if (error) throw error;
+      const ids = (rows ?? []).map((r: any) => r.id);
+      if (ids.length === 0) {
+        toast({ title: "Nothing to regenerate", description: "All AI Coach comments already have audio." });
+        return;
+      }
+      toast({ title: "Regenerating voice", description: `Generating ${ids.length} clip${ids.length === 1 ? "" : "s"}…` });
+      let done = 0;
+      let failed = 0;
+      // Throttle to 4 in flight to avoid rate limits
+      const concurrency = 4;
+      let cursor = 0;
+      const workers = Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
+        while (cursor < ids.length) {
+          const i = cursor++;
+          const cid = ids[i];
+          try {
+            const { data: r, error: e } = await supabase.functions.invoke("tts-clone-comment", {
+              body: { commentId: cid },
+            });
+            if (e || r?.error) failed += 1;
+            else done += 1;
+          } catch {
+            failed += 1;
+          }
+        }
+      });
+      await Promise.all(workers);
+      toast({
+        title: failed === 0 ? "Voice audio ready" : "Regeneration finished",
+        description: failed === 0
+          ? `Generated ${done} clip${done === 1 ? "" : "s"} in your new voice.`
+          : `${done} succeeded, ${failed} failed.`,
+        variant: failed > 0 && done === 0 ? "destructive" : undefined,
+      });
+      fetchComments();
+    } catch (err: any) {
+      toast({ title: "Could not regenerate", description: err?.message || "Failed", variant: "destructive" });
+    } finally {
+      setCoachRegenAudio(false);
+    }
+  };
+
+  const handleDeleteAllCoachComments = async () => {
     if (!id) return;
     setCoachDeleting(true);
     try {
