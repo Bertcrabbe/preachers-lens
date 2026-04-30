@@ -3282,8 +3282,8 @@ const SermonViewer = () => {
       if (hideAIEvalComments && c.rule_id) return false;
       // Hide individually-deselected AI rule categories
       if (c.rule_id && hiddenRuleIds.has(c.rule_id)) return false;
-      // Hide the user's own (non-rule) comments when toggle is on
-      if (hideMyComments && !c.rule_id) return false;
+      // Hide the user's own (non-rule, non-AI-coach) comments when toggle is on
+      if (hideMyComments && !c.rule_id && !/^\s*\[AI Coach\]/i.test(c.comment_text || "")) return false;
       // Check if comment falls within or just after the range (covers gaps between sentences)
       return c.start_time_ms >= start && c.start_time_ms < end;
     });
