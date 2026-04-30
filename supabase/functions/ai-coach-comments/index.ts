@@ -260,6 +260,7 @@ SPACING (CRITICAL):
 For EACH note:
 
 - Anchor it to ONE specific sentence by its #order_index.
+- ANCHOR-AFTER-QUOTE RULE: if your note quotes or reacts to a specific line, anchor it to the sentence IMMEDIATELY AFTER that line so the comment plays once the listener has actually heard it. Only anchor BEFORE the line if the comment text is explicitly telegraphing what's coming ("Listen to what you're about to say here…").
 - The SUBJECT MATTER of the comment must echo what this coach typically notices (see samples). Don't invent new categories they never use.
 - Write in the COACH'S OWN VOICE — match their sentence length, vocabulary, directness, hedging level, and tone. Avoid generic AI-coach phrasing (no "Consider...", no "It might be helpful if...", unless the coach actually talks like that).
 - Be concrete and specific to this sentence. No vague platitudes.
