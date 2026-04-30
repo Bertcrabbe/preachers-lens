@@ -57,32 +57,47 @@ Deno.serve(async (req) => {
     textToSpeak = textToSpeak.replace(/^\s*\[AI Coach\]\s*(\([^)]*\)\s*)?/i, "").trim();
     if (!textToSpeak) throw new Error("Empty comment text");
 
-    // Call ElevenLabs TTS
-    const ttsResp = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: textToSpeak,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.85,
-            style: 0.35,
-            use_speaker_boost: true,
+    // Call ElevenLabs TTS — retry on 429 (concurrent_limit_exceeded) with backoff
+    let ttsResp: Response | null = null;
+    let lastErrText = "";
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const r = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": ELEVENLABS_API_KEY,
+            "Content-Type": "application/json",
           },
-        }),
-      },
-    );
-    if (!ttsResp.ok) {
-      const errTxt = await ttsResp.text();
-      console.error("ElevenLabs error", ttsResp.status, errTxt);
-      throw new Error(`ElevenLabs ${ttsResp.status}: ${errTxt.slice(0, 200)}`);
+          body: JSON.stringify({
+            text: textToSpeak,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.85,
+              style: 0.35,
+              use_speaker_boost: true,
+            },
+          }),
+        },
+      );
+      if (r.ok) {
+        ttsResp = r;
+        break;
+      }
+      lastErrText = await r.text();
+      // Retry on 429 / concurrent-limit; otherwise abort immediately
+      const isRate = r.status === 429 || /concurrent|rate_limit/i.test(lastErrText);
+      console.error(`ElevenLabs attempt ${attempt + 1} failed`, r.status, lastErrText.slice(0, 200));
+      if (!isRate || attempt === maxAttempts - 1) {
+        throw new Error(`ElevenLabs ${r.status}: ${lastErrText.slice(0, 200)}`);
+      }
+      // Exponential backoff with jitter: 1.5s, 3s, 6s, 12s
+      const delay = 1500 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+      await new Promise((res) => setTimeout(res, delay));
     }
+    if (!ttsResp) throw new Error(`ElevenLabs failed after retries: ${lastErrText.slice(0, 200)}`);
     const audioBuf = await ttsResp.arrayBuffer();
 
     // Upload to storage
