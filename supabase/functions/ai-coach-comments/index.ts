@@ -105,11 +105,25 @@ serve(async (req) => {
     const MAX_TRANSCRIPT_CHARS = 22000;
     let tChars = 0;
     const transcriptLines: string[] = [];
-    for (const s of sentences) {
+    for (let i = 0; i < sentences.length; i++) {
+      const s = sentences[i];
+      const next = sentences[i + 1];
       const ts = `[${Math.floor((s.start_time_ms || 0) / 60000)}:${String(
         Math.floor(((s.start_time_ms || 0) % 60000) / 1000),
       ).padStart(2, "0")}]`;
-      const line = `#${s.order_index} ${ts} ${s.sentence_text}`;
+      // Gap to next sentence in seconds = pause length after this sentence.
+      const gapMs = next
+        ? Math.max(0, (next.start_time_ms ?? 0) - (s.end_time_ms ?? s.start_time_ms ?? 0))
+        : 0;
+      const gapSec = gapMs / 1000;
+      // Tag pause with a short hint so the model can spot heavy-line + no-pause.
+      let pauseTag = "";
+      if (next) {
+        if (gapSec < 0.4) pauseTag = " (no-pause)";
+        else if (gapSec < 0.9) pauseTag = " (short-pause)";
+        else if (gapSec >= 1.5) pauseTag = ` (pause:${gapSec.toFixed(1)}s)`;
+      }
+      const line = `#${s.order_index} ${ts}${pauseTag} ${s.sentence_text}`;
       if (tChars + line.length + 1 > MAX_TRANSCRIPT_CHARS) break;
       tChars += line.length + 1;
       transcriptLines.push(line);
@@ -162,6 +176,7 @@ WHAT TO NOTICE (in rough order of priority)
 1. Sermon length / brevity — push hard for tightening. Anything over ~35 min is suspect.
 2. Audience awareness — especially the non-believer / newcomer / first-timer. Flag jargon, insider language, assumed knowledge.
 3. Vocal dynamics + silence — varied volume, varied pace, intentional silence after questions.
+   - PAUSE-AFTER-HEAVY-LINE RULE (HIGH PRIORITY): Each transcript line shows the pause that follows it as a tag: "(no-pause)" = <0.4s, "(short-pause)" = <0.9s, "(pause:Xs)" = ≥1.5s. Whenever the speaker drops a HEAVY line — a gut-punch question, a convicting statement, a vulnerable confession, a key emotional beat, a "let it land" rhetorical question — and the very next tag is "(no-pause)" or "(short-pause)", you MUST flag it with a middle note in category "pacing". Tell them exactly which line and that they ran past it; use the signature phrase "let the silence do its work" or "let that land" and tell them to add 2–4 seconds of silence right there. Aim to catch at least one of these per sermon if any exist.
 4. Emotive content vs. intellect — "touch the heart." Critique anything "too heady," "too theological," "too academic."
 5. Application — clear, specific, portable "do."
 6. Rhetorical devices — questions invite, statements inform. Swap "we" for "you" for directness.
