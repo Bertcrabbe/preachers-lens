@@ -2704,6 +2704,7 @@ const SermonViewer = () => {
               const audio = new Audio(url);
               audio.volume = commentVolume;
               audio.playbackRate = playbackRate;
+              fixWebmDuration(audio);
               commentAudioRef.current = audio;
               
               // Use a flag to prevent double-handling
@@ -2765,6 +2766,25 @@ const SermonViewer = () => {
       commentAudioRef.current = null;
     }
     setPlayingCommentId(null);
+  };
+
+  // MediaRecorder-produced .webm files often have no duration metadata, which
+  // causes HTMLAudioElement to report duration === Infinity and to fire
+  // `ended` almost immediately on play (you'd hear ~0 audio). Forcing a seek
+  // past the end makes the browser scan the whole file and compute the real
+  // duration; we then snap back to 0 so playback starts from the beginning.
+  const fixWebmDuration = (audio: HTMLAudioElement) => {
+    const onLoaded = () => {
+      if (!isFinite(audio.duration)) {
+        const onTimeUpdate = () => {
+          audio.removeEventListener('timeupdate', onTimeUpdate);
+          try { audio.currentTime = 0; } catch { /* noop */ }
+        };
+        audio.addEventListener('timeupdate', onTimeUpdate);
+        try { audio.currentTime = 1e101; } catch { /* noop */ }
+      }
+    };
+    audio.addEventListener('loadedmetadata', onLoaded, { once: true });
   };
 
   // Reset played comments when seeking backwards or toggling preview mode
@@ -5899,6 +5919,8 @@ const SermonViewer = () => {
                           if (url) {
                             const audio = new Audio(url);
                             audio.playbackRate = playbackRate;
+                            audio.volume = commentVolume;
+                            fixWebmDuration(audio);
                             commentAudioRef.current = audio;
                             let handled = false;
                             const cleanup = () => {
@@ -5911,6 +5933,7 @@ const SermonViewer = () => {
                             audio.onerror = () => {
                               const mediaError = audio.error;
                               if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                console.error('Comment playback error:', mediaError.code, mediaError.message);
                                 cleanup();
                               }
                             };
@@ -5918,6 +5941,7 @@ const SermonViewer = () => {
                               await audio.play();
                             } catch (err: any) {
                               if (err.name !== 'AbortError') {
+                                console.error('Comment audio.play() failed:', err);
                                 cleanup();
                               }
                             }
@@ -6073,6 +6097,8 @@ const SermonViewer = () => {
                                 if (url) {
                                   const audio = new Audio(url);
                                   audio.playbackRate = playbackRate;
+                                  audio.volume = commentVolume;
+                                  fixWebmDuration(audio);
                                   commentAudioRef.current = audio;
                                   let handled = false;
                                   const cleanup = () => {
@@ -6085,6 +6111,7 @@ const SermonViewer = () => {
                                   audio.onerror = () => {
                                     const mediaError = audio.error;
                                     if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                      console.error('Comment playback error:', mediaError.code, mediaError.message);
                                       cleanup();
                                     }
                                   };
@@ -6092,6 +6119,7 @@ const SermonViewer = () => {
                                     await audio.play();
                                   } catch (err: any) {
                                     if (err.name !== 'AbortError') {
+                                      console.error('Comment audio.play() failed:', err);
                                       cleanup();
                                     }
                                   }
@@ -6494,6 +6522,8 @@ const SermonViewer = () => {
                                             if (url) {
                                               const audio = new Audio(url);
                                               audio.playbackRate = playbackRate;
+                                              audio.volume = commentVolume;
+                                              fixWebmDuration(audio);
                                               commentAudioRef.current = audio;
                                               let handled = false;
                                               const cleanup = () => {
@@ -6506,6 +6536,7 @@ const SermonViewer = () => {
                                               audio.onerror = () => {
                                                 const mediaError = audio.error;
                                                 if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                                  console.error('Comment playback error:', mediaError.code, mediaError.message);
                                                   cleanup();
                                                 }
                                               };
@@ -6513,6 +6544,7 @@ const SermonViewer = () => {
                                                 await audio.play();
                                               } catch (err: any) {
                                                 if (err.name !== 'AbortError') {
+                                                  console.error('Comment audio.play() failed:', err);
                                                   cleanup();
                                                 }
                                               }
