@@ -2704,6 +2704,7 @@ const SermonViewer = () => {
               const audio = new Audio(url);
               audio.volume = commentVolume;
               audio.playbackRate = playbackRate;
+              fixWebmDuration(audio);
               commentAudioRef.current = audio;
               
               // Use a flag to prevent double-handling
