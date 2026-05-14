@@ -2767,6 +2767,25 @@ const SermonViewer = () => {
     setPlayingCommentId(null);
   };
 
+  // MediaRecorder-produced .webm files often have no duration metadata, which
+  // causes HTMLAudioElement to report duration === Infinity and to fire
+  // `ended` almost immediately on play (you'd hear ~0 audio). Forcing a seek
+  // past the end makes the browser scan the whole file and compute the real
+  // duration; we then snap back to 0 so playback starts from the beginning.
+  const fixWebmDuration = (audio: HTMLAudioElement) => {
+    const onLoaded = () => {
+      if (!isFinite(audio.duration)) {
+        const onTimeUpdate = () => {
+          audio.removeEventListener('timeupdate', onTimeUpdate);
+          try { audio.currentTime = 0; } catch { /* noop */ }
+        };
+        audio.addEventListener('timeupdate', onTimeUpdate);
+        try { audio.currentTime = 1e101; } catch { /* noop */ }
+      }
+    };
+    audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+  };
+
   // Reset played comments when seeking backwards or toggling preview mode
   const handleSeeked = () => {
     // Stop any playing comment when user seeks
