@@ -5919,6 +5919,8 @@ const SermonViewer = () => {
                           if (url) {
                             const audio = new Audio(url);
                             audio.playbackRate = playbackRate;
+                            audio.volume = commentVolume;
+                            fixWebmDuration(audio);
                             commentAudioRef.current = audio;
                             let handled = false;
                             const cleanup = () => {
@@ -5931,6 +5933,7 @@ const SermonViewer = () => {
                             audio.onerror = () => {
                               const mediaError = audio.error;
                               if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                console.error('Comment playback error:', mediaError.code, mediaError.message);
                                 cleanup();
                               }
                             };
@@ -5938,6 +5941,7 @@ const SermonViewer = () => {
                               await audio.play();
                             } catch (err: any) {
                               if (err.name !== 'AbortError') {
+                                console.error('Comment audio.play() failed:', err);
                                 cleanup();
                               }
                             }
@@ -6093,6 +6097,8 @@ const SermonViewer = () => {
                                 if (url) {
                                   const audio = new Audio(url);
                                   audio.playbackRate = playbackRate;
+                                  audio.volume = commentVolume;
+                                  fixWebmDuration(audio);
                                   commentAudioRef.current = audio;
                                   let handled = false;
                                   const cleanup = () => {
@@ -6105,6 +6111,7 @@ const SermonViewer = () => {
                                   audio.onerror = () => {
                                     const mediaError = audio.error;
                                     if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                      console.error('Comment playback error:', mediaError.code, mediaError.message);
                                       cleanup();
                                     }
                                   };
@@ -6112,6 +6119,7 @@ const SermonViewer = () => {
                                     await audio.play();
                                   } catch (err: any) {
                                     if (err.name !== 'AbortError') {
+                                      console.error('Comment audio.play() failed:', err);
                                       cleanup();
                                     }
                                   }
@@ -6514,6 +6522,8 @@ const SermonViewer = () => {
                                             if (url) {
                                               const audio = new Audio(url);
                                               audio.playbackRate = playbackRate;
+                                              audio.volume = commentVolume;
+                                              fixWebmDuration(audio);
                                               commentAudioRef.current = audio;
                                               let handled = false;
                                               const cleanup = () => {
@@ -6526,6 +6536,7 @@ const SermonViewer = () => {
                                               audio.onerror = () => {
                                                 const mediaError = audio.error;
                                                 if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                                                  console.error('Comment playback error:', mediaError.code, mediaError.message);
                                                   cleanup();
                                                 }
                                               };
@@ -6533,6 +6544,7 @@ const SermonViewer = () => {
                                                 await audio.play();
                                               } catch (err: any) {
                                                 if (err.name !== 'AbortError') {
+                                                  console.error('Comment audio.play() failed:', err);
                                                   cleanup();
                                                 }
                                               }
