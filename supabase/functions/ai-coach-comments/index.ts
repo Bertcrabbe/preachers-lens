@@ -255,8 +255,10 @@ COMMENT ANCHOR PLACEMENT (CRITICAL):
     const sermonDurMin = sermonDurMs / 60000;
     const MIN_GAP_MIN = sermonDurMin >= 20 ? 3 : Math.max(1.5, sermonDurMin / 7);
     const MIN_GAP_MS = Math.round(MIN_GAP_MIN * 60000);
-    // Aim for at most one middle comment per ~3.5 min, capped 6-10.
-    const targetMiddle = Math.min(10, Math.max(4, Math.round(sermonDurMin / 3.5)));
+    // TOTAL comments (intro + middles + outro) MUST land between 9 and 12.
+    // That means middle count MUST be between 7 and 10. Spacing scales with sermon length
+    // but the floor/ceiling are hard.
+    const targetMiddle = Math.min(10, Math.max(7, Math.round(sermonDurMin / 3.5)));
 
     const lengthSection = voiceSamplesAll.length
       ? `LENGTH TARGET (computed from this coach's own past comments):
@@ -276,6 +278,11 @@ You MUST produce notes in this order:
 1. FIRST note: an INTRO comment — an overall opening reflection on the sermon as a whole (the kind of thing the coach would say before diving in). Use category "intro" and sentence_index = ${firstIdx}.
 2. MIDDLE notes: about ${targetMiddle} in-line moments (see rules below), weighted toward the SAME kinds of moments this coach has historically flagged in the samples above.
 3. LAST note: an OUTRO comment — an overall closing reflection / summary takeaway in the coach's voice. Use category "outro" and sentence_index = ${lastIdx}.
+
+TOTAL COMMENT COUNT (HARD RULE — NON-NEGOTIABLE):
+- The total number of notes you return (intro + every middle + outro) MUST be between 9 and 12 inclusive.
+- That means: 1 intro + 7-to-10 middles + 1 outro.
+- Fewer than 9 total is a failure. More than 12 total is a failure. If your draft falls outside this window, revise (add the next-best moment, or merge/cut the weakest) before returning.
 
 SPACING (CRITICAL):
 - Sermon length: ${sermonDurMin.toFixed(1)} minutes.
