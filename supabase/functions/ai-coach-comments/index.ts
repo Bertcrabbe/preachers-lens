@@ -424,18 +424,39 @@ Generate exactly: 1 intro note + ~${targetMiddle} middle notes + 1 outro note. R
       });
     }
 
-    // Enforce minimum spacing on middle notes (sort by time, drop any that
-    // fall within MIN_GAP_MS of the previously kept one).
+    // Enforce minimum spacing on middle notes — but never drop below the
+    // total-comment-count floor of 7 middles. If the strict spacing would
+    // leave fewer than 7, progressively relax the gap until we hit the floor
+    // (or run out of candidates).
     middleCandidates.sort((a, b) => a.t - b.t);
-    const keptMiddle: typeof middleCandidates = [];
-    for (const c of middleCandidates) {
-      if (keptMiddle.length === 0 || c.t - keptMiddle[keptMiddle.length - 1].t >= MIN_GAP_MS) {
-        keptMiddle.push(c);
-      } else {
-        console.log(
-          `Dropping middle comment at ${(c.t / 60000).toFixed(2)}min — too close to previous (gap < ${MIN_GAP_MIN.toFixed(1)}min)`,
-        );
+    const MIDDLE_FLOOR = 7;
+    const MIDDLE_CEILING = 10;
+    const greedyKeep = (gapMs: number) => {
+      const kept: typeof middleCandidates = [];
+      for (const c of middleCandidates) {
+        if (kept.length === 0 || c.t - kept[kept.length - 1].t >= gapMs) {
+          kept.push(c);
+          if (kept.length >= MIDDLE_CEILING) break;
+        }
       }
+      return kept;
+    };
+    let currentGapMs = MIN_GAP_MS;
+    let keptMiddle = greedyKeep(currentGapMs);
+    // Relax in 30-second steps down to 45s if we're below the floor.
+    while (
+      keptMiddle.length < Math.min(MIDDLE_FLOOR, middleCandidates.length) &&
+      currentGapMs > 45_000
+    ) {
+      currentGapMs = Math.max(45_000, currentGapMs - 30_000);
+      keptMiddle = greedyKeep(currentGapMs);
+    }
+    // Cap at ceiling
+    if (keptMiddle.length > MIDDLE_CEILING) keptMiddle = keptMiddle.slice(0, MIDDLE_CEILING);
+    if (currentGapMs !== MIN_GAP_MS) {
+      console.log(
+        `Relaxed middle-comment min gap from ${(MIN_GAP_MS / 60000).toFixed(1)}min to ${(currentGapMs / 60000).toFixed(2)}min to reach floor of ${MIDDLE_FLOOR}.`,
+      );
     }
     for (const c of keptMiddle) {
       const s = sentenceMap.get(c.idx);
