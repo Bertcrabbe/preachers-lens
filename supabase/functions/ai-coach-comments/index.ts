@@ -276,7 +276,7 @@ Write each note in the range of roughly ${minWords}-${maxWords} words (centered 
 
 You MUST produce notes in this order:
 1. FIRST note: an INTRO comment — an overall opening reflection on the sermon as a whole (the kind of thing the coach would say before diving in). Use category "intro" and sentence_index = ${firstIdx}.
-2. MIDDLE notes: about ${targetMiddle} in-line moments (see rules below), weighted toward the SAME kinds of moments this coach has historically flagged in the samples above.
+2. MIDDLE notes: exactly ${targetMiddle} in-line moments (see rules below), weighted toward the SAME kinds of moments this coach has historically flagged in the samples above.
 3. LAST note: an OUTRO comment — an overall closing reflection / summary takeaway in the coach's voice. Use category "outro" and sentence_index = ${lastIdx}.
 
 TOTAL COMMENT COUNT (HARD RULE — NON-NEGOTIABLE):
@@ -298,7 +298,7 @@ For EACH note:
 - Write in the COACH'S OWN VOICE — match their sentence length, vocabulary, directness, hedging level, and tone. Avoid generic AI-coach phrasing (no "Consider...", no "It might be helpful if...", unless the coach actually talks like that).
 - Be concrete and specific to this sentence. No vague platitudes.
 - Hit the LENGTH TARGET above. Comments shorter than ${minWords} words are too short and will be rejected.
-- Tag a short category. The first note's category MUST be "intro" and the last note's category MUST be "outro". Middle notes use one of: opening, illustration, structure, clarity, theology, pacing, emotion, close, transition, language.
+- Tag a short category. The first note's category MUST be "intro" and the last note's category MUST be "outro". Middle notes use one of: opening, illustration, structure, clarity, theology, pacing, emotion, rhetoric, close, transition, language.
 
 Transcript:
 ${transcript}
@@ -310,7 +310,7 @@ Return STRICT JSON of the form:
   ]
 }
 
-Generate exactly: 1 intro note + ~${targetMiddle} middle notes + 1 outro note. Respect the spacing rule above. Do not include any prose outside the JSON.`;
+Generate exactly: 1 intro note + ${targetMiddle} middle notes + 1 outro note. Respect the spacing rule above. Do not include any prose outside the JSON.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -426,11 +426,13 @@ Generate exactly: 1 intro note + ~${targetMiddle} middle notes + 1 outro note. R
 
     // Enforce minimum spacing on middle notes — but never drop below the
     // total-comment-count floor of 7 middles. If the strict spacing would
-    // leave fewer than 7, progressively relax the gap until we hit the floor
-    // (or run out of candidates).
+    // leave fewer than 7, progressively relax the gap until we hit the floor.
+    // If the model still returns too few middles, backfill from the remaining
+    // candidates so we still hit the required 7-10 middle-note window.
     middleCandidates.sort((a, b) => a.t - b.t);
     const MIDDLE_FLOOR = 7;
     const MIDDLE_CEILING = 10;
+    const targetMiddleCount = Math.min(MIDDLE_CEILING, Math.max(MIDDLE_FLOOR, targetMiddle));
     const greedyKeep = (gapMs: number) => {
       const kept: typeof middleCandidates = [];
       for (const c of middleCandidates) {
@@ -451,11 +453,26 @@ Generate exactly: 1 intro note + ~${targetMiddle} middle notes + 1 outro note. R
       currentGapMs = Math.max(45_000, currentGapMs - 30_000);
       keptMiddle = greedyKeep(currentGapMs);
     }
+    if (keptMiddle.length < Math.min(targetMiddleCount, middleCandidates.length)) {
+      const keptIdx = new Set(keptMiddle.map((c) => c.idx));
+      for (const candidate of middleCandidates) {
+        if (keptMiddle.length >= Math.min(targetMiddleCount, middleCandidates.length)) break;
+        if (keptIdx.has(candidate.idx)) continue;
+        keptMiddle.push(candidate);
+        keptIdx.add(candidate.idx);
+      }
+      keptMiddle.sort((a, b) => a.t - b.t);
+    }
     // Cap at ceiling
     if (keptMiddle.length > MIDDLE_CEILING) keptMiddle = keptMiddle.slice(0, MIDDLE_CEILING);
     if (currentGapMs !== MIN_GAP_MS) {
       console.log(
         `Relaxed middle-comment min gap from ${(MIN_GAP_MS / 60000).toFixed(1)}min to ${(currentGapMs / 60000).toFixed(2)}min to reach floor of ${MIDDLE_FLOOR}.`,
+      );
+    }
+    if (keptMiddle.length < MIDDLE_FLOOR) {
+      console.warn(
+        `ai-coach-comments floor miss: only ${keptMiddle.length} middle notes available after backfill from ${middleCandidates.length} candidates.`,
       );
     }
     for (const c of keptMiddle) {
