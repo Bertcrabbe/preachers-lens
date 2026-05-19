@@ -178,6 +178,69 @@ const SermonViewer = () => {
   const coachPreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const coachPreviewCacheRef = useRef<Map<number, string>>(new Map());
 
+  // Style guide (auto-learned weekly from this user's own comments)
+  const [styleGuide, setStyleGuide] = useState<{
+    last_analyzed_at: string | null;
+    comments_analyzed: number;
+  } | null>(null);
+  const [relearning, setRelearning] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("coach_style_guides")
+        .select("last_analyzed_at, comments_analyzed")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!cancelled) setStyleGuide(data ?? { last_analyzed_at: null, comments_analyzed: 0 });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleRelearnStyle = async () => {
+    setRelearning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("learn-coach-style", {
+        body: { mode: "self" },
+      });
+      if (error) throw error;
+      const first = data?.results?.[0]?.result;
+      if (first?.skipped) {
+        toast({
+          title: "Not enough comments yet",
+          description: `Need at least 5 of your own comments to learn from. Found ${first.count}.`,
+        });
+      } else if (first?.error) {
+        throw new Error(first.error);
+      } else {
+        toast({
+          title: "Style guide refreshed",
+          description: `Learned from ${first?.count ?? "—"} of your comments. Bert will use this on the next generation.`,
+        });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: row } = await supabase
+            .from("coach_style_guides")
+            .select("last_analyzed_at, comments_analyzed")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (row) setStyleGuide(row);
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: "Re-learn failed",
+        description: err?.message || "Could not refresh style guide.",
+        variant: "destructive",
+      });
+    } finally {
+      setRelearning(false);
+    }
+  };
+
   const handlePreviewCoachNote = async (idx: number, text: string) => {
     // If already playing this one, stop
     if (coachPreviewPlayingIdx === idx && coachPreviewAudioRef.current) {
@@ -5700,6 +5763,36 @@ const SermonViewer = () => {
                   AI reviews this sermon's transcript and writes 6–10 timestamped coaching notes,
                   modeled on the voice of your past comments across all sermons.
                 </p>
+
+                <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-border/40 bg-muted/20 px-3 py-2 text-xs">
+                  <div className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Bert's style guide:</span>{" "}
+                    {styleGuide?.last_analyzed_at ? (
+                      <>
+                        last learned{" "}
+                        {new Date(styleGuide.last_analyzed_at).toLocaleDateString(undefined, {
+                          month: "short", day: "numeric", year: "numeric",
+                        })}{" "}
+                        from {styleGuide.comments_analyzed} of your comments. Auto-refreshes Sundays.
+                      </>
+                    ) : (
+                      <>not learned yet — runs automatically Sunday nights, or trigger it now.</>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleRelearnStyle}
+                    disabled={relearning}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                  >
+                    {relearning ? (
+                      <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> Learning…</>
+                    ) : (
+                      <><RotateCcw className="mr-1.5 h-3 w-3" /> Re-learn from my comments</>
+                    )}
+                  </Button>
+                </div>
 
                 {commentSummary && (
                   <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-4">
