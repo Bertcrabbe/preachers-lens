@@ -84,11 +84,22 @@ serve(async (req) => {
     const avgWords = avg(wordCounts);
     const medWords = median(wordCounts);
     const avgChars = avg(charCounts);
-    // Target a band around the user's typical length (use the larger of avg/median
-    // as the centerpoint so we don't get pulled down by a few terse one-liners).
-    const center = Math.max(avgWords, medWords) || 40;
-    const minWords = Math.max(15, Math.round(center * 0.7));
-    const maxWords = Math.max(minWords + 10, Math.round(center * 1.4));
+    // Target a band around the user's typical length. Use the larger of avg/median
+    // as the centerpoint, and put the FLOOR at the median itself — we never want
+    // Bert dipping below what the user typically writes. A few past one-liners
+    // should not be permission to ship short notes.
+    const center = Math.max(avgWords, medWords) || 50;
+    const minWords = Math.max(25, medWords || Math.round(center * 0.9));
+    const maxWords = Math.max(minWords + 15, Math.round(center * 1.5));
+    // "Clock" the spoken duration. User comments are recorded audio, so the
+    // transcribed word count maps to seconds via typical conversational pace
+    // (~2.5 words/sec). Surface this so the model is literally matching how
+    // LONG the user speaks, not just word counts on a page.
+    const WORDS_PER_SEC = 2.5;
+    const avgSpokenSec = Math.round(avgWords / WORDS_PER_SEC);
+    const medSpokenSec = Math.round(medWords / WORDS_PER_SEC);
+    const minSpokenSec = Math.round(minWords / WORDS_PER_SEC);
+    const maxSpokenSec = Math.round(maxWords / WORDS_PER_SEC);
 
     const MAX_VOICE_CHARS = 14000;
     let runChars = 0;
