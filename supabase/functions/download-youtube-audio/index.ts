@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
     console.log('Conversion still processing, creating async job...');
     const { data: sermon, error: sermonError } = await adminSupabase.from('sermons').insert({
       user_id: user.id, title: resolvedTitle, file_url: `youtube:${videoId}`,
-      file_type: 'audio/mpeg', transcription_status: 'downloading',
+      file_type: 'audio/mpeg', transcription_status: 'processing',
       communicator_id: communicatorId || null,
       error_message: JSON.stringify({ videoId, provider: 'vevioz' }),
     }).select('id').single();
