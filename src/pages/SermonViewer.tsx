@@ -4330,6 +4330,22 @@ const SermonViewer = () => {
                             />
                           );
                         })}
+
+                        {/* Missed-question opportunity overlays */}
+                        {showMissedQuestions && missedQuestionsData?.opportunities.map((opp) => {
+                          const sentence = sentences[opp.index];
+                          if (!sentence) return null;
+                          const left = (sentence.start_time_ms / totalDuration) * 100;
+                          const width = ((sentence.end_time_ms - sentence.start_time_ms) / totalDuration) * 100;
+                          return (
+                            <div
+                              key={`missed-q-${opp.index}`}
+                              className="absolute h-full border-t-2 border-b-2 border-rose-500 bg-rose-500/30"
+                              style={{ left: `${left}%`, width: `${Math.max(width, 0.3)}%` }}
+                              title={`💡 Try as a question: ${opp.suggested_question}`}
+                            />
+                          );
+                        })}
                       </>
                     );
                   })()}
