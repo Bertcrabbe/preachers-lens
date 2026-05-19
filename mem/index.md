@@ -1,2 +1,3 @@
 - [Digital Bert Learned Style Guide](mem://features/ai-coach/learned-style-guide) — Weekly Sunday cron distills user comments into a personalized style guide Bert reads on every generation
 - [Digital Bert Intro/Outro Scope](mem://features/ai-coach/intro-outro-scope) — Intro and outro are 2-3x longer than middles and encapsulate the full scope of feedback (bookends)
+- [Digital Bert Length Clock](mem://features/ai-coach/length-clock) — Per-note length clocked against the user's own avg/median word count and spoken seconds, with hard floor at the median
