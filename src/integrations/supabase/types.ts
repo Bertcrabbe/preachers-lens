@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      coach_style_guides: {
+        Row: {
+          comments_analyzed: number
+          created_at: string
+          guide_text: string
+          id: string
+          last_analyzed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comments_analyzed?: number
+          created_at?: string
+          guide_text?: string
+          id?: string
+          last_analyzed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comments_analyzed?: number
+          created_at?: string
+          guide_text?: string
+          id?: string
+          last_analyzed_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       communicator_links: {
         Row: {
           communicator_id: string
