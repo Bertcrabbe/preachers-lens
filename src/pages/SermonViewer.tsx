@@ -5764,6 +5764,36 @@ const SermonViewer = () => {
                   modeled on the voice of your past comments across all sermons.
                 </p>
 
+                <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-border/40 bg-muted/20 px-3 py-2 text-xs">
+                  <div className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Bert's style guide:</span>{" "}
+                    {styleGuide?.last_analyzed_at ? (
+                      <>
+                        last learned{" "}
+                        {new Date(styleGuide.last_analyzed_at).toLocaleDateString(undefined, {
+                          month: "short", day: "numeric", year: "numeric",
+                        })}{" "}
+                        from {styleGuide.comments_analyzed} of your comments. Auto-refreshes Sundays.
+                      </>
+                    ) : (
+                      <>not learned yet — runs automatically Sunday nights, or trigger it now.</>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleRelearnStyle}
+                    disabled={relearning}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                  >
+                    {relearning ? (
+                      <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> Learning…</>
+                    ) : (
+                      <><RotateCcw className="mr-1.5 h-3 w-3" /> Re-learn from my comments</>
+                    )}
+                  </Button>
+                </div>
+
                 {commentSummary && (
                   <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-4">
                     <div>
