@@ -6210,6 +6210,15 @@ const SermonViewer = () => {
                 const hasConfusing = showConfusingPhrases && confusingPhrases && confusingPhrases.phrases.some(p => {
                   return paragraph.some(s => s.start_time_ms === p.start_time_ms);
                 });
+
+                // Map of sentence index -> missed-question opportunity for fast lookup
+                const missedByIdx = new Map<number, { suggested_question: string; reason?: string }>();
+                if (showMissedQuestions && missedQuestionsData) {
+                  for (const opp of missedQuestionsData.opportunities) {
+                    missedByIdx.set(opp.index, { suggested_question: opp.suggested_question, reason: opp.reason });
+                  }
+                }
+                const hasMissedQuestion = paragraph.some(s => missedByIdx.has(sentences.indexOf(s)));
                 
                 // Determine highlight color and style based on active analytics
                 let highlightStyle = "hover:bg-muted";
@@ -6273,6 +6282,12 @@ const SermonViewer = () => {
                   customStyle = {
                     backgroundColor: '#f59e0b40',
                     borderColor: '#f59e0b'
+                  };
+                } else if (hasMissedQuestion) {
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#f43f5e26',
+                    borderColor: '#f43f5e'
                   };
                 }
                 
@@ -6369,14 +6384,34 @@ const SermonViewer = () => {
                               {paragraph.map((s) => {
                                 const sIdx = sentences.indexOf(s);
                                 const hlColor = highlights[sIdx];
+                                const missed = missedByIdx.get(sIdx);
                                 return (
-                                  <span
-                                    key={sIdx}
-                                    className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
-                                    style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
-                                    onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
-                                  >
-                                    {s.sentence_text}{' '}
+                                  <span key={sIdx}>
+                                    <span
+                                      className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''} ${missed ? 'underline decoration-rose-500 decoration-2 underline-offset-4' : ''}`}
+                                      style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
+                                      onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
+                                    >
+                                      {s.sentence_text}{' '}
+                                    </span>
+                                    {missed && (
+                                      <span
+                                        className="block mt-2 mb-1 p-3 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-700 font-sans text-sm"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <span className="block text-[10px] uppercase tracking-wider font-bold text-rose-700 dark:text-rose-300 mb-1">
+                                          Try as a question
+                                        </span>
+                                        <span className="block italic text-rose-900 dark:text-rose-100">
+                                          "{missed.suggested_question}"
+                                        </span>
+                                        {missed.reason && (
+                                          <span className="block mt-1 text-xs text-rose-700/80 dark:text-rose-300/80 not-italic">
+                                            {missed.reason}
+                                          </span>
+                                        )}
+                                      </span>
+                                    )}
                                   </span>
                                 );
                               })}
@@ -6429,14 +6464,34 @@ const SermonViewer = () => {
                                     {segment.sentences.map((s) => {
                                       const sIdx = sentences.indexOf(s);
                                       const hlColor = highlights[sIdx];
+                                      const missed = missedByIdx.get(sIdx);
                                       return (
-                                        <span
-                                          key={sIdx}
-                                          className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
-                                          style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
-                                          onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
-                                        >
-                                          {s.sentence_text}{' '}
+                                        <span key={sIdx}>
+                                          <span
+                                            className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''} ${missed ? 'underline decoration-rose-500 decoration-2 underline-offset-4' : ''}`}
+                                            style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
+                                            onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
+                                          >
+                                            {s.sentence_text}{' '}
+                                          </span>
+                                          {missed && (
+                                            <span
+                                              className="block mt-2 mb-1 p-3 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-700 font-sans text-sm"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <span className="block text-[10px] uppercase tracking-wider font-bold text-rose-700 dark:text-rose-300 mb-1">
+                                                Try as a question
+                                              </span>
+                                              <span className="block italic text-rose-900 dark:text-rose-100">
+                                                "{missed.suggested_question}"
+                                              </span>
+                                              {missed.reason && (
+                                                <span className="block mt-1 text-xs text-rose-700/80 dark:text-rose-300/80 not-italic">
+                                                  {missed.reason}
+                                                </span>
+                                              )}
+                                            </span>
+                                          )}
                                         </span>
                                       );
                                     })}
