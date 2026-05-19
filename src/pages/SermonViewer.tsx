@@ -4246,7 +4246,10 @@ const SermonViewer = () => {
                         
                         {/* Insider language overlays */}
                         {getTopInsiderTerms().map((term) => {
-                          if (!visibleInsiderTerms.has(term.word)) return null;
+                          if (!showInsiderLanguage) return null;
+                          // When the master toggle is on, show every top term by default.
+                          // The per-term checkboxes only narrow the set when at least one is selected.
+                          if (visibleInsiderTerms.size > 0 && !visibleInsiderTerms.has(term.word)) return null;
                           
                           return getInsiderTermTimestamps(term.word).map((timestamp, idx) => {
                             const left = (timestamp.start / totalDuration) * 100;
