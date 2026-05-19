@@ -299,13 +299,17 @@ COMMENT ANCHOR PLACEMENT (CRITICAL):
     const targetMiddle = Math.min(10, Math.max(7, Math.round(sermonDurMin / 3.5)));
 
     const lengthSection = voiceSamplesAll.length
-      ? `LENGTH TARGET (computed from this coach's own past comments):
-- Average words per comment: ${avgWords}
-- Median words per comment: ${medWords}
-- Average characters per comment: ${avgChars}
-- Sample size: ${voiceSamplesAll.length}
+      ? `LENGTH TARGET — CLOCKED FROM THIS COACH'S OWN RECORDED COMMENTS:
+- Average comment: ${avgWords} words (~${avgSpokenSec}s of speech)
+- Median comment:  ${medWords} words (~${medSpokenSec}s of speech)
+- Average characters: ${avgChars}
+- Sample size: ${voiceSamplesAll.length} of the coach's own past comments
 
-Write each note in the range of roughly ${minWords}-${maxWords} words (centered around ~${center} words). Do NOT write terse one-liners — match the substantive length this coach typically uses. Intro and outro notes should be at the LONGER end of that range since they cover the sermon as a whole.
+These comments are RECORDED AUDIO — so word count maps directly to spoken seconds (~${WORDS_PER_SEC} words/sec). The coach speaks for roughly ${avgSpokenSec} seconds on a typical note. Your output should clock to about the same duration when read aloud.
+
+TARGET PER MIDDLE NOTE: ${minWords}-${maxWords} words (~${minSpokenSec}-${maxSpokenSec} seconds spoken), centered around ~${center} words (~${Math.round(center / WORDS_PER_SEC)}s). Notes below ${minWords} words / ~${minSpokenSec}s will be REJECTED — that's where Bert has been failing. Do NOT write terse one-liners; the coach does not.
+
+TARGET FOR INTRO & OUTRO: 2-3x the middle-note length (roughly ${Math.round(center * 2)}-${Math.round(center * 2.8)} words, ~${Math.round((center * 2) / WORDS_PER_SEC)}-${Math.round((center * 2.8) / WORDS_PER_SEC)}s spoken). Multi-paragraph bookends, per the intro/outro-scope rule.
 
 `
       : "";
