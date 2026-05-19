@@ -6384,14 +6384,34 @@ const SermonViewer = () => {
                               {paragraph.map((s) => {
                                 const sIdx = sentences.indexOf(s);
                                 const hlColor = highlights[sIdx];
+                                const missed = missedByIdx.get(sIdx);
                                 return (
-                                  <span
-                                    key={sIdx}
-                                    className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
-                                    style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
-                                    onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
-                                  >
-                                    {s.sentence_text}{' '}
+                                  <span key={sIdx}>
+                                    <span
+                                      className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''} ${missed ? 'underline decoration-rose-500 decoration-2 underline-offset-4' : ''}`}
+                                      style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
+                                      onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
+                                    >
+                                      {s.sentence_text}{' '}
+                                    </span>
+                                    {missed && (
+                                      <span
+                                        className="block mt-2 mb-1 p-3 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-700 font-sans text-sm"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <span className="block text-[10px] uppercase tracking-wider font-bold text-rose-700 dark:text-rose-300 mb-1">
+                                          Try as a question
+                                        </span>
+                                        <span className="block italic text-rose-900 dark:text-rose-100">
+                                          "{missed.suggested_question}"
+                                        </span>
+                                        {missed.reason && (
+                                          <span className="block mt-1 text-xs text-rose-700/80 dark:text-rose-300/80 not-italic">
+                                            {missed.reason}
+                                          </span>
+                                        )}
+                                      </span>
+                                    )}
                                   </span>
                                 );
                               })}
@@ -6444,14 +6464,34 @@ const SermonViewer = () => {
                                     {segment.sentences.map((s) => {
                                       const sIdx = sentences.indexOf(s);
                                       const hlColor = highlights[sIdx];
+                                      const missed = missedByIdx.get(sIdx);
                                       return (
-                                        <span
-                                          key={sIdx}
-                                          className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''}`}
-                                          style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
-                                          onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
-                                        >
-                                          {s.sentence_text}{' '}
+                                        <span key={sIdx}>
+                                          <span
+                                            className={`${highlightMode ? 'cursor-pointer hover:opacity-80' : ''} ${hlColor ? 'rounded px-0.5' : ''} ${missed ? 'underline decoration-rose-500 decoration-2 underline-offset-4' : ''}`}
+                                            style={hlColor ? { backgroundColor: hlColor + 'cc' } : undefined}
+                                            onClick={highlightMode ? (e) => { e.stopPropagation(); toggleHighlight(sIdx); } : undefined}
+                                          >
+                                            {s.sentence_text}{' '}
+                                          </span>
+                                          {missed && (
+                                            <span
+                                              className="block mt-2 mb-1 p-3 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-700 font-sans text-sm"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <span className="block text-[10px] uppercase tracking-wider font-bold text-rose-700 dark:text-rose-300 mb-1">
+                                                Try as a question
+                                              </span>
+                                              <span className="block italic text-rose-900 dark:text-rose-100">
+                                                "{missed.suggested_question}"
+                                              </span>
+                                              {missed.reason && (
+                                                <span className="block mt-1 text-xs text-rose-700/80 dark:text-rose-300/80 not-italic">
+                                                  {missed.reason}
+                                                </span>
+                                              )}
+                                            </span>
+                                          )}
                                         </span>
                                       );
                                     })}
