@@ -5739,7 +5739,23 @@ const SermonViewer = () => {
                               )}
                               <button
                                 type="button"
-                                className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline ml-auto"
+                                className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline ml-auto flex items-center gap-1"
+                                onClick={() => handlePreviewCoachNote(i, n.comment_text)}
+                                disabled={coachPreviewLoadingIdx === i}
+                                title="Hear this in your cloned voice"
+                              >
+                                {coachPreviewLoadingIdx === i ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : coachPreviewPlayingIdx === i ? (
+                                  <Pause className="h-3 w-3" />
+                                ) : (
+                                  <Volume2 className="h-3 w-3" />
+                                )}
+                                {coachPreviewPlayingIdx === i ? "Stop" : "Preview in my voice"}
+                              </button>
+                              <button
+                                type="button"
+                                className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
                                 onClick={() => {
                                   if (audioRef.current) {
                                     audioRef.current.currentTime = ms / 1000;
