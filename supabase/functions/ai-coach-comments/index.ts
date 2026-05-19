@@ -84,11 +84,22 @@ serve(async (req) => {
     const avgWords = avg(wordCounts);
     const medWords = median(wordCounts);
     const avgChars = avg(charCounts);
-    // Target a band around the user's typical length (use the larger of avg/median
-    // as the centerpoint so we don't get pulled down by a few terse one-liners).
-    const center = Math.max(avgWords, medWords) || 40;
-    const minWords = Math.max(15, Math.round(center * 0.7));
-    const maxWords = Math.max(minWords + 10, Math.round(center * 1.4));
+    // Target a band around the user's typical length. Use the larger of avg/median
+    // as the centerpoint, and put the FLOOR at the median itself — we never want
+    // Bert dipping below what the user typically writes. A few past one-liners
+    // should not be permission to ship short notes.
+    const center = Math.max(avgWords, medWords) || 50;
+    const minWords = Math.max(25, medWords || Math.round(center * 0.9));
+    const maxWords = Math.max(minWords + 15, Math.round(center * 1.5));
+    // "Clock" the spoken duration. User comments are recorded audio, so the
+    // transcribed word count maps to seconds via typical conversational pace
+    // (~2.5 words/sec). Surface this so the model is literally matching how
+    // LONG the user speaks, not just word counts on a page.
+    const WORDS_PER_SEC = 2.5;
+    const avgSpokenSec = Math.round(avgWords / WORDS_PER_SEC);
+    const medSpokenSec = Math.round(medWords / WORDS_PER_SEC);
+    const minSpokenSec = Math.round(minWords / WORDS_PER_SEC);
+    const maxSpokenSec = Math.round(maxWords / WORDS_PER_SEC);
 
     const MAX_VOICE_CHARS = 14000;
     let runChars = 0;
@@ -247,7 +258,7 @@ OPENING & CLOSING PATTERNS
 - OUTRO note: LONG AND SUMMATIVE. This is the closing wrap that re-encapsulates the whole sermon and the whole feedback set. Pull the threads back together: name the 2-3 most important takeaways (mix of strengths AND concrete things to take into the next sermon), tie back to Know/Feel/Do, and reference the through-line that ran across the middle notes. It should feel like a coach closing a film-review session, not a quick sign-off. Offer real encouragement, nudge a follow-up conversation ("hit me up when you're done," "we'll talk soon"), then sign off with "Peace." Match the intro in length — this is the bookend, not a one-liner.
 
 LENGTH & DENSITY
-- Middle notes are usually surgical — 1-3 sentences making one sharp point. Don't pad.
+- Middle notes should still feel focused (one main point per note — don't try to cover three things at once) but they MUST clock to roughly the user's own average spoken duration (see LENGTH TARGET below). That means most middle notes are 2-4 full sentences, not one-liners. Develop the point: name the moment, react to it, and add the "why it matters" or the concrete coaching beat. Avoid padding, but never undershoot the length target — short, clipped notes are the failure mode we're correcting for.
 - Intro and outro notes are SIGNIFICANTLY LONGER than middle notes — multi-paragraph, multi-faceted briefings that encapsulate the FULL scope of feedback (length, structure, Know/Feel/Do, audience, heart, AND the specific threads you pulled on in the middle notes). Treat them as bookends that frame and re-frame the whole review. Aim for roughly 2-3x the length of a typical middle note.
 
 HARD DON'TS
@@ -288,13 +299,17 @@ COMMENT ANCHOR PLACEMENT (CRITICAL):
     const targetMiddle = Math.min(10, Math.max(7, Math.round(sermonDurMin / 3.5)));
 
     const lengthSection = voiceSamplesAll.length
-      ? `LENGTH TARGET (computed from this coach's own past comments):
-- Average words per comment: ${avgWords}
-- Median words per comment: ${medWords}
-- Average characters per comment: ${avgChars}
-- Sample size: ${voiceSamplesAll.length}
+      ? `LENGTH TARGET — CLOCKED FROM THIS COACH'S OWN RECORDED COMMENTS:
+- Average comment: ${avgWords} words (~${avgSpokenSec}s of speech)
+- Median comment:  ${medWords} words (~${medSpokenSec}s of speech)
+- Average characters: ${avgChars}
+- Sample size: ${voiceSamplesAll.length} of the coach's own past comments
 
-Write each note in the range of roughly ${minWords}-${maxWords} words (centered around ~${center} words). Do NOT write terse one-liners — match the substantive length this coach typically uses. Intro and outro notes should be at the LONGER end of that range since they cover the sermon as a whole.
+These comments are RECORDED AUDIO — so word count maps directly to spoken seconds (~${WORDS_PER_SEC} words/sec). The coach speaks for roughly ${avgSpokenSec} seconds on a typical note. Your output should clock to about the same duration when read aloud.
+
+TARGET PER MIDDLE NOTE: ${minWords}-${maxWords} words (~${minSpokenSec}-${maxSpokenSec} seconds spoken), centered around ~${center} words (~${Math.round(center / WORDS_PER_SEC)}s). Notes below ${minWords} words / ~${minSpokenSec}s will be REJECTED — that's where Bert has been failing. Do NOT write terse one-liners; the coach does not.
+
+TARGET FOR INTRO & OUTRO: 2-3x the middle-note length (roughly ${Math.round(center * 2)}-${Math.round(center * 2.8)} words, ~${Math.round((center * 2) / WORDS_PER_SEC)}-${Math.round((center * 2.8) / WORDS_PER_SEC)}s spoken). Multi-paragraph bookends, per the intro/outro-scope rule.
 
 `
       : "";
