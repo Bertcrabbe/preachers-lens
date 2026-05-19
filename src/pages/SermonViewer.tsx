@@ -821,14 +821,8 @@ const SermonViewer = () => {
     // currentTime is already in milliseconds
     const currentTimeMs = currentTime;
 
-    // Compute each comment's end time (start + duration). Only count comments that
-    // have already finished by the current playback position.
-    const endedComments = userComments
-      .map(c => ({
-        ...c,
-        end_time_ms: c.start_time_ms + Math.round((c.duration_seconds ?? 0) * 1000),
-      }))
-      .filter(c => c.end_time_ms <= currentTimeMs);
+    // Only count comments that have already finished by the current playback position.
+    const endedComments = userComments.filter(c => c.end_time_ms <= currentTimeMs);
 
     if (endedComments.length === 0) return null;
 
