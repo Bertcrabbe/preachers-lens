@@ -178,6 +178,69 @@ const SermonViewer = () => {
   const coachPreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const coachPreviewCacheRef = useRef<Map<number, string>>(new Map());
 
+  // Style guide (auto-learned weekly from this user's own comments)
+  const [styleGuide, setStyleGuide] = useState<{
+    last_analyzed_at: string | null;
+    comments_analyzed: number;
+  } | null>(null);
+  const [relearning, setRelearning] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("coach_style_guides")
+        .select("last_analyzed_at, comments_analyzed")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!cancelled) setStyleGuide(data ?? { last_analyzed_at: null, comments_analyzed: 0 });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleRelearnStyle = async () => {
+    setRelearning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("learn-coach-style", {
+        body: { mode: "self" },
+      });
+      if (error) throw error;
+      const first = data?.results?.[0]?.result;
+      if (first?.skipped) {
+        toast({
+          title: "Not enough comments yet",
+          description: `Need at least 5 of your own comments to learn from. Found ${first.count}.`,
+        });
+      } else if (first?.error) {
+        throw new Error(first.error);
+      } else {
+        toast({
+          title: "Style guide refreshed",
+          description: `Learned from ${first?.count ?? "—"} of your comments. Bert will use this on the next generation.`,
+        });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: row } = await supabase
+            .from("coach_style_guides")
+            .select("last_analyzed_at, comments_analyzed")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (row) setStyleGuide(row);
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: "Re-learn failed",
+        description: err?.message || "Could not refresh style guide.",
+        variant: "destructive",
+      });
+    } finally {
+      setRelearning(false);
+    }
+  };
+
   const handlePreviewCoachNote = async (idx: number, text: string) => {
     // If already playing this one, stop
     if (coachPreviewPlayingIdx === idx && coachPreviewAudioRef.current) {
