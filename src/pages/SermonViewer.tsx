@@ -173,6 +173,64 @@ const SermonViewer = () => {
     start_time_ms: number;
     end_time_ms: number;
   }> | null>(null);
+  const [coachPreviewLoadingIdx, setCoachPreviewLoadingIdx] = useState<number | null>(null);
+  const [coachPreviewPlayingIdx, setCoachPreviewPlayingIdx] = useState<number | null>(null);
+  const coachPreviewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const coachPreviewCacheRef = useRef<Map<number, string>>(new Map());
+
+  const handlePreviewCoachNote = async (idx: number, text: string) => {
+    // If already playing this one, stop
+    if (coachPreviewPlayingIdx === idx && coachPreviewAudioRef.current) {
+      coachPreviewAudioRef.current.pause();
+      coachPreviewAudioRef.current = null;
+      setCoachPreviewPlayingIdx(null);
+      return;
+    }
+    // Stop any other preview
+    if (coachPreviewAudioRef.current) {
+      coachPreviewAudioRef.current.pause();
+      coachPreviewAudioRef.current = null;
+      setCoachPreviewPlayingIdx(null);
+    }
+    // Pause sermon audio if it's playing
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
+    try {
+      let url = coachPreviewCacheRef.current.get(idx);
+      if (!url) {
+        setCoachPreviewLoadingIdx(idx);
+        const { data, error } = await supabase.functions.invoke("tts-clone-preview", {
+          body: { text },
+        });
+        if (error) throw error;
+        if (!data?.audioContent) throw new Error(data?.error || "No audio returned");
+        url = `data:audio/mpeg;base64,${data.audioContent}`;
+        coachPreviewCacheRef.current.set(idx, url);
+      }
+      const a = new Audio(url);
+      coachPreviewAudioRef.current = a;
+      setCoachPreviewPlayingIdx(idx);
+      a.onended = () => {
+        if (coachPreviewAudioRef.current === a) coachPreviewAudioRef.current = null;
+        setCoachPreviewPlayingIdx((cur) => (cur === idx ? null : cur));
+      };
+      a.onerror = () => {
+        if (coachPreviewAudioRef.current === a) coachPreviewAudioRef.current = null;
+        setCoachPreviewPlayingIdx((cur) => (cur === idx ? null : cur));
+      };
+      await a.play();
+    } catch (err: any) {
+      toast({
+        title: "Preview failed",
+        description: err?.message || "Could not generate voice preview. Make sure your ElevenLabs voice is configured.",
+        variant: "destructive",
+      });
+      setCoachPreviewPlayingIdx(null);
+    } finally {
+      setCoachPreviewLoadingIdx(null);
+    }
+  };
   const [viewStart, setViewStart] = useState(0); // percentage of audio (0-100)
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
