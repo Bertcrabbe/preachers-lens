@@ -4246,7 +4246,10 @@ const SermonViewer = () => {
                         
                         {/* Insider language overlays */}
                         {getTopInsiderTerms().map((term) => {
-                          if (!visibleInsiderTerms.has(term.word)) return null;
+                          if (!showInsiderLanguage) return null;
+                          // When the master toggle is on, show every top term by default.
+                          // The per-term checkboxes only narrow the set when at least one is selected.
+                          if (visibleInsiderTerms.size > 0 && !visibleInsiderTerms.has(term.word)) return null;
                           
                           return getInsiderTermTimestamps(term.word).map((timestamp, idx) => {
                             const left = (timestamp.start / totalDuration) * 100;
@@ -6205,8 +6208,11 @@ const SermonViewer = () => {
                 let insiderTermColor = null;
                 if (showInsiderLanguage) {
                   const topTerms = getTopInsiderTerms();
+                  // When the master toggle is on, treat every top term as visible by default.
+                  // The per-term checkboxes only narrow the set when at least one is selected.
+                  const anyTermSelected = visibleInsiderTerms.size > 0;
                   for (const term of topTerms) {
-                    if (visibleInsiderTerms.has(term.word)) {
+                    if (!anyTermSelected || visibleInsiderTerms.has(term.word)) {
                       const regex = new RegExp(`\\b${term.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
                       const hasThisTerm = paragraph.some(s => regex.test(s.sentence_text));
                       if (hasThisTerm) {
