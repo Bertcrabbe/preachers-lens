@@ -6320,14 +6320,19 @@ const SermonViewer = () => {
                     className={`transcript-paragraph p-4 rounded-xl transition-all duration-200 cursor-pointer relative group shadow-sm hover:shadow-md ${highlightStyle}`}
                     style={customStyle}
                     onClick={() => {
-                      if (isCurrentParagraph(paragraph)) {
+                      // Treat the click as a play/pause toggle if the playhead is anywhere
+                      // inside this paragraph's extended range (start → next paragraph's start).
+                      // This avoids seeking backward when the playhead has drifted into the
+                      // gap between this paragraph and the next one.
+                      const isWithinRange =
+                        currentTime >= firstSentence.start_time_ms && currentTime < rangeEnd;
+                      if (isWithinRange) {
                         if (playing) {
                           audioRef.current?.pause();
                         } else {
                           audioRef.current?.play().catch(() => {});
                         }
                       } else {
-                        const firstSentence = paragraph[0];
                         seekTo(firstSentence.start_time_ms);
                         if (!playing) {
                           audioRef.current?.play().catch(() => {});
