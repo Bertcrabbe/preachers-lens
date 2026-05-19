@@ -1,0 +1,1 @@
+- [Digital Bert Learned Style Guide](mem://features/ai-coach/learned-style-guide) — Weekly Sunday cron distills user comments into a personalized style guide Bert reads on every generation
