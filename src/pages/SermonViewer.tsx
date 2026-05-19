@@ -812,7 +812,7 @@ const SermonViewer = () => {
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [playing, playingCommentId, audioUrl, currentTime, sentences, commentDialogOpen, floatingRecording, playSermonAudio]);
 
-  // Calculate time since last comment in audio timeline
+  // Calculate time since last comment ended in audio timeline
   const timeSinceLastCommentInAudio = (() => {
     // Only count the user's own comments — exclude AI-generated evaluation-rule comments
     const userComments = comments.filter(c => !c.rule_id);
@@ -821,18 +821,24 @@ const SermonViewer = () => {
     // currentTime is already in milliseconds
     const currentTimeMs = currentTime;
 
-    // Find user comments that have started before or at the current playback position
-    const pastComments = userComments.filter(c => c.start_time_ms <= currentTimeMs);
-    
-    if (pastComments.length === 0) return null;
-    
-    // Get the most recent comment before current position (by start time)
-    const lastComment = pastComments.reduce((latest, comment) => 
-      comment.start_time_ms > latest.start_time_ms ? comment : latest
-    , pastComments[0]);
-    
-    // Return time elapsed in seconds since that comment started
-    return Math.floor((currentTimeMs - lastComment.start_time_ms) / 1000);
+    // Compute each comment's end time (start + duration). Only count comments that
+    // have already finished by the current playback position.
+    const endedComments = userComments
+      .map(c => ({
+        ...c,
+        end_time_ms: c.start_time_ms + Math.round((c.duration_seconds ?? 0) * 1000),
+      }))
+      .filter(c => c.end_time_ms <= currentTimeMs);
+
+    if (endedComments.length === 0) return null;
+
+    // Most recent comment by end time
+    const lastComment = endedComments.reduce((latest, comment) =>
+      comment.end_time_ms > latest.end_time_ms ? comment : latest
+    , endedComments[0]);
+
+    // Return time elapsed in seconds since that comment ended
+    return Math.floor((currentTimeMs - lastComment.end_time_ms) / 1000);
   })();
 
   const generateWaveform = async (url: string) => {
