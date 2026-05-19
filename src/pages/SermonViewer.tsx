@@ -6210,6 +6210,15 @@ const SermonViewer = () => {
                 const hasConfusing = showConfusingPhrases && confusingPhrases && confusingPhrases.phrases.some(p => {
                   return paragraph.some(s => s.start_time_ms === p.start_time_ms);
                 });
+
+                // Map of sentence index -> missed-question opportunity for fast lookup
+                const missedByIdx = new Map<number, { suggested_question: string; reason?: string }>();
+                if (showMissedQuestions && missedQuestionsData) {
+                  for (const opp of missedQuestionsData.opportunities) {
+                    missedByIdx.set(opp.index, { suggested_question: opp.suggested_question, reason: opp.reason });
+                  }
+                }
+                const hasMissedQuestion = paragraph.some(s => missedByIdx.has(sentences.indexOf(s)));
                 
                 // Determine highlight color and style based on active analytics
                 let highlightStyle = "hover:bg-muted";
@@ -6273,6 +6282,12 @@ const SermonViewer = () => {
                   customStyle = {
                     backgroundColor: '#f59e0b40',
                     borderColor: '#f59e0b'
+                  };
+                } else if (hasMissedQuestion) {
+                  highlightStyle = "border-2 hover:opacity-90 transition-all";
+                  customStyle = {
+                    backgroundColor: '#f43f5e26',
+                    borderColor: '#f43f5e'
                   };
                 }
                 
