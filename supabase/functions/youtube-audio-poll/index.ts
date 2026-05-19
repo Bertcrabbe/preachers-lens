@@ -59,11 +59,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: 'Not authorized' }, 403);
     }
 
-    // If already done downloading, return current status
-    if (sermon.transcription_status !== 'downloading') {
+    // If no longer in the converting state, return current status
+    if (sermon.transcription_status !== 'processing' || !sermon.error_message?.includes('videoId')) {
       return jsonResponse({
         success: true,
-        status: sermon.transcription_status === 'error' ? 'failed' : 'completed',
+        status: sermon.transcription_status === 'failed' ? 'failed' : 'completed',
         sermonId: sermon.id,
       });
     }
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
         if (data.status === 'fail') {
           // Mark as failed
           await adminSupabase.from('sermons').update({
-            transcription_status: 'error',
+            transcription_status: 'failed',
             error_message: data.msg || 'Conversion failed',
           }).eq('id', sermonId);
           return jsonResponse({ success: true, status: 'failed', error: data.msg || 'Conversion failed' });
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
     if (uploadError) {
       console.error('Upload error:', uploadError);
       await adminSupabase.from('sermons').update({
-        transcription_status: 'error',
+        transcription_status: 'failed',
         error_message: 'Storage upload failed: ' + uploadError.message,
       }).eq('id', sermonId);
       return jsonResponse({ success: true, status: 'failed', error: 'Upload failed' });
