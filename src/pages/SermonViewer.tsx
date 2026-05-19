@@ -5674,6 +5674,7 @@ const SermonViewer = () => {
                         return (
                           <div key={i} className="rounded-lg border border-border/60 bg-muted/30 p-3">
                             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              <Badge variant="default" className="font-mono text-[10px]">#{i + 1}</Badge>
                               <Badge variant="outline" className="font-mono text-[10px]">{ts}</Badge>
                               {n.category && (
                                 <Badge variant="secondary" className="text-[10px] capitalize">{n.category}</Badge>
