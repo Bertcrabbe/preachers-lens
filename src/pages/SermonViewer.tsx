@@ -2935,17 +2935,23 @@ const SermonViewer = () => {
     // Don't re-acquire if we already have an active stream
     if (preAcquiredStream && preAcquiredStream.active) return;
     const audioConstraints: MediaTrackConstraints = {
-      ...(selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : {}),
+      ...(selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : {}),
       sampleRate: 44100,
       echoCancellation: false,
       noiseSuppression: false,
       autoGainControl: true,
     };
     navigator.mediaDevices.getUserMedia({ audio: audioConstraints }).then(stream => {
+      console.log('Pre-acquired mic stream using track:', stream.getAudioTracks()[0]?.label);
       setPreAcquiredStream(stream);
     }).catch(e => {
-      console.error('Failed to pre-acquire mic stream:', e);
-      setPreAcquiredStream(undefined);
+      // If the exact device is unavailable, retry without the hard constraint
+      console.error('Failed to pre-acquire selected mic, retrying with default:', e);
+      navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: 44100, echoCancellation: false, noiseSuppression: false, autoGainControl: true },
+      }).then(stream => {
+        setPreAcquiredStream(stream);
+      }).catch(() => setPreAcquiredStream(undefined));
     });
   };
 
