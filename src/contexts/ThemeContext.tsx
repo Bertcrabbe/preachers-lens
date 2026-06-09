@@ -63,6 +63,12 @@ export const THEMES: ThemeDefinition[] = [
     description: "Classic navy with white pinstripe & steel blue",
     preview: { bg: "#1a2540", card: "#2e3a55", primary: "#ffffff", accent: "#4a74c4" },
   },
+  {
+    id: "ny-knicks",
+    name: "NY Knicks",
+    description: "Knicks blue with bold orange & silver",
+    preview: { bg: "#0a2a47", card: "#1b4a6e", primary: "#f58426", accent: "#006bb6" },
+  },
 ];
 
 interface ThemeContextType {
