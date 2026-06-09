@@ -101,14 +101,25 @@ export const AudioRecorder = ({ onRecordingComplete, onClear, selectedDeviceId, 
       if (preAcquiredStream && preAcquiredStream.active) {
         stream = preAcquiredStream;
       } else {
-        const audioConstraints: MediaTrackConstraints = {
-          ...(selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : {}),
+        const baseConstraints = {
           sampleRate: 44100,
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: true,
         };
-        stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              ...(selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : {}),
+              ...baseConstraints,
+            },
+          });
+        } catch (exactErr) {
+          // Selected device unavailable — fall back to default so recording still works
+          console.error('Selected mic unavailable, falling back to default:', exactErr);
+          stream = await navigator.mediaDevices.getUserMedia({ audio: baseConstraints });
+        }
+        console.log('Recording using mic track:', stream.getAudioTracks()[0]?.label);
       }
       streamRef.current = stream;
       
