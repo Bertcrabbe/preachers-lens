@@ -444,6 +444,52 @@ All colors MUST be HSL.
     --gradient-warm: linear-gradient(135deg, hsl(0, 0%, 100%) 0%, hsl(220, 60%, 55%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(220, 30%, 20%) 0%, hsl(220, 40%, 12%) 100%);
   }
+
+  /* ===== NY KNICKS (dark — Knicks Blue + Orange + Silver) ===== */
+  [data-theme="ny-knicks"] {
+    --background: 207 70% 13%;
+    --foreground: 0 0% 96%;
+    --card: 207 55% 21%;
+    --card-foreground: 0 0% 98%;
+    --popover: 207 55% 23%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 25 91% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 207 45% 27%;
+    --secondary-foreground: 0 0% 92%;
+    --muted: 207 40% 27%;
+    --muted-foreground: 207 12% 65%;
+    --accent: 202 100% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 207 50% 22%;
+    --input: 207 50% 22%;
+    --ring: 25 91% 55%;
+    --radius: 0.75rem;
+    --success: 142 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 25 91% 55%;
+    --warning-foreground: 207 70% 10%;
+    --sidebar-background: 207 72% 10%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 25 91% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 202 100% 40%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 207 60% 18%;
+    --sidebar-ring: 25 91% 55%;
+    --chart-1: 25 91% 55%;
+    --chart-2: 202 100% 45%;
+    --chart-3: 210 6% 75%;
+    --chart-4: 207 50% 50%;
+    --chart-5: 38 90% 55%;
+    --sidebar: 207 72% 10%;
+    --gradient-primary: linear-gradient(135deg, hsl(25, 91%, 55%) 0%, hsl(20, 85%, 46%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(202, 100%, 40%) 0%, hsl(202, 90%, 30%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(25, 91%, 55%) 0%, hsl(202, 100%, 40%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(207, 55%, 19%) 0%, hsl(207, 70%, 13%) 100%);
+  }
 }
 
 
